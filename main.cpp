@@ -1,5 +1,8 @@
 #include <iostream>
 
+#include "Core/Renderer.h"
+
 int main(){
-    std::cout<<"sdf"<<std::endl;
+    Renderer renderer;
+    renderer.render().saveToPNG("test.png");
 }
