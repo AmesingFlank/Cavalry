@@ -8,17 +8,36 @@ set(CMAKE_CXX_STANDARD 17)
 
 include_directories(Dependencies/include)
 
-add_executable(Cavalry
- main.cpp
- Core/Camera.h
- Core/Film.h
- Core/Integrator.h
- Core/Renderer.cpp
- Core/Renderer.h
- Core/RenderResult.cpp
- Core/RenderResult.h
- Core/Scene.h
+file(GLOB ALL_CODE
+    "BSDFs/*.h"
+    "BSDFs/*.cpp"
+    "BSDFs/*.cu"
+    "Cameras/*.h"
+    "Cameras/*.cpp"
+    "Cameras/*.cu"
+    "Core/*.h"
+    "Core/*.cpp"
+    "Core/*.cu"
+    "Dependencies/*.h"
+    "Dependencies/*.inc"
+    "Films/*.h"
+    "Films/*.cpp"
+    "Films/*.cu"
+    "Integrators/*.h"
+    "Integrators/*.cpp"
+    "Integrators/*.cu"
+    "Samplers/*.h"
+    "Samplers/*.cpp"
+    "Samplers/*.cu"
+    "Shapes/*.h"
+    "Shapes/*.cpp"
+    "Shapes/*.cu"
+    "Utils/*.h"
+    "Utils/*.cpp"
+    "Utils/*.cu"
 )
+
+add_executable(Cavalry ${ALL_CODE})
 
 IF(APPLE)
 set_property(TARGET Cavalry
