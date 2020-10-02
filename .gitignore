@@ -1,4 +1,5 @@
 .vs/
+.vscode/
 x64/
 out/
 *.aux
