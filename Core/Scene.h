@@ -7,5 +7,5 @@ class Scene{
 
 public:
     std::vector<Primitive> primitives;
-    bool intersect(IntersectionResult& result, const Ray& ray);
+    bool intersect(IntersectionResult& result, const Ray& ray) const;
 };

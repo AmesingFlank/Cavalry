@@ -2,6 +2,7 @@
 .vscode/
 x64/
 out/
+build_tmp/
 *.aux
 *.bbl
 *.blg

@@ -9,6 +9,7 @@ set(CMAKE_CXX_STANDARD 17)
 include_directories(Dependencies/include)
 
 file(GLOB ALL_CODE
+    "main.cpp"
     "BSDFs/*.h"
     "BSDFs/*.cpp"
     "BSDFs/*.cu"

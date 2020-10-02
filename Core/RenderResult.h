@@ -2,16 +2,18 @@
 
 
 #include <string>
+#include <vector>
 
 class RenderResult
 {
 public:
-    unsigned char *data;
     unsigned int width;
     unsigned int height;
+    std::vector<unsigned char> data;
+
 
     RenderResult(int width_, int height_);
-    ~RenderResult();
+    
 
     void saveToPNG(const std::string& fileName);
 };

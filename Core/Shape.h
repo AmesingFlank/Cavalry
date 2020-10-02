@@ -9,5 +9,6 @@
 
 
 class Shape{
-    bool intersect(IntersectionResult& result, const Ray& ray);
+public:
+    virtual bool intersect(IntersectionResult& result, const Ray& ray) = 0;
 };

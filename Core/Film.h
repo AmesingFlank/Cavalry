@@ -2,12 +2,14 @@
 
 #include "RenderResult.h"
 #include "Color.h"
+#include "CameraSample.h"
 
 class Film{
 public:
-    RenderResult readCurrentResult();
-    void addSample(float2 position, Color color);
+    virtual RenderResult readCurrentResult()=0;
+    virtual void addSample(const CameraSample& sample, const Color& color) = 0;
 
     int width;
     int height;
+
 };

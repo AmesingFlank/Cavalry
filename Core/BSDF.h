@@ -5,6 +5,6 @@
 
 class BSDF {
 public:
-    Color eval(float3 incident, float3 exitant);
+    virtual Color eval(float3 incident, float3 exitant) = 0;
 
 };

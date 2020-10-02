@@ -4,7 +4,7 @@
 #include "Integrator.h"
 #include "Camera.h"
 #include "Film.h"
-
+#include "Sampler.h"
 #include <memory>
 
 class Renderer {

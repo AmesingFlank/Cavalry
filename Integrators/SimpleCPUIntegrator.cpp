@@ -1,31 +1,26 @@
 #include "SimpleCPUIntegrator.h"
 
-RenderResult SimpleCPUIntegrator::render(const Scene& scene, const Camera& camera, Film& film, const CameraSampler& cameraSampler) {
+RenderResult SimpleCPUIntegrator::render(const Scene& scene, const Camera& camera, Film& film, CameraSampler& cameraSampler) {
     std::vector<CameraSample> allSamples = cameraSampler.genAllSamples(camera, film);
-    std::vector<Ray> allRays;
-    std::vector<IntersectionResult> intersectionResults;
-    std::vector<Color> allColors;
+
+
     for(const auto& sample:allSamples){
         Ray ray = camera.genRay(sample);
-        allRays.push_back(ray);
 
         IntersectionResult thisResult;
-        scene->intersect(thisResult,ray);
+        scene.intersect(thisResult,ray);
 
-        intersectionResults.push_back(thisResult);
-        allColors.push_back(renderIntersection(result))
-    }
+		Color color = renderIntersection(thisResult);
 
-    RenderResult renderResult(film.width,film.height);
-    for(int i = 0;i<allColors.size();++i){
-        writeColorAt(allColors[i], renderResult.data + i*3);
+        film.addSample(sample,color);
     }
-    return renderResult;
+    
+    return film.readCurrentResult();
 }
 
 
 Color SimpleCPUIntegrator::renderIntersection(const IntersectionResult& result){
-    if(result.intersected){
+    if(!result.intersected){
         return make_float3(0,0,0);
     }
     else{

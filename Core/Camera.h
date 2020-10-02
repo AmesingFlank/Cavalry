@@ -1,7 +1,9 @@
 #pragma once
 
+#include "../Utils/GpuCommons.h"
+#include "Ray.h"
 #include "CameraSample.h"
 class Camera{
 public:
-    Ray genRay(const CameraSample& cameraSample);
+    virtual Ray genRay(const CameraSample& cameraSample) const = 0;
 };

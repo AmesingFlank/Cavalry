@@ -4,7 +4,7 @@
 #include "Film.h"
 #include <vector>
 
-class CameraSampler{
+class CameraSampler {
 public:
-    std::vector<CameraSample> genAllSamples(const Camera& camera, const Film& film);
-}
+	virtual std::vector<CameraSample> genAllSamples(const Camera& camera, const Film& film)=0;
+};
