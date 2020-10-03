@@ -20,5 +20,5 @@ void SimpleFilm::addSample(const CameraSample& sample, const Spectrum& spectrum)
 		std::cout << x << " " << y <<"  "<<index<<"    "<<result.data.size()<< std::endl;
 	}
 
-	writeColorAt(color,&(result.data[index*3]));
+	writeColorAt(spectrum,&(result.data[index*3]));
 }

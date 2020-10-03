@@ -9,6 +9,6 @@ public:
     float3 position;
     Spectrum color;
 
-    virtual Spectrum sampleRayToPoint(const float3& position,const float2& randomSource, float& outputProbability, Ray& outputRay) override;
+    virtual Spectrum sampleRayToPoint(const float3& position,const float2& randomSource, float& outputProbability, Ray& outputRay,,VisibilityTest& outputVisibilityTest) const override;
 
 };

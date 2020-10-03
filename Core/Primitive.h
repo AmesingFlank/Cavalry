@@ -4,7 +4,6 @@
 #include "Material.h"
 #include <vector>
 #include <memory>
-#include "IntersectionResult.h"
 #include "Shape.h"
 
 class Primitive{

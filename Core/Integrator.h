@@ -11,12 +11,13 @@
 class Integrator{
 public:
     virtual RenderResult render(const Scene& scene, const Camera& camera, Film& film) = 0;
+    std::unique_ptr<Sampler> sampler;
 };
 
 
-class SamplingIntegrator{
+class SamplingIntegrator: public Integrator{
 public:
     std::unique_ptr<CameraSampler> cameraSampler;
     virtual RenderResult render(const Scene& scene, const Camera& camera, Film& film) override;
-    virtual Spectrum renderCameraSample(const Scene& scene, const CameraSample sample) = 0;
+    virtual Spectrum renderRay(const Scene& scene, const Ray& ray) = 0;
 };

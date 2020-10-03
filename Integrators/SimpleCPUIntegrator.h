@@ -4,5 +4,5 @@
 
 class SimpleCPUIntegrator : public SamplingIntegrator {
 public:
-	virtual Spectrum renderCameraSample(const Scene& scene, const CameraSample sample) override;
+	virtual Spectrum renderRay(const Scene& scene, const Ray& ray) override;
 };

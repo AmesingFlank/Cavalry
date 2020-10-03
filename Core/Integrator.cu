@@ -5,7 +5,7 @@ RenderResult SamplingIntegrator::render(const Scene& scene, const Camera& camera
 
 
     for(const auto& sample:allSamples){
-        Spectrum color = renderCameraSample(scene,sample);
+        Spectrum color = renderRay(scene,camera.genRay(sample));
         film.addSample(sample,color);
     }
     

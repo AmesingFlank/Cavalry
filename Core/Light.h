@@ -3,6 +3,8 @@
 #pragma once
 
 #include "Color.h"
+#include "Ray.h"
+#include "VisibilityTest.h"
 
 class Light{
 public:
@@ -11,13 +13,13 @@ public:
 
 class AreaLight: public Light{
 public:
-    virtual Spectrum evaluateRay(const Ray& ray) = 0;
+    virtual Spectrum evaluateRay(const Ray& ray) const = 0;
 };
 
-class EnvironmentMap : public Light{
+class EnvironmentMap : public AreaLight{
 public:
-    virtual Spectrum sampleRayToPoint(const float3& position,const float2& randomSource, float& outputProbability, Ray& outputRay) override;
+    virtual Spectrum sampleRayToPoint(const float3& position,const float2& randomSource, float& outputProbability, Ray& outputRay) const override;
 
-    virtual Spectrum evaluateRay(const Ray& ray) override;
+    virtual Spectrum evaluateRay(const Ray& ray) const = 0;
 
 };
