@@ -9,5 +9,5 @@ struct IntersectionResult{
     float3 position;
     float3 normal;
     float2 textureCoordinates;
-    Primitive* primitive;
+    const Primitive* primitive;
 };

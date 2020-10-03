@@ -4,7 +4,7 @@
 
 bool Scene::intersect(IntersectionResult& result, const Ray& ray) const{
     bool foundIntersection = false;
-    for(auto& prim:primitives){
+    for(const Primitive& prim:primitives){
         IntersectionResult thisResult;
         if(prim.intersect(thisResult,ray)){
             if(!foundIntersection || thisResult.distance<result.distance){
@@ -19,8 +19,8 @@ bool Scene::intersect(IntersectionResult& result, const Ray& ray) const{
 bool Scene::testVisibility(const VisibilityTest& test) const{
     Ray ray = test.ray;
     bool foundIntersection = false;
-    for(auto& prim:primitives){
-        if(&prim->shape.get() == test.sourceGeometry || &prim->shape.get() == test.targetGeometry){
+    for(const auto& prim:primitives){
+        if(prim.shape.get() == test.sourceGeometry || prim.shape.get() == test.targetGeometry){
             continue;
         }
         IntersectionResult thisResult;

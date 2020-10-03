@@ -21,7 +21,7 @@ bool Sphere::intersect(IntersectionResult& result, const Ray& ray){
 
     if(t1 <= 0 && t2 <= 0){
         result.intersected = false;
-        std::cout << "no intersection.. t<0" <<std::endl;
+        //std::cout << "no intersection.. t<0" <<std::endl;
         return false;
     }
 
