@@ -1,8 +1,8 @@
 #pragma once
 
 #include "../Utils/GpuCommons.h"
-#include "Primitive.h"
 
+class Primitive;
 struct IntersectionResult{
     bool intersected = false;
     float distance;

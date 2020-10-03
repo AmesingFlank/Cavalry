@@ -3,6 +3,9 @@
 #include "BSDF.h"
 #include <vector>
 #include <memory>
+#include "Ray.h"
+#include "Color.h"
+#include "IntersectionResult.h"
 
 class Material{
 public:

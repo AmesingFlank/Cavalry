@@ -4,6 +4,7 @@
 #include "Core/Material.h"
 #include "Shapes/Sphere.h"
 #include "Integrators/SimpleCPUIntegrator.h"
+#include "Integrators/DirectLightingCPUIntegrator.h"
 #include "Cameras/PerspectiveCamera.h"
 #include "Samplers/NaiveCameraSampler.h"
 #include "Films/SimpleFilm.h"
@@ -17,7 +18,7 @@ int main(){
 
     Renderer renderer;
 
-    std::unique_ptr<SimpleCPUIntegrator> integrator = std::make_unique<SimpleCPUIntegrator>();
+    std::unique_ptr<DirectLightingCPUIntegrator> integrator = std::make_unique<DirectLightingCPUIntegrator>();
     integrator->cameraSampler = std::make_unique<NaiveCameraSampler>();
     integrator->sampler = std::make_unique<SimpleSampler>();
 

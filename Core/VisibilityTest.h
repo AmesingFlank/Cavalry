@@ -2,7 +2,7 @@
 
 #include "../Utils/GpuCommons.h"
 
-class Primitive;
+class Shape;
 
 
 class VisibilityTest{
@@ -10,8 +10,8 @@ public:
     Ray ray;
     float distanceLimit;
     bool useDistanceLimit = false;
-    Primitive* sourcePrim = nullptr;
-    Primitive* targetPrim = nullptr;
+    Shape* sourceGeometry = nullptr;
+    Shape* targetGeometry = nullptr;
     
 
     void setDistanceLimit(float limit){

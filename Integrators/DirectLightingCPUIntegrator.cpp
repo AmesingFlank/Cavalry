@@ -11,7 +11,7 @@ Spectrum DirectLightingCPUIntegrator::renderRay(const Scene& scene, const Ray& r
     
     Spectrum result = make_float3(0,0,0);
 
-    Primitive& prim = intersection->primitive;
+	Primitive* prim = intersection.primitive;
 
     Ray exitantRay = {intersection.position,ray.direction*-1};
 
@@ -21,11 +21,11 @@ Spectrum DirectLightingCPUIntegrator::renderRay(const Scene& scene, const Ray& r
         float2 randomSource = sampler->rand2();
 
         VisibilityTest visibilityTest;
-        visibilityTest.sourcePrim = &prim;
+        visibilityTest.sourceGeometry = prim->shape.get();
 
-        Spectrum incident = light->sampleRayToPoint(intersection.position, randomSource, probability, Ray& ray,visibilityTest);
+        Spectrum incident = light->sampleRayToPoint(intersection.position, randomSource, probability, rayToLight,visibilityTest);
         if(scene.testVisibility(visibilityTest)){
-            result += prim.material->eval(rayToLight,incident,exitantRay,intersection);
+            result += prim->material->eval(rayToLight,incident,exitantRay,intersection);
         }
     }
     return result;

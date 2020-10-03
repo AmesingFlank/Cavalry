@@ -10,4 +10,5 @@ class Primitive{
 public:
     std::unique_ptr<Material> material;
     std::unique_ptr<Shape> shape;
+    bool intersect(IntersectionResult& result, const Ray& ray);
 };
