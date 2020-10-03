@@ -12,7 +12,6 @@ public:
     std::unique_ptr<Integrator> integrator;
     std::unique_ptr<Camera> camera;
     std::unique_ptr<Film> film;
-    std::unique_ptr<CameraSampler> cameraSampler;
 
 	RenderResult render(const Scene& scene);
 };

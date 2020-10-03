@@ -11,7 +11,7 @@ RenderResult SimpleFilm::readCurrentResult(){
     return result;
 }
 
-void SimpleFilm::addSample(const CameraSample& sample, const Color& color){
+void SimpleFilm::addSample(const CameraSample& sample, const Spectrum& spectrum){
     int x = round(sample.x*(width-1));
     int y = round(sample.y*(height-1));
     int index = y*width + x;

@@ -1,7 +1,7 @@
 #include "Lambertian.h"
+#include "../Utils/MathsCommons.h"
 
-#define _USE_MATH_DEFINES
-#include <math.h>
+
 
 LambertianBSDF::LambertianBSDF(const Color& baseColor_):baseColor(baseColor_){
 

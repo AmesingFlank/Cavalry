@@ -5,7 +5,7 @@
 class SimpleFilm : public Film {
 public:
 	SimpleFilm(int width_, int height_);
-	virtual void addSample(const CameraSample& sample, const Color& color) override;
+	virtual void addSample(const CameraSample& sample, const Spectrum& spectrum) override;
 	virtual RenderResult readCurrentResult()  override;
 
 	RenderResult result;

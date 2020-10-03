@@ -15,10 +15,13 @@ int main(){
 
     Renderer renderer;
 
-    renderer.integrator = std::make_unique<SimpleCPUIntegrator>();
+    std::unique_ptr<SimpleCPUIntegrator> integrator;
+    integrator->cameraSampler = std::make_unique<NaiveCameraSampler>();
+
+
+    renderer.integrator = std::move(integrator);
     renderer.camera = std::make_unique<PerspectiveCamera>();
     renderer.film = std::make_unique<SimpleFilm>(200,200);
-    renderer.cameraSampler = std::make_unique<NaiveCameraSampler>();
 
 
     Material lambertian;

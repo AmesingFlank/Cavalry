@@ -2,9 +2,7 @@
 
 #include "../Core/Integrator.h"
 
-class SimpleCPUIntegrator : public Integrator {
+class SimpleCPUIntegrator : public SamplingIntegrator {
 public:
-	virtual RenderResult render(const Scene& scene, const Camera& camera, Film& film, CameraSampler& cameraSampler) override;
-
-	Color renderIntersection(const IntersectionResult& result);
+	virtual Spectrum renderCameraSample(const Scene& scene, const CameraSample sample) override;
 };

@@ -3,6 +3,7 @@
 #include "../Utils/GpuCommons.h"
 
 using Color = float3;
+using Spectrum = float3;
 
 inline void writeColorAt(const Color& color, unsigned char* address){
     address[0] = color.x * 255;

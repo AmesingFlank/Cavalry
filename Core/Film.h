@@ -7,7 +7,7 @@
 class Film{
 public:
     virtual RenderResult readCurrentResult()=0;
-    virtual void addSample(const CameraSample& sample, const Color& color) = 0;
+    virtual void addSample(const CameraSample& sample, const Spectrum& color) = 0;
 
     int width;
     int height;
