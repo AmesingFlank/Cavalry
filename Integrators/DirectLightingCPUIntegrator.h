@@ -4,9 +4,9 @@
 #include "../Core/Sampler.h"
 #include <memory>
 
-class DirectLightingCPUIntegrator : public SamplingIntegrator {
+class DirectLightingCPUIntegrator : public SamplingIntegratorCPU {
 public:
-	virtual Spectrum renderRay(const Scene& scene, const Ray& ray) override;
+	virtual Spectrum renderRay(const SceneHandle& scene, const Ray& ray) override;
 
     
 };

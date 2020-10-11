@@ -10,10 +10,10 @@ public:
     Ray ray;
     float distanceLimit;
     bool useDistanceLimit = false;
-    Shape* sourceGeometry = nullptr;
-    Shape* targetGeometry = nullptr;
+    ShapeID sourceGeometry = nullptr;
+    ShapeID targetGeometry = nullptr;
     
-
+    __host__ __device__
     void setDistanceLimit(float limit){
         distanceLimit  = limit;
         useDistanceLimit = true;

@@ -6,18 +6,21 @@
 #include "Sampler.h"
 #include "Color.h"
 #include <memory>
+#include "../Cameras/CameraObject.h"
 
 
 class Integrator{
 public:
-    virtual RenderResult render(const Scene& scene, const Camera& camera, Film& film) = 0;
+    virtual RenderResult render(const Scene& scene, const CameraObject& camera, Film& film) = 0;
     std::unique_ptr<Sampler> sampler;
 };
 
 
-class SamplingIntegrator: public Integrator{
+class SamplingIntegratorCPU: public Integrator{
 public:
     std::unique_ptr<CameraSampler> cameraSampler;
-    virtual RenderResult render(const Scene& scene, const Camera& camera, Film& film) override;
-    virtual Spectrum renderRay(const Scene& scene, const Ray& ray) = 0;
+    virtual RenderResult render(const Scene& scene, const CameraObject& camera, Film& film) override;
+
+    virtual Spectrum renderRay(const SceneHandle& scene, const Ray& ray) = 0;
 };
+

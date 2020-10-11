@@ -2,9 +2,14 @@
 
 #include "Color.h"
 #include "../Utils/GpuCommons.h"
+#include "../Utils/Variant.h"
+
 
 class BSDF {
 public:
-    virtual Spectrum eval(float3 incident, float3 exitant) = 0;
-
+    __host__ __device__
+    virtual Spectrum eval(const float3& incident, const float3& exitant) const = 0;
 };
+
+
+

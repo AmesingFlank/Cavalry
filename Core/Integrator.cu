@@ -1,11 +1,12 @@
 #include "Integrator.h"
 
-RenderResult SamplingIntegrator::render(const Scene& scene, const Camera& camera, Film& film){
+RenderResult SamplingIntegratorCPU::render(const Scene& scene, const CameraObject& camera, Film& film){
     std::vector<CameraSample> allSamples = cameraSampler->genAllSamples(camera, film);
 
+    SceneHandle sceneHandle= scene.getHostHandle();
 
     for(const auto& sample:allSamples){
-        Spectrum color = renderRay(scene,camera.genRay(sample));
+        Spectrum color = renderRay(sceneHandle,camera.genRay(sample));
         film.addSample(sample,color);
     }
     

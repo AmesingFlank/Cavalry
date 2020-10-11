@@ -1,6 +1,6 @@
 #include "SimpleCPUIntegrator.h"
 
-Spectrum SimpleCPUIntegrator::renderRay(const Scene& scene, const Ray& ray){
+Spectrum SimpleCPUIntegrator::renderRay(const SceneHandle& scene, const Ray& ray){
 
     IntersectionResult result;
     scene.intersect(result,ray);

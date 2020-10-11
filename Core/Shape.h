@@ -7,8 +7,19 @@
 #include "IntersectionResult.h"
 #include "Ray.h"
 
+class Shape;
+// using the this pointer as a unique identifier of the shape.
+using ShapeID = const Shape*;
+
 
 class Shape{
 public:
-    virtual bool intersect(IntersectionResult& result, const Ray& ray) = 0;
+    
+    __host__ __device__
+    ShapeID getID() const { 
+        return this; 
+    };
+
+    __host__ __device__
+    virtual bool intersect(IntersectionResult& result, const Ray& ray) const = 0;
 };

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "BSDF.h"
+#include "../BSDFs/BSDFObject.h"
 #include <vector>
 #include <memory>
 #include "Ray.h"
@@ -9,6 +9,13 @@
 
 class Material{
 public:
-    std::vector<std::shared_ptr<BSDF>> bsdfs;
-    virtual Spectrum eval(const Ray& incidentRay, const Spectrum& incidentSpectrum, const Ray& exitantRay, const IntersectionResult& intersection);
+    BSDFObject bsdf;
+
+    __host__ __device__
+    Spectrum eval(const Ray& incidentRay, const Spectrum& incidentSpectrum, const Ray& exitantRay, const IntersectionResult& intersection) const{
+        float cosine = dot(incidentRay.direction,intersection.normal);
+        Spectrum result = bsdf.eval(incidentRay.direction,exitantRay.direction) * incidentSpectrum * cosine ;
+            
+        return result;
+    }
 };
