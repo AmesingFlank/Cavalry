@@ -1,6 +1,11 @@
 #include "DirectLightingCPUIntegrator.h"
+#include "../Samplers/SimpleSamplerCPU.h"
 
-Spectrum DirectLightingCPUIntegrator::renderRay(const SceneHandle& scene, const Ray& ray){
+DirectLightingCPUIntegrator::DirectLightingCPUIntegrator() {
+    sampler = std::make_unique<SamplerObject>(SimpleSamplerCPU());
+}
+
+Spectrum DirectLightingCPUIntegrator::renderRay(const SceneHandle& scene, const Ray& ray, SamplerObject& sampler){
 
     IntersectionResult intersection;
     scene.intersect(intersection,ray);
@@ -21,7 +26,7 @@ Spectrum DirectLightingCPUIntegrator::renderRay(const SceneHandle& scene, const 
         const LightObject& light = scene.lights[i];
         Ray rayToLight;
         float probability;
-        float2 randomSource = sampler->rand2();
+        float2 randomSource = sampler.rand2();
 
         VisibilityTest visibilityTest;
         visibilityTest.sourceGeometry = prim->shape.getID();

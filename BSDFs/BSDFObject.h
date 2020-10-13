@@ -35,7 +35,7 @@ public:
 		auto visitor = [&](auto& arg) -> Spectrum {
 			using T = typename std::remove_reference<decltype(arg)>::type;
 			if constexpr (std::is_base_of<BSDF,typename T>::value) {
-				return arg.eval(incident, exitant);
+				return arg.T::eval(incident, exitant);
 			}
 			else {
 				SIGNAL_VARIANT_ERROR;

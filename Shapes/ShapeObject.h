@@ -31,7 +31,7 @@ public:
 		auto visitor = [&](auto& arg) -> bool {
 			using T = typename std::remove_reference<decltype(arg)>::type;
 			if constexpr (std::is_base_of<Shape,typename T>::value) {
-				return arg.intersect(result,ray);
+				return arg.T::intersect(result,ray);
 			}
 			else {
 				SIGNAL_VARIANT_ERROR;
@@ -45,7 +45,7 @@ public:
         auto visitor = [&](auto& arg) -> ShapeID {
 			using T = typename std::remove_reference<decltype(arg)>::type;
 			if constexpr (std::is_base_of<Shape,typename T>::value) {
-				return arg.getID();
+				return arg.T::getID();
 			}
 			else {
 				SIGNAL_VARIANT_ERROR;

@@ -35,7 +35,7 @@ public:
 		auto visitor = [&](auto& arg) -> Ray {
 			using T = typename std::remove_reference<decltype(arg)>::type;
 			if constexpr (std::is_base_of<Camera,typename T>::value) {
-				return arg.genRay(cameraSample);
+				return arg.T::genRay(cameraSample);
 			}
 			else {
 				SIGNAL_VARIANT_ERROR;

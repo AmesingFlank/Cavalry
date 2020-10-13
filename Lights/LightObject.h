@@ -31,7 +31,7 @@ public:
 		auto visitor = [&](auto& arg) -> Spectrum {
 			using T = typename std::remove_reference<decltype(arg)>::type;
 			if constexpr (std::is_base_of<Light,typename T>::value) {
-				return arg.sampleRayToPoint(position,randomSource,outputProbability,outputRay,outputVisibilityTest);
+				return arg.T::sampleRayToPoint(position,randomSource,outputProbability,outputRay,outputVisibilityTest);
 			}
 			else {
 				SIGNAL_VARIANT_ERROR;

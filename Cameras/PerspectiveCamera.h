@@ -5,7 +5,7 @@
 class PerspectiveCamera: public Camera{
 public:
 	__host__ __device__
-	virtual Ray genRay(const CameraSample& cameraSample) const override
+	Ray genRay(const CameraSample& cameraSample) const
 	{
 		float3 pixelLocation = {0,0,0};
 		pixelLocation.x = cameraSample.x - 0.5;

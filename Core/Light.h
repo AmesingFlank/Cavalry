@@ -29,7 +29,7 @@ public:
         outputProbability = 1.0 / (4.0*M_PI);
 
         outputVisibilityTest.ray = outputRay;
-        return evaluateRay(outputRay); 
+        return EnvironmentMap::evaluateRay(outputRay);
     }
 
     __host__ __device__

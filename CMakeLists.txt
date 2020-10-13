@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
 project(Cavalry LANGUAGES CXX CUDA C)
 
 
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -use_fast_math -std=c++17 -Xcompiler \"/std:c++17\"")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -use_fast_math --extended-lambda -std=c++17 -Xcompiler \"/std:c++17\"")
 set(CMAKE_CXX_STANDARD 17)
 
 

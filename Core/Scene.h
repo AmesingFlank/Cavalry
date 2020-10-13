@@ -17,7 +17,7 @@ struct SceneHandle{
 
     const LightObject* environmentMapLightObject;
 
-    
+    __host__ __device__
     const EnvironmentMap& getEnvironmentMap() const{
         return environmentMapLightObject->get<EnvironmentMap>();
     }
@@ -60,31 +60,31 @@ struct SceneHandle{
 
 class Scene{
 public:
-    thrust::host_vector<Primitive> primitivesHost;
-    thrust::device_vector<Primitive> primitivesDevice;
+    std::vector<Primitive> primitivesHost;
+    ManagedArray<Primitive> primitivesDevice = ManagedArray<Primitive>(0,true);
 
-    thrust::host_vector<LightObject> lightsHost;
-    thrust::device_vector<LightObject> lightsDevice;
+    std::vector<LightObject> lightsHost;
+    ManagedArray<LightObject> lightsDevice = ManagedArray<LightObject>(0,true);
 
     int environmentMapIndex;
 
     SceneHandle getHostHandle() const{
         return {
-            thrust::raw_pointer_cast(primitivesHost.data()),
+            primitivesHost.data(),
             primitivesHost.size(),
-            thrust::raw_pointer_cast(lightsHost.data()),
+            lightsHost.data(),
             lightsHost.size(), 
-            thrust::raw_pointer_cast(lightsHost.data())+environmentMapIndex
+            lightsHost.data()+environmentMapIndex
         };
     }
 
     SceneHandle getDeviceHandle()const {
         return {
-            thrust::raw_pointer_cast(primitivesDevice.data()),
-            primitivesDevice.size(),
-            thrust::raw_pointer_cast(lightsDevice.data()),
-            lightsDevice.size(),
-            thrust::raw_pointer_cast(lightsDevice.data()) + environmentMapIndex
+            primitivesDevice.data,
+            (size_t)primitivesDevice.N,
+            lightsDevice.data,
+            (size_t)lightsDevice.N,
+            lightsDevice.data + environmentMapIndex
         };
     }
 

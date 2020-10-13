@@ -157,7 +157,7 @@ struct nearest_type {
 template<typename Fn, typename H, typename T>
 __host__ __device__
 auto unwrap_apply(Fn fn,
-                  const storage<cons<H, T> >& storage) ->
+                  storage<cons<H, T> >& storage) ->
     decltype(fn(std::declval<H>()))
 {
     return fn(storage.head);
@@ -167,7 +167,28 @@ auto unwrap_apply(Fn fn,
 template<typename Fn, typename H, typename T>
 __host__ __device__
 auto unwrap_apply(Fn fn,
-                  const storage<cons<uninitialized<H>, T>>& storage) ->
+                  storage<cons<uninitialized<H>, T>>& storage) ->
+    decltype(fn(std::declval<H>()))
+{
+    return fn(storage.head.get());
+}
+
+
+#pragma hd_warning_disable
+template<typename Fn, typename H, typename T>
+__host__ __device__
+auto unwrap_apply(Fn fn,
+    const storage<cons<H, T> >& storage) ->
+    decltype(fn(std::declval<H>()))
+{
+    return fn(storage.head);
+}
+
+#pragma hd_warning_disable
+template<typename Fn, typename H, typename T>
+__host__ __device__
+auto unwrap_apply(Fn fn,
+    const storage<cons<uninitialized<H>, T>>& storage) ->
     decltype(fn(std::declval<H>()))
 {
     return fn(storage.head.get());
@@ -185,7 +206,7 @@ struct apply_to_variant<Fn, cons<Head, Tail>, R, L, false> {
     template<typename S>
     __host__ __device__
     static auto impl(Fn fn,
-                     const S& storage,
+                     S& storage,
                      const char& which) ->
         decltype(fn(std::declval<typename unwrapped<typename S::head_type>::type>()))
     {
@@ -196,6 +217,23 @@ struct apply_to_variant<Fn, cons<Head, Tail>, R, L, false> {
                 fn, storage.tail, which);
         }
     }
+
+#pragma hd_warning_disable
+    template<typename S>
+    __host__ __device__
+        static auto impl(Fn fn,
+            const S& storage,
+            const char& which) ->
+        decltype(fn(std::declval<typename unwrapped<typename S::head_type>::type>()))
+    {
+        if (R == which) {
+            return unwrap_apply(fn, storage);
+        }
+        else {
+            return apply_to_variant<Fn, Tail, R + 1, L>::impl(
+                fn, storage.tail, which);
+        }
+    }
 };
 
 template<typename Fn, typename Head, typename Tail, int R, int L>
@@ -203,8 +241,18 @@ struct apply_to_variant<Fn, cons<Head, Tail>, R, L, true> {
     template<typename S>
     __host__ __device__
     static auto impl(Fn fn,
-                     const S& storage,
+                     S& storage,
                      const char& /*which*/) ->
+        decltype(fn(std::declval<typename unwrapped<typename S::head_type>::type>()))
+    {
+        return unwrap_apply(fn, storage);
+    }
+
+    template<typename S>
+    __host__ __device__
+     static auto impl(Fn fn,
+            const S& storage,
+            const char& /*which*/) ->
         decltype(fn(std::declval<typename unwrapped<typename S::head_type>::type>()))
     {
         return unwrap_apply(fn, storage);
@@ -216,7 +264,7 @@ struct apply_to_variant<Fn, cons<Head, Tail>, R, L, true> {
 //Apply visitor to variant
 template<typename Fn, typename Variant>
 __host__ __device__
-auto apply_visitor(Fn fn, const Variant& v) -> 
+auto apply_visitor(Fn fn, Variant& v) -> 
     decltype(fn(std::declval<typename Variant::cons_type::head_type>()))
 {
     return detail::apply_to_variant<Fn,

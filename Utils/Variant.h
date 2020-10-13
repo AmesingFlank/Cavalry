@@ -4,15 +4,13 @@
 
 // https://github.com/cselab/cuda_variant
 #include <variant/variant.h>
-
-#ifndef SIGNAL_VARIANT_ERROR
-#define SIGNAL_VARIANT_ERROR printf("variant error!\n");
-#endif
+#include "GpuCommons.h"
 
 
-#ifndef SIGNAL_VARIANT_GET_ERROR
-#define SIGNAL_VARIANT_GET_ERROR printf("variant get error!\n");
-#endif
+#define SIGNAL_VARIANT_ERROR SIGNAL_ERROR("variant error")
+
+
+#define SIGNAL_VARIANT_GET_ERROR SIGNAL_ERROR("variant get error")
 
 
 
@@ -73,7 +71,6 @@ public:
             }
             else {
                 SIGNAL_VARIANT_GET_ERROR;
-                return *static_cast<T*>(nullptr);
             }
         });
     }
@@ -88,7 +85,6 @@ public:
             }
             else {
                 SIGNAL_VARIANT_GET_ERROR;
-                return *static_cast<T*>(nullptr);
             }
         });
     }

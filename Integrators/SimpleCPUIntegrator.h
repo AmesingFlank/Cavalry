@@ -2,7 +2,7 @@
 
 #include "../Core/Integrator.h"
 
-class SimpleCPUIntegrator : public SamplingIntegratorCPU {
+class SimpleCPUIntegrator : public SamplingIntegratorCPU<SimpleCPUIntegrator> {
 public:
-	virtual Spectrum renderRay(const SceneHandle& scene, const Ray& ray) override;
+	static Spectrum renderRay(const SceneHandle& scene, const Ray& ray,SamplerObject& sampler);
 };
