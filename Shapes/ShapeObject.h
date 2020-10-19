@@ -1,9 +1,10 @@
 #pragma once
 #include "Sphere.h"
+#include "TriangleMesh.h"
 
 #include "../Utils/Variant.h"
 
-using ShapeVariant = Variant<Sphere>;
+using ShapeVariant = Variant<Sphere,TriangleMesh>;
 
 class ShapeObject : public ShapeVariant {
 public:
@@ -53,4 +54,18 @@ public:
 		};
 		return visit(visitor);
     }
+
+	__host__
+	ShapeObject getCopyForKernel(){
+		auto visitor = [&](auto& arg) -> ShapeObject{
+			using T = typename std::remove_reference<decltype(arg)>::type;
+			if constexpr (std::is_base_of<Shape,typename T>::value) {
+				return ShapeObject(arg.T::getCopyForKernel());
+			}
+			else {
+				SIGNAL_VARIANT_ERROR;
+			}
+		};
+		return visit(visitor);
+	}
 };

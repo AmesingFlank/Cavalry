@@ -2,6 +2,7 @@
 
 #include "../Core/Film.h"
 #include "../Utils/GpuCommons.h"
+#include "../Utils/Array.h"
 
 
 class SimpleFilmGPU : public Film {
@@ -32,6 +33,6 @@ public:
 
 	virtual RenderResult readCurrentResult()  override;
 
-	ManagedArray<unsigned char> data;
+	GpuArray<unsigned char> data;
 
 };

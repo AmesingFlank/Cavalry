@@ -16,6 +16,10 @@ public:
 
     }
 
+    Sphere getCopyForKernel(){
+        return *this;
+    }
+
 
     __host__ __device__
     virtual bool intersect(IntersectionResult& result, const Ray& ray) const override{

@@ -2,6 +2,8 @@
 
 #include <ctime>
 #include "GpuCommons.h"
+#include "Array.h"
+
 #include <iostream>
 
 inline long long getSeed(){
@@ -12,7 +14,7 @@ inline long long getSeed(){
 
 __global__ void initCurandStates ( curandState * states, unsigned long seed, int maxThreads );
 
-struct CurandStateArray:public ManagedArray<curandState> {
+struct CurandStateArray:public GpuArray<curandState> {
 
     __device__ 
     curandState* getState(int index) {
@@ -20,7 +22,7 @@ struct CurandStateArray:public ManagedArray<curandState> {
     }
 
     __host__
-    CurandStateArray(int N_, bool isCopyForKernel_ = false) :ManagedArray<curandState>(N_,isCopyForKernel_) {
+    CurandStateArray(int N_, bool isCopyForKernel_ = false) :GpuArray<curandState>(N_,isCopyForKernel_) {
         if (!isCopyForKernel_) {
             int numThreads = min(N, MAX_THREADS_PER_BLOCK);
             int numBlocks = divUp(N, numThreads);

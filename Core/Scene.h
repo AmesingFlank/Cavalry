@@ -7,6 +7,7 @@
 #include "../Lights/LightObject.h"
 #include <thrust/copy.h>
 #include <thrust/device_vector.h>
+#include "../Utils/Array.h"
 
 struct SceneHandle{
     const Primitive* primitives;
@@ -61,10 +62,10 @@ struct SceneHandle{
 class Scene{
 public:
     std::vector<Primitive> primitivesHost;
-    ManagedArray<Primitive> primitivesDevice = ManagedArray<Primitive>(0,true);
+    GpuArray<Primitive> primitivesDevice = GpuArray<Primitive>(0,true);
 
     std::vector<LightObject> lightsHost;
-    ManagedArray<LightObject> lightsDevice = ManagedArray<LightObject>(0,true);
+    GpuArray<LightObject> lightsDevice = GpuArray<LightObject>(0,true);
 
     int environmentMapIndex;
 
