@@ -68,7 +68,8 @@ template<typename T>
     // copy assignment
     __host__ __device__ inline uninitialized<T> &operator=(const T &other)
     {
-      T& self = *this;
+
+      T& self = *(new(this) T());
       self = other;
       return *this;
     }

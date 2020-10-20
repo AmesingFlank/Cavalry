@@ -1,4 +1,5 @@
 #include "TriangleMesh.h"
+#include <iostream>
 
 __host__ 
 TriangleMesh::TriangleMesh():
@@ -10,7 +11,7 @@ normals(0,true),
 texCoords(0,true),
 indices(0,true)
 {
-
+    std::cout << "default constructing trianglemesh" << std::endl;
 }
 
 __host__ 
@@ -34,4 +35,11 @@ TriangleMesh TriangleMesh::getCopyForKernel(){
     copy.texCoords.gpu.data = texCoords.gpu.data;
     copy.indices.gpu.data = indices.gpu.data;
     return copy;
+}
+
+void TriangleMesh::copyToDevice() {
+    positions.copyToDevice();
+    normals.copyToDevice();
+    texCoords.copyToDevice();
+    indices.copyToDevice();
 }

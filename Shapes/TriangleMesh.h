@@ -26,7 +26,6 @@ inline bool rayTriangleIntersection(IntersectionResult& result, const Ray& r,
         result.intersected = false;
         return false;
     }
-		return -1.0f;
 
 	float3 qvec = cross(tvec, edge1);
 
@@ -66,11 +65,14 @@ public:
     __host__ 
     TriangleMesh(int trianglesCount_, int verticesCount_,bool hasVertexNormals_, bool isCopyForKernel_);
 
+    __host__
+    void copyToDevice();
+
     TriangleMesh getCopyForKernel();
 
 
     __host__ __device__
-    float3 getNormal(IntersectionResult& result, int triangleIndex,float u, float v) const{
+    void getNormal(IntersectionResult& result, int triangleIndex,float u, float v) const{
 #ifdef __CUDA_ARCH__
         float3* positionsData = positions.gpu.data;
         float3* normalsData = normals.gpu.data;
@@ -85,14 +87,14 @@ public:
             float3 n0 = normalsData[thisIndices.x];
             float3 n1 = normalsData[thisIndices.y];
             float3 n2 = normalsData[thisIndices.z];
-            return normalize(n0*(1.f-u-v) + u*n1+v*n2);
+            result.normal= normalize(n0*(1.f-u-v) + u*n1+v*n2);
         }
         else{
             int3 thisIndices = indicesData[triangleIndex];
             float3 p0 = positionsData[thisIndices.x];
             float3 p1 = positionsData[thisIndices.y];
             float3 p2 = positionsData[thisIndices.z];
-            return normalize(cross(p2-p0,p1-p0));
+            result.normal = normalize(cross(p2-p0,p1-p0));
         }
     }
 
@@ -121,7 +123,7 @@ public:
             IntersectionResult thisResult;
             float u,v;
             if(rayTriangleIntersection(thisResult,ray,v0,edge1,edge2,u,v)){
-                if(!result.intersected || result.distance < thisResult.distance){
+                if(!result.intersected || result.distance > thisResult.distance){
                     getNormal(thisResult,i,u,v);
                     result = thisResult;
                 }

@@ -16,8 +16,8 @@ struct CpuArray{
     __host__
     CpuArray(int N_,bool isCopyForKernel_ = false) :N(N_),isCopyForKernel(isCopyForKernel_) {
         if (!isCopyForKernel) {
-            std::cout << "allocing Ts on CPU" << N << "    " << N * sizeof(T) << std::endl;
             data = new T[N];
+            std::cout << "allocing Ts on CPU " << N << "    " << N * sizeof(T) <<"   "<<(void*)data<< std::endl;
         }
     }
 
@@ -26,8 +26,8 @@ struct CpuArray{
         isCopyForKernel = other.isCopyForKernel;
         N = other.N;
         if (!isCopyForKernel) {
-            std::cout << "allocing Ts (on CPU) bc copy construtor " << N << "    " << N * sizeof(T) << std::endl;
             data = new T[N];
+            std::cout << "allocing Ts (on CPU) bc copy construtor " << N << "    " << N * sizeof(T) << "   " << (void*)data << std::endl;
             memcpy(data, other.data, N*sizeof(T));
         }
         else {
@@ -52,7 +52,6 @@ struct CpuArray{
                 std::cout << "freeing (on CPU) bc copy assign " << data << std::endl;
                 delete[] data;
             }
-            N = other.N;
             std::cout << "allocing Ts bc copy assign" << N << "    " << N * sizeof(T) << std::endl;
             data = new T[N];
             memcpy(data, other.data, N*sizeof(T));
@@ -67,7 +66,7 @@ struct CpuArray{
     ~CpuArray() {
         if (isCopyForKernel) return;
 
-        std::cout << "freeing " << (void*) data << std::endl;
+        std::cout << "freeing on CPU" << (void*) data << std::endl;
 
         delete[] data;
     }
@@ -185,5 +184,9 @@ struct ArrayPair{
 
     ArrayPair(int N_,bool isCopyForKernel_ = false): N(N_),isCopyForKernel(isCopyForKernel_),cpu(N_,isCopyForKernel_),gpu(N_,isCopyForKernel_) {
         
+    }
+
+    void copyToDevice() {
+        gpu = cpu;
     }
 };

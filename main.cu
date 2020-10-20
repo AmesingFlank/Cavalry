@@ -70,6 +70,7 @@ void testDirectLightingCPU0() {
     lambertian.bsdf = LambertianBSDF(make_float3(1, 1, 1));
 
     Scene scene;
+    
 
     Primitive prim0;
     prim0.shape = Sphere(make_float3(0, 1, 7), 0.7);
@@ -80,6 +81,21 @@ void testDirectLightingCPU0() {
     prim1.shape = Sphere(make_float3(0, -100, 17), 100);
     prim1.material = Material(lambertian);
     scene.primitivesHost.push_back(prim1);
+
+    
+
+    Primitive prim2;
+    TriangleMesh mesh(1, 3, false, false);
+    mesh.positions.cpu.data[0] = make_float3(0, 1, 5);
+    mesh.positions.cpu.data[1] = make_float3(1, 1, 5);
+    mesh.positions.cpu.data[2] = make_float3(0, 2, 6);
+    mesh.indices.cpu.data[0] = make_int3(0, 1, 2);
+    mesh.copyToDevice();
+
+    prim2.shape = mesh;
+    prim2.material = Material(lambertian);
+    scene.primitivesHost.push_back(prim2);
+    
 
 
     scene.lightsHost.push_back(EnvironmentMap());
@@ -117,6 +133,20 @@ void testDirectLightingGPU0() {
     prim1.shape = Sphere(make_float3(0, -100, 17), 100);
     prim1.material = Material(lambertian);
     scene.primitivesHost.push_back(prim1);
+
+    
+    Primitive prim2;
+    TriangleMesh mesh(1, 3, false, false);
+    mesh.positions.cpu.data[0] = make_float3(0, 1, 5);
+    mesh.positions.cpu.data[1] = make_float3(1, 1, 5);
+    mesh.positions.cpu.data[2] = make_float3(0, 2, 6);
+    mesh.indices.cpu.data[0] = make_int3(0, 1, 2);
+    mesh.copyToDevice();
+
+    prim2.shape = mesh;
+    prim2.material = Material(lambertian);
+    scene.primitivesHost.push_back(prim2);
+    
 
 
     scene.lightsHost.push_back(EnvironmentMap());
