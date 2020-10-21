@@ -9,6 +9,24 @@
 
 #include <math.h>
 
+#define GLM_FORCE_CUDA
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp> 
+
+template <typename T>
+__host__ __device__
+inline float3 to_float3(const T& vec){
+	return make_float3(vec.x,vec.y,vec.z);
+}
+
+
+template <typename T>
+__host__ __device__
+inline glm::vec3 to_vec3(const T& vec){
+	return glm::vec3(vec.x,vec.y,vec.z);
+}
+
+
 inline float3 sampleSphere(const float2& randomSource){
     float u = randomSource.x * 2 * M_PI;
     float v = (randomSource.y - 0.5) * M_PI;

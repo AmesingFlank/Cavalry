@@ -18,8 +18,8 @@ public:
 	__host__ __device__
 	virtual void addSample(const CameraSample& sample, const Spectrum& spectrum) override{
 #ifdef __CUDA_ARCH__
-        int x = round(sample.x*(width-1));
-		int y = round(sample.y*(height-1));
+        int x = round(sample.x-0.5);
+		int y = round(sample.y-0.5);
 		int index = y*width + x;
 		if (x >= width || y >= height) {
 			printf("error %d %d %d %d\n", x, y, width, height);

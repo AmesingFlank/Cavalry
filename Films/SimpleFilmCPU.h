@@ -17,8 +17,8 @@ public:
 #ifdef __CUDA_ARCH__
     	SIGNAL_ERROR("Not Implemented on GPU");
 #else
-		int x = round(sample.x*(width-1));
-		int y = round(sample.y*(height-1));
+		int x = round(sample.x - 0.5);
+		int y = round(sample.y -0.5);
 		int index = y*width + x;
 
 		if (!(index*3 < result.data.size() && index >= 0)) {

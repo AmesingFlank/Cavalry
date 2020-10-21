@@ -36,7 +36,14 @@ inline bool rayTriangleIntersection(IntersectionResult& result, const Ray& r,
         return false;
     }
 
+    
+
     result.distance = dot(edge2, qvec) * det;
+
+    if (result.distance <= 0.f) {
+        result.intersected = false;
+        return false;
+    }
 
     result.position = r.positionAtDistance(result.distance);
     result.intersected = true;

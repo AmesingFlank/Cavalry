@@ -7,7 +7,7 @@ std::vector<CameraSample> NaiveCameraSampler::genAllSamplesCPU(const CameraObjec
     std::vector<CameraSample> result;
     for (float x = 0; x < width; x += 1) {
         for (float y = 0; y < height; y += 1) {
-            CameraSample sample{ x / (float)(width - 1),y / (float)(height - 1) };
+            CameraSample sample{ x +0.5 ,y +0.5 };
             result.push_back(sample);
         }
     }
@@ -24,7 +24,7 @@ void genNaiveSample(CameraSample* resultPointer, int samplesCount, int width, in
     }
     int x = index % width;
     int y = index / width;
-    CameraSample sample{ x / (float)(width - 1),y / (float)(height - 1) };
+    CameraSample sample{ x +0.5 ,y +0.5 };
     resultPointer[index] = sample;
 }
 
