@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Core/Scene.h"
+#include "../Core/RenderSetup.h"
 #include <string>
 
-Scene readScene(const std::string& pbrtFilePath);
+RenderSetup readRenderSetup(const std::string& pbrtFilePath);

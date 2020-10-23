@@ -2,6 +2,7 @@
 
 #include "../Core/Camera.h"
 #include "../Utils/MathsCommons.h"
+#include "../Core/Parameters.h"
 
 class PerspectiveCamera: public Camera{
 public:
@@ -26,6 +27,8 @@ public:
 	__host__
 	PerspectiveCamera(const float3& eye_, const float3& center_, const float3& up_, float fov_, int filmWidth_, int filmHeight_);
 
+	
+	static PerspectiveCamera createFromParams(const Parameters& params,const float3& eye_, const float3& center_, const float3& up_, int filmWidth_, int filmHeight_);
 
 
 	__host__ __device__

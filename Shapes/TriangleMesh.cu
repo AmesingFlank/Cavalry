@@ -1,5 +1,6 @@
 #include "TriangleMesh.h"
 #include <iostream>
+#include <happly.h>
 
 __host__ 
 TriangleMesh::TriangleMesh():
@@ -42,4 +43,46 @@ void TriangleMesh::copyToDevice() {
     normals.copyToDevice();
     texCoords.copyToDevice();
     indices.copyToDevice();
+}
+
+
+TriangleMesh TriangleMesh::createFromPLY(const std::string& filename,const glm::mat4& transform){
+    happly::PLYData plyIn(filename);
+
+    std::vector<float> positionsX = plyIn.getElement("vertex").getProperty<float>("x");
+    std::vector<float> positionsY= plyIn.getElement("vertex").getProperty<float>("y");
+    std::vector<float> positionsZ= plyIn.getElement("vertex").getProperty<float>("z");
+
+    std::vector<std::vector<int>> indices = 
+        plyIn.getElement("face").getListProperty<int>("vertex_indices");
+
+    int trianglesCount = indices.size();
+    int verticesCount = positionsX.size();
+    TriangleMesh mesh(trianglesCount,verticesCount,false,false);
+
+    for(int i = 0;i<verticesCount;++i){
+        float3 pos = make_float3(positionsX[i],positionsY[i],positionsZ[i]);
+        pos = to_float3(transform * glm::vec4(to_vec3(pos), 1.f));
+        mesh.positions.cpu.data[i] = pos;
+    }
+
+    for(int i = 0;i<trianglesCount;++i){
+        int3 thisIndices = make_int3(indices[i][0],indices[i][1],indices[i][2]);
+        mesh.indices.cpu.data[i] = thisIndices;
+    }
+
+    mesh.copyToDevice();
+    return mesh;
+
+}
+
+
+TriangleMesh TriangleMesh::createFromParams(const Parameters& params,const glm::mat4& transform,const std::filesystem::path& basePath){
+    
+    std::string plyPathString = params.getString("filename");
+    std::filesystem::path plyRelativePath(plyPathString);
+    std::string filename = (basePath/plyRelativePath).generic_string();
+    
+    return TriangleMesh::createFromPLY(filename,transform);
+
 }

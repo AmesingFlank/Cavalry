@@ -30,10 +30,16 @@ public:
 
         SamplerObject samplerObject = *sampler;
 
-        for(const auto& sample:allSamples){
-            Spectrum color = Derived::renderRay(sceneHandle,camera.genRay(sample),samplerObject);
-            film.addSample(sample,color);
+        for (int i = 0; i < allSamples.size(); ++i) {
+            const auto& sample = allSamples[i];
+            Spectrum color = Derived::renderRay(sceneHandle, camera.genRay(sample), samplerObject);
+            film.addSample(sample, color);
+
+            if (i % 100 == 0) {
+                std::cout << "done " << i <<" / "<<allSamples.size()<< std::endl;
+            }
         }
+
         
         return film.readCurrentResult();
     }

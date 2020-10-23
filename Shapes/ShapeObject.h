@@ -68,4 +68,8 @@ public:
 		};
 		return visit(visitor);
 	}
+
+	static ShapeObject createFromObjectDefinition(const ObjectDefinition& def,const glm::mat4 transform, const std::filesystem::path& basePath){
+		return ShapeObject(TriangleMesh::createFromParams(def.params,transform,basePath));
+	}
 };

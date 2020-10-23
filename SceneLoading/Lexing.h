@@ -10,17 +10,40 @@
 #include <memory>
 
 enum class TokenType{
-    KeyWord, String,Num, LeftSquareBracket, RightSquareBracket, Comma
+    KeyWord, String,Num, LeftSquareBracket, RightSquareBracket
 };
 
 class Token {
 public:
     TokenType type;
+    virtual std::string print() = 0;
 };
 
 struct TokenBuf {
     std::vector<std::shared_ptr<Token>> tokens;
     int currentIndex = 0;
+
+    std::shared_ptr<Token> peek(int offset = 0){
+        if (currentIndex+offset >= tokens.size()) {
+            SIGNAL_ERROR("peek out of bounds");
+        }
+        return tokens[currentIndex+offset];
+    }
+
+    void moveForward(){
+        ++currentIndex;
+    }
+
+    template <typename T>
+    std::shared_ptr<T> checkAndPop(){
+        std::shared_ptr<Token> thisToken = peek();
+        std::shared_ptr<T> casted = std::dynamic_pointer_cast<T>(thisToken);
+        if(casted){
+            ++currentIndex;
+            return casted;
+        }
+        SIGNAL_ERROR((std::string("Token checkAndPop failed. Token index: ")+std::to_string(currentIndex)+ "." + thisToken->print()).c_str());
+    }
 };
 
 TokenBuf runLexing(const std::string& input);
@@ -31,22 +54,34 @@ public:
     std::string word;
     KeyWordToken(const std::string& word_):word(word_){
         std::unordered_set<std::string> recognized = 
-        {""};
+        {"Texture","Scale","Rotate","Translate","LightSource","LookAt","Camera","Film","WorldBegin","WorldEnd","AttributeBegin","AttributeEnd","Sampler","Material","Shape","Integrator"};
         if(recognized.find(word)==recognized.end()){
             SIGNAL_ERROR((std::string("Unrecognized Keyword: ")+word).c_str());
         }
         type = TokenType::KeyWord;
     }
+
     static void read(const std::string& input, int& pos, TokenBuf& result);
+
+    virtual std::string print() override{
+        return word;
+    }
 };
 
 class StringToken: public Token{
 public:
     std::vector<std::string> words;
-    StringToken(const std::string& raw):words(splitString(raw," ")){
+    std::string all;
+    StringToken(const std::string& raw):words(splitString(raw," ")),all(raw){
         type = TokenType::String;
     }
     static void read(const std::string& input, int& pos, TokenBuf& result);
+    virtual std::string print() override{
+        std::string result = "\"";
+        result += all;
+        result += "\"";
+        return result;
+    }
 };
 
 class NumToken: public Token{
@@ -56,12 +91,18 @@ public:
         type = TokenType::Num;
     }
     static void read(const std::string& input, int& pos, TokenBuf& result);
+    virtual std::string print() override{
+        return std::to_string(value);
+    }
 };
 
 class LeftSquareBracketToken: public Token{
 public:
     LeftSquareBracketToken(){
         type = TokenType::LeftSquareBracket;
+    }
+    virtual std::string print() override{
+        return "[";
     }
 };
 
@@ -70,13 +111,10 @@ public:
     RightSquareBracketToken(){
         type = TokenType::RightSquareBracket;
     }
-};
-
-class CommaToken: public Token{
-public:
-    CommaToken(){
-        type = TokenType::Comma;
+    virtual std::string print() override{
+        return "]";
     }
 };
+
 
 

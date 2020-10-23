@@ -1,6 +1,10 @@
 #pragma once
 
 #include "Lexing.h"
-#include "../Core/Scene.h"
+#include "../Core/RenderSetup.h"
+#include "../Core/Parameters.h"
+#include <filesystem>
 
-Scene runParsing(TokenBuf tokens);
+
+
+RenderSetup runParsing(TokenBuf tokens,const std::filesystem::path& basePath);

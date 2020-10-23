@@ -1,8 +1,10 @@
 #pragma once
 
 #include "../Core/Shape.h"
-
+#include "../Core/Parameters.h"
 #include "../Utils/Array.h"
+#include <string>
+#include <filesystem>
 
 __host__ __device__ 
 inline bool rayTriangleIntersection(IntersectionResult& result, const Ray& r,
@@ -73,6 +75,11 @@ public:
     TriangleMesh(int trianglesCount_, int verticesCount_,bool hasVertexNormals_, bool isCopyForKernel_);
 
     __host__
+    static TriangleMesh createFromPLY(const std::string& filename,const glm::mat4& transform);
+
+    static TriangleMesh createFromParams(const Parameters& filename,const glm::mat4& transform, const std::filesystem::path& basePath);
+
+    __host__
     void copyToDevice();
 
     TriangleMesh getCopyForKernel();
@@ -136,6 +143,10 @@ public:
                 }
             }
         }
+
+        if (dot(result.normal, ray.direction) > 0) {
+            result.normal *= -1;
+        }
         
         return result.intersected;
 
@@ -143,3 +154,4 @@ public:
     }
 
 };
+

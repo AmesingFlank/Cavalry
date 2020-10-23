@@ -3,6 +3,7 @@
 #include "../Core/Film.h"
 #include "../Utils/GpuCommons.h"
 #include "../Utils/Array.h"
+#include "../Core/Parameters.h"
 
 
 class SimpleFilmGPU : public Film {
@@ -34,5 +35,7 @@ public:
 	virtual RenderResult readCurrentResult()  override;
 
 	GpuArray<unsigned char> data;
+
+	static SimpleFilmGPU createFromParams(const Parameters& params);
 
 };

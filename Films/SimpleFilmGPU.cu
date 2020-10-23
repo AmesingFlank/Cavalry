@@ -24,3 +24,9 @@ SimpleFilmGPU SimpleFilmGPU::getCopyForKernel() {
     copy.data = data.getCopyForKernel();
     return copy;
 }
+
+SimpleFilmGPU SimpleFilmGPU::createFromParams(const Parameters& params){
+	int width = params.getNumList("xresolution")[0];
+	int height = params.getNumList("yresolution")[0];
+	return SimpleFilmGPU(width,height,false);
+}

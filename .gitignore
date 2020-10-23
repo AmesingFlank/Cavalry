@@ -3,6 +3,7 @@
 x64/
 out/
 build_tmp/
+TestScenes/
 *.aux
 *.bbl
 *.blg

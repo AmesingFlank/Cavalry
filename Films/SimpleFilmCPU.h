@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Core/Film.h"
+#include "../Core/Parameters.h"
 #include <iostream>
 
 class SimpleFilmCPU : public Film {
@@ -32,4 +33,6 @@ public:
 	virtual RenderResult readCurrentResult()  override;
 
 	RenderResult result;
+
+	static SimpleFilmCPU createFromParams(const Parameters& params);
 };

@@ -6,6 +6,7 @@
 #include "Color.h"
 #include "../Utils/GpuCommons.h"
 #include "../Utils/Variant.h"
+#include "../Core/Parameters.h"
 
 
 
@@ -42,5 +43,9 @@ public:
 			}
 		};
 		return visit(visitor);
+	}
+
+	static CameraObject createFromObjectDefinition(const ObjectDefinition& def,const float3& eye_, const float3& center_, const float3& up_, int filmWidth_, int filmHeight_){
+		return CameraObject(PerspectiveCamera::createFromParams(def.params,eye_,center_,up_,filmWidth_,filmHeight_));
 	}
 };

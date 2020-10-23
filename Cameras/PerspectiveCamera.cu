@@ -19,3 +19,9 @@ PerspectiveCamera::PerspectiveCamera(const float3& eye_, const float3& center_, 
         depthForUnitSizePixel = z;
     }
 }
+
+PerspectiveCamera  PerspectiveCamera::createFromParams(const Parameters& params, const float3& eye_, const float3& center_, const float3& up_, int filmWidth_, int filmHeight_)
+{
+    float fov = glm::radians(params.getNum("fov"));
+    return PerspectiveCamera(eye_,center_,up_,fov,filmWidth_,filmHeight_);
+}

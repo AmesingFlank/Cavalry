@@ -30,11 +30,8 @@ TokenBuf runLexing(const std::string& input){
             ++pos;
             continue;
         }
-        if(input[pos]==','){
-            result.tokens.push_back(std::make_shared<CommaToken>());
-            ++pos;
-            continue;
-        }
+        
+
         if(isLetter(input[pos])){
             KeyWordToken::read(input,pos,result);
             continue;
@@ -43,7 +40,7 @@ TokenBuf runLexing(const std::string& input){
             StringToken::read(input,pos,result);
             continue;
         }
-        if(isDigit(input[pos]) || input[pos] == '-' ){
+        if(isDigit(input[pos]) || input[pos] == '-' ||input[pos] == '.' ){
             NumToken::read(input,pos,result);
         }
     }
@@ -87,12 +84,15 @@ void StringToken::read(const std::string& input, int& pos, TokenBuf& result){
 void NumToken::read(const std::string& input, int& pos, TokenBuf& result){
     std::string raw;
     for(;pos<input.size();++pos){
-        if(isDigit(input[pos]) || input[pos]=='-' || input[pos] == '.'){
+        if(isDigit(input[pos]) || input[pos]=='-' || input[pos] == '.' || input[pos]=='e'){
             raw += input[pos];
         }
         else{
             break;
         }
+    }
+    if(raw[0]=='.'){
+        raw = std::string("0")+raw;
     }
     result.tokens.push_back(std::make_shared<NumToken>(std::stof(raw)));
 }

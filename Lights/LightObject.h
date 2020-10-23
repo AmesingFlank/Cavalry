@@ -39,4 +39,8 @@ public:
 		};
 		return visit(visitor);
 	}
+
+	static LightObject createFromObjectDefinition(const ObjectDefinition& def,const glm::mat4 transform){
+		return LightObject(EnvironmentMap());
+	}
 };

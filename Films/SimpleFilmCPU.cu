@@ -18,3 +18,9 @@ RenderResult SimpleFilmCPU::readCurrentResult(){
 SimpleFilmCPU SimpleFilmCPU::getCopyForKernel(){
 	SIGNAL_ERROR("not implemented. shouldn't pass to kernel");
 }
+
+SimpleFilmCPU SimpleFilmCPU::createFromParams(const Parameters& params){
+	int width = params.getNum("xresolution");
+	int height = params.getNum("yresolution");
+	return SimpleFilmCPU(width,height);
+}

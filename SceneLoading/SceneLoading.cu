@@ -2,9 +2,10 @@
 #include "Lexing.h"
 #include "Parsing.h"
 #include "../Utils/Utils.h"
+#include <filesystem>
 
-Scene readScene(const std::string& pbrtFilePath){
+RenderSetup readRenderSetup(const std::string& pbrtFilePath){
     std::string contents = readTextFile(pbrtFilePath);
     TokenBuf tokens = runLexing(contents);
-    return runParsing(tokens);
+    return runParsing(tokens,std::filesystem::path(pbrtFilePath).parent_path());
 }

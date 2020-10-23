@@ -4,6 +4,7 @@
 #include "SimpleFilmGPU.h"
 
 #include "../Utils/Variant.h"
+#include "../Core/Parameters.h"
 
 using FilmVariant = Variant<SimpleFilmCPU,SimpleFilmGPU>;
 
@@ -96,4 +97,8 @@ public:
 		};
 		return visit(visitor);
     }
+
+	static FilmObject createFromObjectDefinition(const ObjectDefinition& def){
+		return FilmObject(SimpleFilmGPU::createFromParams(def.params));
+	}
 };
