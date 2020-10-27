@@ -52,9 +52,10 @@ TokenBuf runLexing(const std::string& input);
 class KeyWordToken: public Token{
 public:
     std::string word;
+
+    static const std::unordered_set<std::string> recognized;
+
     KeyWordToken(const std::string& word_):word(word_){
-        std::unordered_set<std::string> recognized = 
-        {"Texture","Scale","Rotate","Translate","LightSource","LookAt","Camera","Film","WorldBegin","WorldEnd","AttributeBegin","AttributeEnd","Sampler","Material","Shape","Integrator"};
         if(recognized.find(word)==recognized.end()){
             SIGNAL_ERROR((std::string("Unrecognized Keyword: ")+word).c_str());
         }

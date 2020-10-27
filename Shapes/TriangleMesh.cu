@@ -12,7 +12,7 @@ normals(0,true),
 texCoords(0,true),
 indices(0,true)
 {
-    std::cout << "default constructing trianglemesh" << std::endl;
+
 }
 
 __host__ 
@@ -79,10 +79,52 @@ TriangleMesh TriangleMesh::createFromPLY(const std::string& filename,const glm::
 
 TriangleMesh TriangleMesh::createFromParams(const Parameters& params,const glm::mat4& transform,const std::filesystem::path& basePath){
     
-    std::string plyPathString = params.getString("filename");
-    std::filesystem::path plyRelativePath(plyPathString);
-    std::string filename = (basePath/plyRelativePath).generic_string();
-    
-    return TriangleMesh::createFromPLY(filename,transform);
+    if (params.hasString("filename")) {
+        std::string plyPathString = params.getString("filename");
+        std::filesystem::path plyRelativePath(plyPathString);
+        std::string filename = (basePath / plyRelativePath).generic_string();
 
+        return TriangleMesh::createFromPLY(filename, transform);
+    }
+    else if(params.hasNumList("P") && params.hasNumList("indices")){
+        std::vector<float> positionsFloats = params.getNumList("P");
+        std::vector<float> indicesFloats = params.getNumList("indices");
+
+        int trianglesCount = indicesFloats.size() / 3;
+        int verticesCount = positionsFloats.size() / 3;
+
+
+        std::vector<int3> indices(trianglesCount);
+        for (int i = 0; i < trianglesCount; ++i) {
+            indices[i] = make_int3(indicesFloats[i * 3], indicesFloats[i * 3+1], indicesFloats[i * 3+2]);
+        }
+
+        std::vector<float3> positions(verticesCount);
+        for (int i = 0; i < verticesCount; ++i) {
+            positions[i] = make_float3(positionsFloats[i * 3], positionsFloats[i * 3 + 1], positionsFloats[i * 3 + 2]);
+        }
+
+        bool hasNormal = params.hasNumList("N");
+
+        TriangleMesh mesh(trianglesCount, verticesCount, hasNormal, false);
+        mesh.positions.cpu = positions;
+        mesh.indices.cpu = indices;
+
+        if (hasNormal) {
+            std::vector<float> normalsFloats = params.getNumList("N");
+            std::vector<float3> normals(verticesCount);
+            for (int i = 0; i < verticesCount; ++i) {
+                normals[i] = make_float3(normalsFloats[i * 3], normalsFloats[i * 3 + 1], normalsFloats[i * 3 + 2]);
+            }
+            mesh.normals.cpu = normals;
+        }
+        mesh.copyToDevice();
+        return mesh;
+
+
+    }
+    else {
+        SIGNAL_ERROR("No valid inputs for triangle mesh");
+    }
+    
 }

@@ -45,7 +45,7 @@ public:
 		return visit(visitor);
 	}
 
-	static CameraObject createFromObjectDefinition(const ObjectDefinition& def,const float3& eye_, const float3& center_, const float3& up_, int filmWidth_, int filmHeight_){
-		return CameraObject(PerspectiveCamera::createFromParams(def.params,eye_,center_,up_,filmWidth_,filmHeight_));
+	static CameraObject createFromObjectDefinition(const ObjectDefinition& def,const glm::mat4& cameraToWorld, int filmWidth_, int filmHeight_){
+		return CameraObject(PerspectiveCamera::createFromParams(def.params,cameraToWorld,filmWidth_,filmHeight_));
 	}
 };

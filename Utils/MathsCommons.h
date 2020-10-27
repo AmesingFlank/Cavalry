@@ -12,6 +12,7 @@
 #define GLM_FORCE_CUDA
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp> 
+#include <vector>
 
 template <typename T>
 __host__ __device__
@@ -24,6 +25,12 @@ template <typename T>
 __host__ __device__
 inline glm::vec3 to_vec3(const T& vec){
 	return glm::vec3(vec.x,vec.y,vec.z);
+}
+
+inline glm::mat4 to_mat4(std::vector<float> data) {
+	glm::mat4 result;
+	memcpy(&result, data.data(), 16 * sizeof(float));
+	return result;
 }
 
 

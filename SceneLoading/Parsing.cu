@@ -5,6 +5,7 @@
 #include "../Core/Primitive.h"
 #include "../Samplers/NaiveCameraSampler.h"
 #include "../Integrators/DirectLightingGPUIntegrator.h"
+#include "../Utils/Utils.h"
 
 #define SIGNAL_PARSING_ERROR(err,pos,tokenString) SIGNAL_ERROR((std::string("Parsing Error: ")+err+std::string("\n at token ")+std::to_string(pos)+": "+tokenString).c_str())
 
@@ -36,6 +37,12 @@ std::vector<std::string> readStringList(TokenBuf& buf) {
 	return result;
 }
 
+void readUntilNextKeyWorkd(TokenBuf& buf) {
+	buf.checkAndPop<KeyWordToken>();
+	while (buf.peek()->type != TokenType::KeyWord) {
+		buf.moveForward();
+	}
+}
 
 ObjectDefinition readObjectDefinition(TokenBuf& buf){
 	ObjectDefinition def;
@@ -99,7 +106,7 @@ void readLookAt(TokenBuf& buf, float3& eye, float3& center, float3& up){
 }
 
 
-bool doRotation(TokenBuf& buf, glm::mat4& transform){
+bool readTransform(TokenBuf& buf, glm::mat4& transform){
 	auto nextToken = buf.peek();
 	auto keyWord = std::dynamic_pointer_cast<KeyWordToken>(nextToken);
 	if(keyWord){
@@ -129,6 +136,13 @@ bool doRotation(TokenBuf& buf, glm::mat4& transform){
 			transform = glm::scale(transform,glm::vec3(x,y,z));
 			return true;
 		}
+		if (word == "Transform") {
+			buf.moveForward();
+			std::vector<float> matData = readNumList(buf);
+			glm::mat4 mat = to_mat4(matData);
+			transform = mat * transform;
+			return true;
+		}
 		else{
 			return false;
 		}
@@ -138,8 +152,9 @@ bool doRotation(TokenBuf& buf, glm::mat4& transform){
 
 
 void parseSceneWideOptions(TokenBuf& buf,RenderSetup& result){
-	float3 eye,center,up;
-	bool hasLookAt = false;
+
+	glm::mat4 transform(1.0);
+
 	ObjectDefinition cameraDef;
 	ObjectDefinition filmDef;
 	ObjectDefinition integratorDef;
@@ -154,8 +169,10 @@ void parseSceneWideOptions(TokenBuf& buf,RenderSetup& result){
 				break;
 			}
 			else if(keyWord->word == "LookAt"){
+				float3 eye,center,up;
+
 				readLookAt(buf,eye,center,up);
-				hasLookAt = true;
+				transform = glm::lookAtLH(to_vec3(eye), to_vec3(center), to_vec3(up)) * transform;
 			}
 			else if(keyWord->word == "Camera"){
 				cameraDef = readObjectDefinition(buf);
@@ -166,12 +183,15 @@ void parseSceneWideOptions(TokenBuf& buf,RenderSetup& result){
 			else if(keyWord->word == "Sampler"){
 				samplerDef = readObjectDefinition(buf);
 			}
+			else if (readTransform(buf, transform)) {
+
+			}
 			else if(keyWord->word == "Integrator"){
 				integratorDef = readObjectDefinition(buf);
 			}
 			else{
-				std::cout<<"reading unrecognized object from "<<buf.currentIndex<<std::endl;
-				readObjectDefinition(buf);
+				std::cout<<"reading unrecognized object from "<<buf.currentIndex;
+				readUntilNextKeyWorkd(buf);
 				std::cout<<"done"<<std::endl;
 			}
 		}
@@ -180,7 +200,7 @@ void parseSceneWideOptions(TokenBuf& buf,RenderSetup& result){
 		}
 	}
 
-	if(!(hasLookAt && cameraDef.isDefined && filmDef.isDefined && integratorDef.isDefined && samplerDef.isDefined)){
+	if(!(cameraDef.isDefined && filmDef.isDefined && integratorDef.isDefined && samplerDef.isDefined)){
 		SIGNAL_ERROR("incomplete scene-wide options");
 	}
 
@@ -191,104 +211,60 @@ void parseSceneWideOptions(TokenBuf& buf,RenderSetup& result){
 	result.renderer.film = std::make_unique<FilmObject>(FilmObject::createFromObjectDefinition(filmDef));
 	int width = result.renderer.film->getWidth();
 	int height = result.renderer.film->getHeight();
-	result.renderer.camera = std::make_unique<CameraObject>(CameraObject::createFromObjectDefinition(cameraDef,eye,center,up,width,height));
+	result.renderer.camera = std::make_unique<CameraObject>(CameraObject::createFromObjectDefinition(cameraDef,glm::inverse(transform),width,height));
 
 }
 
 
 
-
-
-void readAttribute(TokenBuf& buf,RenderSetup& result,glm::mat4 transform, const std::filesystem::path& basePath){
+void parseSubsection(TokenBuf& buf, RenderSetup& result, glm::mat4 transform,const std::filesystem::path& basePath) {
 	auto begin = buf.checkAndPop<KeyWordToken>();
-	if(begin->word != "AttributeBegin"){
-		SIGNAL_PARSING_ERROR("AttributeBegin expected.",buf.currentIndex,begin->print());
+	if ( !endsWith(begin->word,"Begin") ) {
+		SIGNAL_PARSING_ERROR("XXXBegin expected.", buf.currentIndex, begin->print());
 	}
 
+	std::string subsectionName = begin->word.substr(0, begin->word.size() - std::string("Begin").size());
 
-	while(true){
+	while (true) {
 		auto nextToken = buf.peek();
 		auto keyWord = std::dynamic_pointer_cast<KeyWordToken>(nextToken);
-		if(keyWord){
-			if(keyWord->word == "AttributeEnd"){
+		if (keyWord) {
+			if (endsWith(keyWord->word, "End")) {
+				std::string endingSubsectionName = keyWord->word.substr(0, keyWord->word.size() - std::string("End").size());
+				if (endingSubsectionName != subsectionName) {
+					SIGNAL_PARSING_ERROR("Mismatching subsection names.", buf.currentIndex, nextToken->print());
+				}
 				break;
 			}
-			else if(keyWord->word == "Shape"){
+			else if (endsWith(keyWord->word,"Begin")) {
+				parseSubsection(buf, result, transform, basePath);
+			}
+			else if (keyWord->word == "Shape") {
 				auto shapeDef = readObjectDefinition(buf);
-				ShapeObject shape = ShapeObject::createFromObjectDefinition(shapeDef,transform,basePath);
+				ShapeObject shape = ShapeObject::createFromObjectDefinition(shapeDef, transform, basePath);
 				Primitive prim;
 				Material lambertian;
-    			lambertian.bsdf = LambertianBSDF(make_float3(1, 1, 1));
+				lambertian.bsdf = LambertianBSDF(make_float3(1, 1, 1));
 				prim.shape = shape;
 				prim.material = lambertian;
 				result.scene.primitivesHost.push_back(prim);
 			}
-			else if(keyWord->word == "LightSource"){
+			else if (keyWord->word == "LightSource" || keyWord->word == "AreaLightSource") {
 				auto lightDef = readObjectDefinition(buf);
-				LightObject light = LightObject::createFromObjectDefinition(lightDef,transform);
+				LightObject light = LightObject::createFromObjectDefinition(lightDef, transform);
 				result.scene.lightsHost.push_back(light);
 			}
-			else if(doRotation(buf,transform)){
+			else if (readTransform(buf, transform)) {
 
 			}
-			else{
-				std::cout<<"reading unrecognized object from "<<buf.currentIndex<<std::endl;
-				readObjectDefinition(buf);
-				std::cout<<"done"<<std::endl;
+			else {
+				std::cout << "reading unrecognized object from " << buf.currentIndex ;
+				readUntilNextKeyWorkd(buf);
+				std::cout << "done" << std::endl;
 			}
 		}
-		else{
-			SIGNAL_PARSING_ERROR("Keyword expected.",buf.currentIndex,nextToken->print());
-		}
-	}
-	buf.checkAndPop<KeyWordToken>();
-}
-
-
-void parseWorld(TokenBuf& buf,RenderSetup& result, const std::filesystem::path& basePath){
-	auto worldBegin = buf.checkAndPop<KeyWordToken>();
-	if(worldBegin->word != "WorldBegin"){
-		SIGNAL_PARSING_ERROR("WorldBegin expected.",buf.currentIndex,worldBegin->print());
-	}
-
-	glm::mat4 transform(1.0);
-
-	while(true){
-		auto nextToken = buf.peek();
-		auto keyWord = std::dynamic_pointer_cast<KeyWordToken>(nextToken);
-		if(keyWord){
-			if(keyWord->word == "WorldEnd"){
-				break;
-			}
-			else if(keyWord->word == "AttributeBegin"){
-				readAttribute(buf, result,transform,basePath);
-			}
-			else if(keyWord->word == "Shape"){
-				auto shapeDef = readObjectDefinition(buf);
-				ShapeObject shape = ShapeObject::createFromObjectDefinition(shapeDef,transform,basePath);
-				Primitive prim;
-				Material lambertian;
-    			lambertian.bsdf = LambertianBSDF(make_float3(1, 1, 1));
-				prim.shape = shape;
-				prim.material = lambertian;
-				result.scene.primitivesHost.push_back(prim);
-			}
-			else if(keyWord->word == "LightSource"){
-				auto lightDef = readObjectDefinition(buf);
-				LightObject light = LightObject::createFromObjectDefinition(lightDef,transform);
-				result.scene.lightsHost.push_back(light);
-			}
-			else if(doRotation(buf,transform)){
-				
-			}
-			else{
-				std::cout<<"reading unrecognized object from "<<buf.currentIndex<<std::endl;
-				readObjectDefinition(buf);
-				std::cout<<"done"<<std::endl;
-			}
-		}
-		else{
-			SIGNAL_PARSING_ERROR("Keyword expected.",buf.currentIndex,nextToken->print());
+		else {
+			SIGNAL_PARSING_ERROR("Keyword expected.", buf.currentIndex, nextToken->print());
 		}
 	}
 	result.scene.environmentMapIndex = 0;
@@ -302,7 +278,7 @@ RenderSetup runParsing(TokenBuf tokens, const std::filesystem::path& basePath) {
 
 	parseSceneWideOptions(tokens, result);
 
-	parseWorld(tokens,result,basePath);
+	parseSubsection(tokens,result,glm::mat4(1.0),basePath);
 
 	return result;
 }

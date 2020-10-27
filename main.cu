@@ -14,6 +14,7 @@
 #include "Films/FilmObject.h"
 #include <variant>
 #include "SceneLoading/SceneLoading.h"
+#include "Utils/MathsCommons.h"
 
 Scene testScene1() {
     Material lambertian;
@@ -77,15 +78,6 @@ Scene testScene0() {
     
 
 
-    Primitive prim3;
-    TriangleMesh dragon = TriangleMesh::createFromPLY("../TestScenes/head.ply",glm::scale(glm::mat4(1.0),glm::vec3(4,4,4)));
-    dragon.copyToDevice();
-
-    prim3.shape = dragon;
-    prim3.material = Material(lambertian);
-    scene.primitivesHost.push_back(prim3);
-
-
 
     scene.lightsHost.push_back(EnvironmentMap());
     scene.lightsHost.push_back(PointLight(make_float3(0, 7, 2), make_float3(1, 1, 1)));
@@ -105,7 +97,9 @@ void testSimpleCPU0() {
     int width = 128,height = 128;
     integrator->cameraSampler = std::make_unique<NaiveCameraSampler>();
 
-    PerspectiveCamera camera(make_float3(0,0,0),make_float3(0,0,-1),make_float3(0,1,0),45,width,height);
+    glm::mat4 cameraToWorld = glm::inverse(glm::lookAt(glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 0.f, -1.f), glm::vec3(0.f,1.f,0.f) ));
+
+    PerspectiveCamera camera(cameraToWorld,45,width,height);
 
     renderer.integrator = std::move(integrator);
     renderer.camera = std::make_unique<CameraObject>(camera);
@@ -128,7 +122,8 @@ void testDirectLightingCPU0() {
     int width = 512,height = 512;
     integrator->cameraSampler = std::make_unique<NaiveCameraSampler>();
 
-    PerspectiveCamera camera(make_float3(-1, 0, 1), make_float3(0, 0, 0), make_float3(0, 1, 0), 45, width, height);
+    glm::mat4 cameraToWorld = glm::inverse(glm::lookAt(glm::vec3(0, 0, 3), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0)));
+    PerspectiveCamera camera(cameraToWorld, glm::radians(45.f), width, height);
 
     renderer.integrator = std::move(integrator);
     renderer.camera = std::make_unique<CameraObject>(camera);
@@ -153,7 +148,13 @@ void testDirectLightingGPU0() {
     int width = 1000,height = 1000;
     integrator->cameraSampler = std::make_unique<NaiveCameraSampler>();
 
-    PerspectiveCamera camera(make_float3(-1, 0.5, 1)*3.f, make_float3(0, 0, -1), make_float3(0, 1, 0), 45, width, height);
+    glm::mat4 cameraToWorld = glm::inverse(glm::lookAt(glm::vec3(-1, 0.5, 1)*3.f, glm::vec3(0, 0, -1), glm::vec3(0, 1, 0)));
+
+    //glm::mat4 cameraToWorld = glm::inverse(glm::lookAt(glm::vec3(0, 0,10), glm::vec3(0, 0, -1), glm::vec3(0, 1, 0)));
+
+
+    PerspectiveCamera camera(cameraToWorld, glm::radians(45.f), width, height);
+
 
     renderer.integrator = std::move(integrator);
     renderer.camera = std::make_unique<CameraObject>(camera);
@@ -175,7 +176,12 @@ void testDirectLightingGPU1() {
     int width = 1280, height = 720;
     integrator->cameraSampler = std::make_unique<NaiveCameraSampler>();
 
-    PerspectiveCamera camera(make_float3(0.322839, 0.0534825, 0.504299), make_float3(-0.140808, - 0.162727 ,- 0.354936), make_float3(0.0355799, 0.964444, - 0.261882), glm::radians(30.f), width, height);
+    glm::mat4 cameraToWorld = glm::inverse(glm::lookAt(
+        glm::vec3(0.322839, 0.0534825, 0.504299), 
+        glm::vec3(-0.140808, -0.162727, -0.354936),
+        glm::vec3(0.0355799, 0.964444, -0.261882)));
+    PerspectiveCamera camera(cameraToWorld, glm::radians(30.f), width, height);
+
 
     renderer.integrator = std::move(integrator);
     renderer.camera = std::make_unique<CameraObject>(camera);
@@ -189,7 +195,8 @@ void testDirectLightingGPU1() {
 }
 
 void testParsing0(){
-    RenderSetup setup = readRenderSetup("../TestScenes/head/f9-5.pbrt");
+    RenderSetup setup = readRenderSetup("../TestScenes/cornellBox/scene.pbrt");
+    setup.scene.lightsHost.push_back(PointLight(make_float3(0,2,3), make_float3(1, 1, 1)));
     setup.scene.copyToDevice();
     setup.renderer.render(setup.scene).saveToPNG("test.png");
 }
@@ -199,4 +206,5 @@ int main(){
 
     testParsing0();
     //testDirectLightingGPU1();
+    //testSimpleCPU0();
 }

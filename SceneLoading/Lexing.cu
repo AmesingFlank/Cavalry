@@ -96,3 +96,8 @@ void NumToken::read(const std::string& input, int& pos, TokenBuf& result){
     }
     result.tokens.push_back(std::make_shared<NumToken>(std::stof(raw)));
 }
+
+
+
+const std::unordered_set<std::string> KeyWordToken::recognized =
+{"PixelFilter","Transform", "NamedMaterial","TransformBegin","TransformEnd","AreaLightSource","MakeNamedMaterial", "Texture","Scale","Rotate","Translate","LightSource","LookAt","Camera","Film","WorldBegin","WorldEnd","AttributeBegin","AttributeEnd","Sampler","Material","Shape","Integrator" };

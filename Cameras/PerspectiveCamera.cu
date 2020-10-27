@@ -3,8 +3,7 @@
 PerspectiveCamera::PerspectiveCamera(){}
 
 
-PerspectiveCamera::PerspectiveCamera(const float3& eye_, const float3& center_, const float3& up_, float fov_, int filmWidth_, int filmHeight_):eye(eye_),center(center_),up(up_),filmWidth(filmWidth_),filmHeight(filmHeight_){
-    lookAtInv = glm::inverse(glm::lookAt(to_vec3(eye),to_vec3(center),to_vec3(up)));
+PerspectiveCamera::PerspectiveCamera(const glm::mat4& cameraToWorld_, float fov_, int filmWidth_, int filmHeight_):cameraToWorld(cameraToWorld_),filmWidth(filmWidth_),filmHeight(filmHeight_){
 
     if(filmHeight <= filmWidth){
         fovY = fov_;
@@ -20,8 +19,8 @@ PerspectiveCamera::PerspectiveCamera(const float3& eye_, const float3& center_, 
     }
 }
 
-PerspectiveCamera  PerspectiveCamera::createFromParams(const Parameters& params, const float3& eye_, const float3& center_, const float3& up_, int filmWidth_, int filmHeight_)
+PerspectiveCamera  PerspectiveCamera::createFromParams(const Parameters& params, const glm::mat4& cameraToWorld , int filmWidth_, int filmHeight_)
 {
     float fov = glm::radians(params.getNum("fov"));
-    return PerspectiveCamera(eye_,center_,up_,fov,filmWidth_,filmHeight_);
+    return PerspectiveCamera(cameraToWorld,fov,filmWidth_,filmHeight_);
 }

@@ -26,7 +26,7 @@ SimpleFilmGPU SimpleFilmGPU::getCopyForKernel() {
 }
 
 SimpleFilmGPU SimpleFilmGPU::createFromParams(const Parameters& params){
-	int width = params.getNumList("xresolution")[0];
-	int height = params.getNumList("yresolution")[0];
+	int width = params.getNum("xresolution");
+	int height = params.getNum("yresolution");
 	return SimpleFilmGPU(width,height,false);
 }

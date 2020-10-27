@@ -43,3 +43,9 @@ inline bool isLetter(char c){
 inline bool isDigit(char c){
     return ('0'<=c && c<='9');
 }
+
+
+inline bool endsWith(const std::string& word,const std::string& end) {
+    if (word.size() < end.size()) return false;
+    return word.substr(word.size() - end.size(), end.size()) == end;
+}

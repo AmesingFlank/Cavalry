@@ -7,9 +7,6 @@
 class PerspectiveCamera: public Camera{
 public:
 
-	float3 eye;
-	float3 center;
-	float3 up;
 	float fovX;
 	float fovY;
 	int filmWidth;
@@ -19,33 +16,37 @@ public:
 	// placed at the position which makes the pixels have size 1x1 in world space.
 	float depthForUnitSizePixel;
 
-	glm::mat4 lookAtInv;
+	// turns a vec in camera space to the corresponding vec in world space
+	glm::mat4 cameraToWorld;
 
 	__host__ 
 	PerspectiveCamera();
 
 	__host__
-	PerspectiveCamera(const float3& eye_, const float3& center_, const float3& up_, float fov_, int filmWidth_, int filmHeight_);
+	PerspectiveCamera(const glm::mat4& cameraToWorld , float fov_, int filmWidth_, int filmHeight_);
 
 	
-	static PerspectiveCamera createFromParams(const Parameters& params,const float3& eye_, const float3& center_, const float3& up_, int filmWidth_, int filmHeight_);
+	static PerspectiveCamera createFromParams(const Parameters& params, const glm::mat4& cameraToWorld, int filmWidth_, int filmHeight_);
 
 
 	__host__ __device__
 	Ray genRay(const CameraSample& cameraSample) const
 	{
-		float3 pixelLocation = {cameraSample.x,cameraSample.y,-depthForUnitSizePixel};
+		float3 pixelLocation = {cameraSample.x,cameraSample.y,depthForUnitSizePixel};
 		pixelLocation.x = cameraSample.x - filmWidth / 2.f;
 		pixelLocation.y = filmHeight/2.f - cameraSample.y;
 
 		float3 origin = {0,0,0};
 		Ray ray;
 
-		ray.origin = eye;
+		glm::vec4 rayOriginCameraSpace = glm::vec4(to_vec3(origin),1);
+		glm::vec4 rayOrigin = cameraToWorld * rayOriginCameraSpace;
+		ray.origin = to_float3(rayOrigin) / rayOrigin.w;
 
 		glm::vec4 rayDirectionCameraSpace = glm::vec4(to_vec3(pixelLocation - origin),1);
-		glm::vec4 rayDirection = lookAtInv * rayDirectionCameraSpace;
+		glm::vec4 rayDirection = cameraToWorld * rayDirectionCameraSpace;
 		ray.direction = normalize(to_float3(rayDirection) / rayDirection.w);
+
 		return ray;
 
 	}

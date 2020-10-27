@@ -35,9 +35,7 @@ public:
             Spectrum color = Derived::renderRay(sceneHandle, camera.genRay(sample), samplerObject);
             film.addSample(sample, color);
 
-            if (i % 100 == 0) {
-                std::cout << "done " << i <<" / "<<allSamples.size()<< std::endl;
-            }
+            
         }
 
         

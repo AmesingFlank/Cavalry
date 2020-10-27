@@ -7,10 +7,10 @@
 #include "GpuCommons.h"
 
 
-#define SIGNAL_VARIANT_ERROR SIGNAL_ERROR("variant error")
+#define SIGNAL_VARIANT_ERROR SIGNAL_ERROR("variant error\n")
 
 
-#define SIGNAL_VARIANT_GET_ERROR SIGNAL_ERROR("variant get error")
+#define SIGNAL_VARIANT_GET_ERROR SIGNAL_ERROR("variant get error\n")
 
 
 

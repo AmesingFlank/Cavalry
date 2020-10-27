@@ -17,7 +17,7 @@ struct CpuArray{
     CpuArray(int N_,bool isCopyForKernel_ = false) :N(N_),isCopyForKernel(isCopyForKernel_) {
         if (!isCopyForKernel) {
             data = new T[N];
-            std::cout << "allocing Ts on CPU " << N << "    " << N * sizeof(T) <<"   "<<(void*)data<< std::endl;
+            //std::cout << "allocing Ts on CPU " << N << "    " << N * sizeof(T) <<"   "<<(void*)data<< std::endl;
         }
     }
 
@@ -27,7 +27,7 @@ struct CpuArray{
         N = other.N;
         if (!isCopyForKernel) {
             data = new T[N];
-            std::cout << "allocing Ts (on CPU) bc copy construtor " << N << "    " << N * sizeof(T) << "   " << (void*)data << std::endl;
+            //std::cout << "allocing Ts (on CPU) bc copy construtor " << N << "    " << N * sizeof(T) << "   " << (void*)data << std::endl;
             memcpy(data, other.data, N*sizeof(T));
         }
         else {
@@ -49,10 +49,10 @@ struct CpuArray{
         N = other.N;
         if (!isCopyForKernel) {
             if (data != nullptr) {
-                std::cout << "freeing (on CPU) bc copy assign " << data << std::endl;
+                //std::cout << "freeing (on CPU) bc copy assign " << data << std::endl;
                 delete[] data;
             }
-            std::cout << "allocing Ts bc copy assign" << N << "    " << N * sizeof(T) << std::endl;
+            //std::cout << "allocing Ts bc copy assign" << N << "    " << N * sizeof(T) << std::endl;
             data = new T[N];
             memcpy(data, other.data, N*sizeof(T));
         }
@@ -66,7 +66,7 @@ struct CpuArray{
     ~CpuArray() {
         if (isCopyForKernel) return;
 
-        std::cout << "freeing on CPU" << (void*) data << std::endl;
+        //std::cout << "freeing on CPU" << (void*) data << std::endl;
 
         delete[] data;
     }
@@ -101,7 +101,7 @@ struct GpuArray{
     __host__
     GpuArray(int N_,bool isCopyForKernel_ = false) :N(N_),isCopyForKernel(isCopyForKernel_) {
         if (!isCopyForKernel) {
-            std::cout << "allocing Ts " << N << "    " << N * sizeof(T) << std::endl;
+            //std::cout << "allocing Ts " << N << "    " << N * sizeof(T) << std::endl;
             HANDLE_ERROR(cudaMalloc(&data, N * sizeof(T)));
         }
     }
@@ -111,7 +111,7 @@ struct GpuArray{
         isCopyForKernel = other.isCopyForKernel;
         N = other.N;
         if (!isCopyForKernel) {
-            std::cout << "allocing Ts bc copy construtor " << N << "    " << N * sizeof(T) << std::endl;
+            //std::cout << "allocing Ts bc copy construtor " << N << "    " << N * sizeof(T) << std::endl;
             HANDLE_ERROR(cudaMalloc(&data, N * sizeof(T)));
             HANDLE_ERROR(cudaMemcpy(data, other.data, N * sizeof(T), cudaMemcpyDeviceToDevice));
         }
@@ -141,11 +141,11 @@ struct GpuArray{
         N = other.N;
         if (!isCopyForKernel) {
             if (data != nullptr) {
-                std::cout << "freeing bc copy assign " << data << std::endl;
+                //std::cout << "freeing bc copy assign " << data << std::endl;
                 HANDLE_ERROR(cudaFree(data));
             }
             N = other.N;
-            std::cout << "allocing Ts bc copy assign" << N << "    " << N * sizeof(T) << std::endl;
+            //std::cout << "allocing Ts bc copy assign" << N << "    " << N * sizeof(T) << std::endl;
             HANDLE_ERROR(cudaMalloc(&data, N * sizeof(T)));
             HANDLE_ERROR(cudaMemcpy(data, other.data, N * sizeof(T), cudaMemcpyDeviceToDevice));
         }
@@ -160,7 +160,7 @@ struct GpuArray{
         if (isCopyForKernel) return;
 
         CHECK_CUDA_ERROR("before free");
-        std::cout << "freeing " << (void*) data << std::endl;
+        //std::cout << "freeing " << (void*) data << std::endl;
 
         HANDLE_ERROR(cudaFree(data));
     }
