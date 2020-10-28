@@ -11,10 +11,56 @@
 #include "Samplers/NaiveCameraSampler.h"
 #include "BSDFs/Lambertian.h"
 #include "Lights/PointLight.h"
+#include "Lights/DiffuseAreaLight.h"
+
 #include "Films/FilmObject.h"
 #include <variant>
 #include "SceneLoading/SceneLoading.h"
 #include "Utils/MathsCommons.h"
+
+
+Scene testScene0() {
+    Material lambertian;
+    lambertian.bsdf = LambertianBSDF(make_float3(1, 1, 1));
+
+    Scene scene;
+
+    
+
+    Primitive prim0;
+    prim0.shape = Sphere(make_float3(0, 1, 3), 0.7);
+    prim0.material = Material(lambertian);
+    scene.primitivesHost.push_back(prim0);
+
+    Primitive prim1;
+    prim1.shape = Sphere(make_float3(0, -100, 17), 100);
+    prim1.material = Material(lambertian);
+    scene.primitivesHost.push_back(prim1);
+
+
+
+    Primitive prim2;
+    TriangleMesh mesh(1, 3, false, false);
+    mesh.positions.cpu.data[0] = make_float3(0, 1, 1);
+    mesh.positions.cpu.data[1] = make_float3(1, 1, 1);
+    mesh.positions.cpu.data[2] = make_float3(0, 2, 3);
+    mesh.indices.cpu.data[0] = make_int3(0, 1, 2);
+    mesh.copyToDevice();
+
+    prim2.shape = mesh;
+    prim2.material = Material(lambertian);
+    scene.primitivesHost.push_back(prim2);
+    
+
+
+
+    scene.lightsHost.push_back(EnvironmentMap());
+    scene.lightsHost.push_back(PointLight(make_float3(0, 5, 2), make_float3(1, 1, 1)));
+    scene.environmentMapIndex = 0;
+
+    return scene;
+
+}
 
 Scene testScene1() {
     Material lambertian;
@@ -42,50 +88,70 @@ Scene testScene1() {
 
 }
 
-
-
-Scene testScene0() {
+Scene testScene2() {
     Material lambertian;
     lambertian.bsdf = LambertianBSDF(make_float3(1, 1, 1));
 
     Scene scene;
 
-    
+
 
     Primitive prim0;
-    prim0.shape = Sphere(make_float3(0, 1, -3), 0.7);
+    prim0.shape = Sphere(make_float3(0, 1, 3), 0.7);
     prim0.material = Material(lambertian);
     scene.primitivesHost.push_back(prim0);
 
     Primitive prim1;
-    prim1.shape = Sphere(make_float3(0, -100, -17), 100);
+    prim1.shape = Sphere(make_float3(0, -100, 17), 100);
     prim1.material = Material(lambertian);
     scene.primitivesHost.push_back(prim1);
 
 
-
+    
     Primitive prim2;
     TriangleMesh mesh(1, 3, false, false);
-    mesh.positions.cpu.data[0] = make_float3(0, 0, -1);
-    mesh.positions.cpu.data[1] = make_float3(1, 0, -1);
-    mesh.positions.cpu.data[2] = make_float3(0, 2, -3);
-    mesh.indices.cpu.data[0] = make_int3(1, 0, 2);
+    mesh.positions.cpu.data[0] = make_float3(0, 1, 1);
+    mesh.positions.cpu.data[1] = make_float3(1, 1, 1);
+    mesh.positions.cpu.data[2] = make_float3(0, 2, 3);
+    mesh.indices.cpu.data[0] = make_int3(0, 1, 2);
     mesh.copyToDevice();
 
     prim2.shape = mesh;
     prim2.material = Material(lambertian);
-    scene.primitivesHost.push_back(prim2);
     
+    scene.primitivesHost.push_back(prim2);
+
+
+    Primitive lightPrim;
+    TriangleMesh lightMesh(1, 3, false, false);
+    lightMesh.positions.cpu.data[0] = make_float3(0, 5, 2);
+    lightMesh.positions.cpu.data[1] = make_float3(0, 5, 3);
+    lightMesh.positions.cpu.data[2] = make_float3(1, 5, 2);
+    lightMesh.indices.cpu.data[0] = make_int3(0, 1, 2);
+    lightMesh.copyToDevice();
+    
+    lightPrim.shape = lightMesh;
+    lightPrim.material = Material(lambertian);
+    scene.primitivesHost.push_back(lightPrim);
+
+    auto light = DiffuseAreaLight(make_float3(1, 1, 1));
+    light.shapeIndex = 3;
+
+    scene.lightsHost.push_back(light);
+
 
 
 
     scene.lightsHost.push_back(EnvironmentMap());
-    scene.lightsHost.push_back(PointLight(make_float3(0, 7, 2), make_float3(1, 1, 1)));
-    scene.environmentMapIndex = 0;
+    //scene.lightsHost.push_back(PointLight(make_float3(0, 5, 2), make_float3(1, 1, 1)));
+    scene.environmentMapIndex = 1;
 
     return scene;
 
 }
+
+
+
 
 void testSimpleCPU0() {
     Renderer renderer;
@@ -97,7 +163,7 @@ void testSimpleCPU0() {
     int width = 128,height = 128;
     integrator->cameraSampler = std::make_unique<NaiveCameraSampler>();
 
-    glm::mat4 cameraToWorld = glm::inverse(glm::lookAt(glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 0.f, -1.f), glm::vec3(0.f,1.f,0.f) ));
+    glm::mat4 cameraToWorld = glm::inverse(glm::lookAtLH(glm::vec3(0.f, 0.f, -1.f), glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f,1.f,0.f) ));
 
     PerspectiveCamera camera(cameraToWorld,45,width,height);
 
@@ -122,7 +188,8 @@ void testDirectLightingCPU0() {
     int width = 512,height = 512;
     integrator->cameraSampler = std::make_unique<NaiveCameraSampler>();
 
-    glm::mat4 cameraToWorld = glm::inverse(glm::lookAt(glm::vec3(0, 0, 3), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0)));
+
+    glm::mat4 cameraToWorld = glm::inverse(glm::lookAtLH(glm::vec3(-3, 2, -3), glm::vec3(0, 0, 1), glm::vec3(0, 1, 0)));
     PerspectiveCamera camera(cameraToWorld, glm::radians(45.f), width, height);
 
     renderer.integrator = std::move(integrator);
@@ -148,9 +215,8 @@ void testDirectLightingGPU0() {
     int width = 1000,height = 1000;
     integrator->cameraSampler = std::make_unique<NaiveCameraSampler>();
 
-    glm::mat4 cameraToWorld = glm::inverse(glm::lookAt(glm::vec3(-1, 0.5, 1)*3.f, glm::vec3(0, 0, -1), glm::vec3(0, 1, 0)));
+    glm::mat4 cameraToWorld = glm::inverse(glm::lookAtLH(glm::vec3(-3, 2,-3), glm::vec3(0, 0, 1), glm::vec3(0, 1, 0)));
 
-    //glm::mat4 cameraToWorld = glm::inverse(glm::lookAt(glm::vec3(0, 0,10), glm::vec3(0, 0, -1), glm::vec3(0, 1, 0)));
 
 
     PerspectiveCamera camera(cameraToWorld, glm::radians(45.f), width, height);
@@ -176,7 +242,7 @@ void testDirectLightingGPU1() {
     int width = 1280, height = 720;
     integrator->cameraSampler = std::make_unique<NaiveCameraSampler>();
 
-    glm::mat4 cameraToWorld = glm::inverse(glm::lookAt(
+    glm::mat4 cameraToWorld = glm::inverse(glm::lookAtLH(
         glm::vec3(0.322839, 0.0534825, 0.504299), 
         glm::vec3(-0.140808, -0.162727, -0.354936),
         glm::vec3(0.0355799, 0.964444, -0.261882)));
@@ -194,17 +260,84 @@ void testDirectLightingGPU1() {
     renderer.render(scene).saveToPNG("test.png");
 }
 
-void testParsing0(){
-    RenderSetup setup = readRenderSetup("../TestScenes/cornellBox/scene.pbrt");
+void testParsingHead(){
+    RenderSetup setup = readRenderSetup("../TestScenes/head/head.pbrt");
     setup.scene.lightsHost.push_back(PointLight(make_float3(0,2,3), make_float3(1, 1, 1)));
     setup.scene.copyToDevice();
     setup.renderer.render(setup.scene).saveToPNG("test.png");
 }
 
 
-int main(){
+void testDirectLightingCPU2() {
+    Renderer renderer;
 
-    testParsing0();
-    //testDirectLightingGPU1();
-    //testSimpleCPU0();
+    std::unique_ptr<DirectLightingCPUIntegrator> integrator = std::make_unique<DirectLightingCPUIntegrator>();
+
+    
+    int width = 512,height = 512;
+    integrator->cameraSampler = std::make_unique<NaiveCameraSampler>();
+
+
+    glm::mat4 cameraToWorld = glm::inverse(glm::lookAtLH(glm::vec3(-3, 2, -3), glm::vec3(0, 0, 1), glm::vec3(0, 1, 0)));
+    PerspectiveCamera camera(cameraToWorld, glm::radians(45.f), width, height);
+
+    renderer.integrator = std::move(integrator);
+    renderer.camera = std::make_unique<CameraObject>(camera);
+    renderer.film = std::make_unique<FilmObject>(SimpleFilmCPU(width,height));
+
+
+
+    Scene scene = testScene2();
+
+    scene.buildCpuReferences();
+
+    renderer.render(scene).saveToPNG("test.png");
+}
+
+void testDirectLightingGPU2() {
+    Renderer renderer;
+
+    std::unique_ptr<DirectLightingGPUIntegrator> integrator = std::make_unique<DirectLightingGPUIntegrator>();
+
+
+    int width = 512, height = 512;
+    integrator->cameraSampler = std::make_unique<NaiveCameraSampler>();
+
+
+    glm::mat4 cameraToWorld = glm::inverse(glm::lookAtLH(glm::vec3(-3, 2, -3), glm::vec3(0, 0, 1), glm::vec3(0, 1, 0)));
+    PerspectiveCamera camera(cameraToWorld, glm::radians(45.f), width, height);
+
+    renderer.integrator = std::move(integrator);
+    renderer.camera = std::make_unique<CameraObject>(camera);
+    renderer.film = std::make_unique<FilmObject>(SimpleFilmGPU(width, height));
+
+
+
+    Scene scene = testScene2();
+    std::cout << scene.lightsHost[0].get<DiffuseAreaLight>()->shapeIndex << "    on host" << std::endl;
+    std::cout << scene.lightsHost.size() << "    lightscount on host" << std::endl;
+
+    printf("host size:%d\n", sizeof(LightObject));
+    scene.copyToDevice();
+
+    std::cout << scene.lightsDevice.data << "    lights device start seen on host" << std::endl;
+    scene.buildGpuReferences();
+    scene.buildCpuReferences();
+
+    renderer.render(scene).saveToPNG("test.png");
+}
+
+void testParsingCornell() {
+    RenderSetup setup = readRenderSetup("../TestScenes/cornellBox/scene.pbrt");
+    setup.scene.lightsHost.push_back(PointLight(make_float3(0, 2, 3), make_float3(1, 1, 1)));
+    setup.scene.copyToDevice();
+    setup.scene.buildGpuReferences();
+    setup.renderer.render(setup.scene).saveToPNG("test.png");
+}
+
+
+int main(){
+    testParsingCornell();
+    //testParsingHead();
+    //testDirectLightingGPU2();
 }

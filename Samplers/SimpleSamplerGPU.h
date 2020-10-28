@@ -55,5 +55,20 @@ public:
     };
 
 
+    __host__ __device__
+	virtual float4 rand4() override {
+#ifdef __CUDA_ARCH__
+        int index = blockIdx.x * blockDim.x + threadIdx.x;
+        if(index >= maxThreads){
+            return;
+        }
+        curandState* myState = states.getState(index);
+        return make_float4(curand_uniform(myState), curand_uniform(myState),curand_uniform(myState), curand_uniform(myState));
+#else
+        SIGNAL_ERROR("NOT Implemented on CPU");
+#endif
+    };
+
+
 
 };

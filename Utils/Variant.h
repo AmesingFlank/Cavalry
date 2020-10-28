@@ -62,12 +62,12 @@ public:
     
     template<typename T>
     __host__ __device__
-    const T& get() const{
-        return visit([&](const auto& arg)-> const T& {
+    const T* get() const{
+        return visit([&](const auto& arg)-> const T* {
             using ConstX = typename std::remove_reference<decltype(arg)>::type;
             using X = typename std::remove_cv<ConstX>::type;
             if constexpr (std::is_same<X, T>::value) {
-                return arg;
+                return &arg;
             }
             else {
                 SIGNAL_VARIANT_GET_ERROR;
@@ -77,11 +77,11 @@ public:
 
     template<typename T>
     __host__ __device__
-    T& get() {
-        return visit([&](auto& arg)-> T& {
+    T* get() {
+        return visit([&](auto& arg)-> T* {
             using X = typename std::remove_reference<decltype(arg)>::type;
             if constexpr (std::is_same<X, T>::value) {
-                return arg;
+                return &arg;
             }
             else {
                 SIGNAL_VARIANT_GET_ERROR;
@@ -89,7 +89,20 @@ public:
         });
     }
 
-
+    template<typename T>
+    __host__ __device__
+    const bool is() const {
+        return visit([&](const auto& arg)-> bool {
+            using ConstX = typename std::remove_reference<decltype(arg)>::type;
+            using X = typename std::remove_cv<ConstX>::type;
+            if constexpr (std::is_same<X, T>::value) {
+                return true;
+            }
+            else {
+                return false;
+            }
+        });
+    }
 
 };
 

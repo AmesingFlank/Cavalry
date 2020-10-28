@@ -12,7 +12,10 @@ Spectrum DirectLightingCPUIntegrator::renderRay(const SceneHandle& scene, const 
 
     
     if(!intersection.intersected){
-        return scene.getEnvironmentMap().evaluateRay(ray);
+        if (scene.hasEnvironmentMap()) {
+            return scene.getEnvironmentMap()->EnvironmentMap::evaluateRay(ray);
+        }
+        return make_float3(0, 0, 0);
     }
     
     
@@ -26,7 +29,7 @@ Spectrum DirectLightingCPUIntegrator::renderRay(const SceneHandle& scene, const 
         const LightObject& light = scene.lights[i];
         Ray rayToLight;
         float probability;
-        float2 randomSource = sampler.rand2();
+        float4 randomSource = sampler.rand4();
 
         VisibilityTest visibilityTest;
         visibilityTest.sourceGeometry = prim->shape.getID();

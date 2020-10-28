@@ -68,6 +68,8 @@ public:
 
     ArrayPair<int3> indices;
 
+    float surfaceArea;
+
     __host__ 
     TriangleMesh();
 
@@ -152,6 +154,48 @@ public:
 
 
     }
+
+    __host__ __device__
+    virtual bool area() const override {
+        return surfaceArea;
+    }
+
+    void computeArea();
+
+    __host__ __device__
+    virtual IntersectionResult sample(const float4& randomSource,float* outputProbability) const override{
+        
+        int triangleID = round(randomSource.z*(trianglesCount-1));
+        float temp = sqrt(randomSource.x);
+        float u = 1-temp;
+        float v = temp*randomSource.y;
+
+#ifdef __CUDA_ARCH__
+        float3* positionsData = positions.gpu.data;
+        int3* indicesData = indices.gpu.data;
+#else
+        float3* positionsData = positions.cpu.data;
+        int3* indicesData = indices.cpu.data;
+#endif
+        int3 thisIndices = indicesData[triangleID];
+        float3 p0 = positionsData[thisIndices.x];
+        float3 p1 = positionsData[thisIndices.y];
+        float3 p2 = positionsData[thisIndices.z];
+
+        
+
+        IntersectionResult result;
+        result. position = p0*u+p1*v+p2*(1.f-u-v);
+        getNormal(result,triangleID,u,v);
+
+        
+        result.intersected = true;
+
+        *outputProbability = 1.f/surfaceArea;
+
+        return result;
+    }
+
 
 };
 

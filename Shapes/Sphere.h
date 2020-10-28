@@ -57,6 +57,18 @@ public:
 
     }
 
+    __host__ __device__
+    virtual bool area() const override {
+        return 4*M_PI*radius*radius;
+    }
+
+    __host__ __device__
+    virtual IntersectionResult sample(const float4& randomSource,float* outputProbability) const override{
+        SIGNAL_ERROR("not implemented yet");
+    }
+
+
+
     float3 center;
     float radius;
 };

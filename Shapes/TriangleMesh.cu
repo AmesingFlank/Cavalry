@@ -128,3 +128,14 @@ TriangleMesh TriangleMesh::createFromParams(const Parameters& params,const glm::
     }
     
 }
+
+void TriangleMesh::computeArea(){
+    surfaceArea = 0;
+    for(int i = 0;i<trianglesCount;++i){
+        int3 vertices = indices.cpu.data[i];
+        float3 p0 = positions.cpu.data[vertices.x];
+        float3 p1 = positions.cpu.data[vertices.y];
+        float3 p2 = positions.cpu.data[vertices.z];
+        surfaceArea += length(cross(p1-p0,p2-p0)) * 0.5f;
+    }
+}

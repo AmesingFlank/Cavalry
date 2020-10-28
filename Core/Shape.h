@@ -22,4 +22,12 @@ public:
 
     __host__ __device__
     virtual bool intersect(IntersectionResult& result, const Ray& ray) const = 0;
+
+    __host__ __device__
+    virtual bool area() const = 0;
+
+    __host__ __device__
+    virtual IntersectionResult sample(const float4& randomSource, float* outputProbability) const = 0;
+
+
 };

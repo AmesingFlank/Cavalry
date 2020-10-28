@@ -16,6 +16,20 @@
 
 template <typename T>
 __host__ __device__
+inline float2 to_float2(const T& vec) {
+	return make_float2(vec.x, vec.y);
+}
+
+
+template <typename T>
+__host__ __device__
+inline glm::vec2 to_vec2(const T& vec) {
+	return glm::vec3(vec.x, vec.y);
+}
+
+
+template <typename T>
+__host__ __device__
 inline float3 to_float3(const T& vec){
 	return make_float3(vec.x,vec.y,vec.z);
 }

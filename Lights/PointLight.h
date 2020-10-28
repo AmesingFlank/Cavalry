@@ -20,7 +20,7 @@ public:
     Spectrum color;
 
     __host__ __device__
-    virtual Spectrum sampleRayToPoint(const float3& position,const float2& randomSource, float& outputProbability, Ray& outputRay, VisibilityTest& outputVisibilityTest) const override{
+    virtual Spectrum sampleRayToPoint(const float3& position,const float4& randomSource, float& outputProbability, Ray& outputRay, VisibilityTest& outputVisibilityTest) const override{
         outputProbability = 1;
 
         outputRay.origin = position;
@@ -31,5 +31,10 @@ public:
 
         return color;
     }
+
+    virtual void buildCpuReferences(const SceneHandle& scene) override {};
+
+    __device__
+    virtual void buildGpuReferences(const SceneHandle& scene) override {};
 
 };

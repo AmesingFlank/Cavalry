@@ -17,6 +17,9 @@ class Sampler{
 
 	__host__ __device__
 	virtual float2 rand2() = 0;
+
+	__host__ __device__
+	virtual float4 rand4() = 0;
 };
 
 class CameraSampler {

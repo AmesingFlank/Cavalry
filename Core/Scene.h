@@ -10,17 +10,22 @@
 #include "../Utils/Array.h"
 
 struct SceneHandle{
-    const Primitive* primitives;
+    Primitive* mutable primitives;
     size_t primitivesCount;
 
-    const LightObject* lights;
+    LightObject* mutable lights;
     size_t lightsCount;
 
     const LightObject* environmentMapLightObject;
 
     __host__ __device__
-    const EnvironmentMap& getEnvironmentMap() const{
+    const EnvironmentMap* getEnvironmentMap() const{
         return environmentMapLightObject->get<EnvironmentMap>();
+    }
+
+    __host__ __device__
+    bool hasEnvironmentMap() const {
+        return environmentMapLightObject != nullptr;
     }
     
     
@@ -50,7 +55,12 @@ struct SceneHandle{
             }
             IntersectionResult thisResult;
             if(prim.shape.intersect(thisResult,ray)){
-                if(test.useDistanceLimit && thisResult.distance <test.distanceLimit){
+                if(test.useDistanceLimit){
+                    if (thisResult.distance < test.distanceLimit) {
+                        return false;
+                    }
+                }
+                else {
                     return false;
                 }
             }
@@ -67,31 +77,17 @@ public:
     std::vector<LightObject> lightsHost;
     GpuArray<LightObject> lightsDevice = GpuArray<LightObject>(0,true);
 
-    int environmentMapIndex;
+    int environmentMapIndex  = -1;
 
-    SceneHandle getHostHandle() const{
-        return {
-            primitivesHost.data(),
-            primitivesHost.size(),
-            lightsHost.data(),
-            lightsHost.size(), 
-            lightsHost.data()+environmentMapIndex
-        };
-    }
+    SceneHandle getHostHandle() const;
 
-    SceneHandle getDeviceHandle()const {
-        return {
-            primitivesDevice.data,
-            (size_t)primitivesDevice.N,
-            lightsDevice.data,
-            (size_t)lightsDevice.N,
-            lightsDevice.data + environmentMapIndex
-        };
-    }
+    SceneHandle getDeviceHandle()const;
 
-    void copyToDevice(){
-        primitivesDevice = primitivesHost;
-        lightsDevice = lightsHost;
-    }
+    void copyToDevice();
+
+    void buildCpuReferences() ;
+    void buildGpuReferences() ;
     
 };
+
+#include "../Lights/DiffuseAreaLightImpl.h"

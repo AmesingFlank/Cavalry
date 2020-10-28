@@ -249,10 +249,36 @@ void parseSubsection(TokenBuf& buf, RenderSetup& result, glm::mat4 transform,con
 				prim.material = lambertian;
 				result.scene.primitivesHost.push_back(prim);
 			}
-			else if (keyWord->word == "LightSource" || keyWord->word == "AreaLightSource") {
+			else if (keyWord->word == "AreaLightSource") {
+				auto lightDef = readObjectDefinition(buf);
+				LightObject light = LightObject::createFromObjectDefinition(lightDef, transform);
+				if (light.is<DiffuseAreaLight>()) {
+					DiffuseAreaLight* diffuseLight = light.get<DiffuseAreaLight>();
+					std::cout << "before adding " << diffuseLight->shapeIndex << std::endl;
+					diffuseLight->shapeIndex = result.scene.primitivesHost.size();
+					std::cout << "added shape for diffuse area light "<< diffuseLight->shapeIndex << std::endl;
+				}
+				if (light.is<DiffuseAreaLight>()) {
+					DiffuseAreaLight* diffuseLight = light.get<DiffuseAreaLight>();
+					std::cout << "before adding " << diffuseLight->shapeIndex << std::endl;
+					diffuseLight->shapeIndex = result.scene.primitivesHost.size();
+					std::cout << "added shape for diffuse area light " << diffuseLight->shapeIndex << std::endl;
+				}
+				result.scene.lightsHost.push_back(light);
+
+				if (result.scene.lightsHost.back().is<DiffuseAreaLight>()) {
+					DiffuseAreaLight* diffuseLight = result.scene.lightsHost.back().get<DiffuseAreaLight>();
+					std::cout << "observing " << diffuseLight->shapeIndex << std::endl;
+				}
+
+			}
+			else if (keyWord->word == "LightSource") {
 				auto lightDef = readObjectDefinition(buf);
 				LightObject light = LightObject::createFromObjectDefinition(lightDef, transform);
 				result.scene.lightsHost.push_back(light);
+				if (lightDef.objectName == "infinite") {
+					result.scene.environmentMapIndex = result.scene.lightsHost.size() - 1;
+				}
 			}
 			else if (readTransform(buf, transform)) {
 
@@ -267,7 +293,7 @@ void parseSubsection(TokenBuf& buf, RenderSetup& result, glm::mat4 transform,con
 			SIGNAL_PARSING_ERROR("Keyword expected.", buf.currentIndex, nextToken->print());
 		}
 	}
-	result.scene.environmentMapIndex = 0;
+
 	buf.checkAndPop<KeyWordToken>();
 }
 

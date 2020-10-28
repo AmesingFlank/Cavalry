@@ -52,7 +52,7 @@ inline void __getLastCudaError(const char* errorMessage, const char* file, const
 
 
 
-#define MAX_THREADS_PER_BLOCK 1024
+#define MAX_THREADS_PER_BLOCK 256
 
 inline int divUp(int a, int b) {
 	if (b == 0) {
