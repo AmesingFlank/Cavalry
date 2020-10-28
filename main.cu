@@ -55,7 +55,7 @@ Scene testScene0() {
 
 
     scene.lightsHost.push_back(EnvironmentMap());
-    scene.lightsHost.push_back(PointLight(make_float3(0, 5, 2), make_float3(1, 1, 1)));
+    scene.lightsHost.push_back(PointLight(make_float3(0, 5, 2), make_float3(2, 1, 0.1)));
     scene.environmentMapIndex = 0;
 
     return scene;
@@ -134,7 +134,7 @@ Scene testScene2() {
     lightPrim.material = Material(lambertian);
     scene.primitivesHost.push_back(lightPrim);
 
-    auto light = DiffuseAreaLight(make_float3(1, 1, 1));
+    auto light = DiffuseAreaLight(make_float3(2, 1, 0.1));
     light.shapeIndex = 3;
 
     scene.lightsHost.push_back(light);
@@ -262,7 +262,7 @@ void testDirectLightingGPU1() {
 
 void testParsingHead(){
     RenderSetup setup = readRenderSetup("../TestScenes/head/head.pbrt");
-    setup.scene.lightsHost.push_back(PointLight(make_float3(0,2,3), make_float3(1, 1, 1)));
+    setup.scene.lightsHost.push_back(PointLight(make_float3(0,2,3), make_float3(2, 1, 0.1)));
     setup.scene.copyToDevice();
     setup.renderer.render(setup.scene).saveToPNG("test.png");
 }

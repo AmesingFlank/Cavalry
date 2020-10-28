@@ -14,7 +14,8 @@ public:
     __host__ __device__
     Spectrum eval(const Ray& incidentRay, const Spectrum& incidentSpectrum, const Ray& exitantRay, const IntersectionResult& intersection) const{
         float cosine = dot(incidentRay.direction,intersection.normal);
-        Spectrum result = bsdf.eval(incidentRay.direction,exitantRay.direction) * incidentSpectrum * cosine ;
+        Spectrum result = incidentSpectrum * bsdf.eval(incidentRay.direction,exitantRay.direction) * cosine ;
+
             
         return result;
     }

@@ -72,14 +72,14 @@ public:
 	static LightObject createFromObjectDefinition(const ObjectDefinition& def,const glm::mat4 transform){
 		if (def.objectName == "diffuse") {
 			Spectrum color = make_float3(1, 1, 1);
-			/*
+			
 			if (def.params.hasNumList("L")) {
 				std::vector<float> colorVec = def.params.getNumList("L");
 				color.x = colorVec[0];
 				color.y = colorVec[1];
 				color.z = colorVec[2];
 			}
-			*/
+			
 			return DiffuseAreaLight(color);
 		}
 		return LightObject(EnvironmentMap());

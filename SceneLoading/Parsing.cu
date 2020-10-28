@@ -254,22 +254,12 @@ void parseSubsection(TokenBuf& buf, RenderSetup& result, glm::mat4 transform,con
 				LightObject light = LightObject::createFromObjectDefinition(lightDef, transform);
 				if (light.is<DiffuseAreaLight>()) {
 					DiffuseAreaLight* diffuseLight = light.get<DiffuseAreaLight>();
-					std::cout << "before adding " << diffuseLight->shapeIndex << std::endl;
 					diffuseLight->shapeIndex = result.scene.primitivesHost.size();
 					std::cout << "added shape for diffuse area light "<< diffuseLight->shapeIndex << std::endl;
 				}
-				if (light.is<DiffuseAreaLight>()) {
-					DiffuseAreaLight* diffuseLight = light.get<DiffuseAreaLight>();
-					std::cout << "before adding " << diffuseLight->shapeIndex << std::endl;
-					diffuseLight->shapeIndex = result.scene.primitivesHost.size();
-					std::cout << "added shape for diffuse area light " << diffuseLight->shapeIndex << std::endl;
-				}
+
 				result.scene.lightsHost.push_back(light);
 
-				if (result.scene.lightsHost.back().is<DiffuseAreaLight>()) {
-					DiffuseAreaLight* diffuseLight = result.scene.lightsHost.back().get<DiffuseAreaLight>();
-					std::cout << "observing " << diffuseLight->shapeIndex << std::endl;
-				}
 
 			}
 			else if (keyWord->word == "LightSource") {

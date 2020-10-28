@@ -26,7 +26,7 @@ public:
 			std::cout <<"simple film cpu error:   "<< x << " " << y <<"  "<<index<<"    "<<result.data.size()<< std::endl;
 		}
 
-		writeColorAt(spectrum,&(result.data[index*3]));
+		writeColorAt(clampBetween0And1(spectrum),&(result.data[index*3]));
 #endif
 	}
 

@@ -25,7 +25,7 @@ public:
 		if (x >= width || y >= height) {
 			printf("error %d %d %d %d\n", x, y, width, height);
 		}
-		writeColorAt(spectrum,&(data.data[index*3]));
+		writeColorAt(clampBetween0And1(spectrum),&(data.data[index*3]));
     	
 #else
         SIGNAL_ERROR("Not Implemented on CPU");
