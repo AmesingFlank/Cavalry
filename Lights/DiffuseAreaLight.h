@@ -40,6 +40,7 @@ public:
 
         outputVisibilityTest.ray = outputRay;
         outputVisibilityTest.targetGeometry = shape->getID();
+        outputVisibilityTest.setDistanceLimit(length(shapeSample.position - position));
 
         return color;
 

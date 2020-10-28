@@ -329,7 +329,7 @@ void testDirectLightingGPU2() {
 
 void testParsingCornell() {
     RenderSetup setup = readRenderSetup("../TestScenes/cornellBox/scene.pbrt");
-    setup.scene.lightsHost.push_back(PointLight(make_float3(0, 2, 3), make_float3(1, 1, 1)));
+    //setup.scene.lightsHost.push_back(PointLight(make_float3(0, 2, 3), make_float3(1, 1, 1)));
     setup.scene.copyToDevice();
     setup.scene.buildGpuReferences();
     setup.renderer.render(setup.scene).saveToPNG("test.png");
