@@ -39,6 +39,9 @@ void Scene::buildCpuReferences() {
     for(LightObject& light:lightsHost){
         light.buildCpuReferences(handle);
     }
+    for (Primitive& prim:primitivesHost) {
+        prim.buildCpuReferences(handle);
+    }
 };
 
 
@@ -50,11 +53,23 @@ void buildLightsGpuReferences(SceneHandle handle){
     }
 }
 
+__global__
+void buildPrimitivesGpuReferences(SceneHandle handle) {
+    for (int i = 0; i < handle.primitivesCount; ++i) {
+        Primitive& prim = handle.primitives[i];
+        prim.buildGpuReferences(handle);
+    }
+}
+
 
 void Scene::buildGpuReferences() {
     SceneHandle handle = getDeviceHandle();
     buildLightsGpuReferences<<<1,1>>>(handle);
     CHECK_CUDA_ERROR("build lights gpu refs");
+
+    buildPrimitivesGpuReferences <<<1, 1 >>> (handle);
+    CHECK_CUDA_ERROR("build prims gpu refs");
+   
 };
 
 void Scene::prepareForRender() {

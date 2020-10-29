@@ -7,8 +7,12 @@
 #include "Shape.h"
 #include "../Shapes/ShapeObject.h"
 
+struct SceneHandle;
+struct LightObject;
+
 class Primitive{
 public:
+
     MaterialObject material;
     ShapeObject shape;
 
@@ -23,4 +27,15 @@ public:
         shape.prepareForRender();
         material.prepareForRender();
     }
+
+    LightObject* areaLight = nullptr;
+    int areaLightIndex = -1;
+    void setAreaLightIndex(int index) {
+        areaLightIndex = index;
+    }
+
+    void buildCpuReferences(const SceneHandle& scene);
+
+    __device__
+    void buildGpuReferences(const SceneHandle& scene) ;
 };

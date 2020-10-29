@@ -252,6 +252,8 @@ void parseSubsection(TokenBuf& buf, RenderSetup& result, glm::mat4 transform,con
 
 	std::unique_ptr<MaterialObject> currentMaterial = nullptr;
 
+	bool addedAreaLight = false;
+
 	while (true) {
 		auto nextToken = buf.peek();
 		auto keyWord = std::dynamic_pointer_cast<KeyWordToken>(nextToken);
@@ -269,6 +271,7 @@ void parseSubsection(TokenBuf& buf, RenderSetup& result, glm::mat4 transform,con
 			else if (keyWord->word == "Shape") {
 				auto shapeDef = readObjectDefinition(buf);
 				ShapeObject shape = ShapeObject::createFromObjectDefinition(shapeDef, transform, basePath);
+				
 				Primitive prim;
 				
 				prim.shape = shape;
@@ -281,6 +284,11 @@ void parseSubsection(TokenBuf& buf, RenderSetup& result, glm::mat4 transform,con
 					prim.material = matteGray;
 				}
 
+				if (addedAreaLight) {
+					prim.setAreaLightIndex(result.scene.lightsHost.size() - 1);
+					addedAreaLight = false;
+				}
+
 				result.scene.primitivesHost.push_back(prim);
 			}
 			else if (keyWord->word == "AreaLightSource") {
@@ -288,8 +296,10 @@ void parseSubsection(TokenBuf& buf, RenderSetup& result, glm::mat4 transform,con
 				LightObject light = LightObject::createFromObjectDefinition(lightDef, transform);
 				if (light.is<DiffuseAreaLight>()) {
 					DiffuseAreaLight* diffuseLight = light.get<DiffuseAreaLight>();
+					// shapeIndex will be the index of the next shape to be added.
 					diffuseLight->shapeIndex = result.scene.primitivesHost.size();
 					std::cout << "added shape for diffuse area light "<< diffuseLight->shapeIndex << std::endl;
+					addedAreaLight = true;
 				}
 
 				result.scene.lightsHost.push_back(light);

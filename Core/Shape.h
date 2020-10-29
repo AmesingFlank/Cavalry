@@ -11,10 +11,11 @@ class Shape;
 // using the this pointer as a unique identifier of the shape.
 using ShapeID = const Shape*;
 
-struct SceneHandle;
 
 class Shape{
 public:
+
+    
     
     __host__ __device__
     ShapeID getID() const { 
@@ -32,8 +33,5 @@ public:
 
     virtual void prepareForRender() {};
 
-    virtual void buildCpuReferences(const SceneHandle& scene)  {};
-
-    __device__
-    virtual void buildGpuReferences(const SceneHandle& scene)  {};
+    
 };

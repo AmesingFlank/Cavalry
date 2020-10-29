@@ -22,12 +22,17 @@ public:
             }
             return make_float3(0, 0, 0);
         }
+
         
         
         Spectrum result = make_float3(0,0,0);
 
 
         const Primitive* prim = intersection.primitive;
+
+        if (prim->areaLight) {
+            result += prim->areaLight->get<DiffuseAreaLight>()->DiffuseAreaLight::evaluateRay(ray);
+        }
 
         Ray exitantRay = {intersection.position,ray.direction*-1};
 

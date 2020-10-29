@@ -94,3 +94,4 @@ public:
 };
 
 #include "../Lights/DiffuseAreaLightImpl.h"
+#include "PrimitiveImpl.h"

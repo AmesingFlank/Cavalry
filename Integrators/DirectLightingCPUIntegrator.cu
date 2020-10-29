@@ -23,6 +23,10 @@ Spectrum DirectLightingCPUIntegrator::renderRay(const SceneHandle& scene, const 
 
 	const Primitive* prim = intersection.primitive;
 
+    if (prim->areaLight) {
+        result += prim->areaLight->get<DiffuseAreaLight>()->DiffuseAreaLight::evaluateRay(ray);
+    }
+
     Ray exitantRay = {intersection.position,ray.direction*-1};
 
     for (int i = 0; i < scene.lightsCount;++i) {
