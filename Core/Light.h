@@ -44,7 +44,7 @@ public:
     __host__ __device__
     virtual Spectrum evaluateRay(const Ray& ray) const override{
         // to be changed
-        return make_float3(0.5*ray.direction.y + 0.5);
+        return make_float3(0.5*ray.direction.y + 0.5) / (4.0 * M_PI);
     }
 
     virtual void buildCpuReferences(const SceneHandle& scene)override  {};

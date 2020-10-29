@@ -44,7 +44,10 @@ public:
             Spectrum incident = light.sampleRayToPoint(intersection.position, randomSource, probability, rayToLight,visibilityTest);
 
             if(scene.testVisibility(visibilityTest) && dot(rayToLight.direction, intersection.normal) > 0){
-                result += prim->material.eval(rayToLight,incident,exitantRay,intersection);
+                if (probability == 0) {
+                    printf("probability is 0\n");
+                }
+                result += prim->material.eval(rayToLight,incident,exitantRay,intersection) / probability;
             }
         }
         return result;

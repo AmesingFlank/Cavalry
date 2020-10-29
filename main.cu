@@ -45,6 +45,7 @@ Scene testScene0() {
     mesh.positions.cpu.data[1] = make_float3(1, 1, 1);
     mesh.positions.cpu.data[2] = make_float3(0, 2, 3);
     mesh.indices.cpu.data[0] = make_int3(0, 1, 2);
+    mesh.computeArea();
     mesh.copyToDevice();
 
     prim2.shape = mesh;
@@ -112,6 +113,7 @@ Scene testScene2() {
     mesh.positions.cpu.data[1] = make_float3(1, 1, 1);
     mesh.positions.cpu.data[2] = make_float3(0, 2, 3);
     mesh.indices.cpu.data[0] = make_int3(0, 1, 2);
+    mesh.computeArea();
     mesh.copyToDevice();
 
     prim2.shape = mesh;
@@ -126,6 +128,7 @@ Scene testScene2() {
     lightMesh.positions.cpu.data[1] = make_float3(0, 5, 3);
     lightMesh.positions.cpu.data[2] = make_float3(1, 5, 2);
     lightMesh.indices.cpu.data[0] = make_int3(0, 1, 2);
+    lightMesh.computeArea();
     lightMesh.copyToDevice();
     
     lightPrim.shape = lightMesh;
@@ -337,5 +340,7 @@ void testParsingCornell() {
 int main(){
     testParsingCornell();
     //testParsingHead();
-   // testDirectLightingGPU0();
+    //testDirectLightingCPU2();
+
+    std::cout << "done!" << std::endl;
 }
