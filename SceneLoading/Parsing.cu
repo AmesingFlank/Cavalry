@@ -6,11 +6,36 @@
 #include "../Samplers/NaiveCameraSampler.h"
 #include "../Integrators/DirectLightingGPUIntegrator.h"
 #include "../Utils/Utils.h"
+#include <unordered_map>
+#include <string>
 
 #define SIGNAL_PARSING_ERROR(err,pos,tokenString) SIGNAL_ERROR((std::string("Parsing Error: ")+err+std::string("\n at token ")+std::to_string(pos)+": "+tokenString).c_str())
 
 
-
+struct MaterialStorage {
+	std::unordered_map<std::string, MaterialObject> materials;
+	bool has(const std::string& name) {
+		return materials.find(name) != materials.end();
+	}
+	void add(const std::string& name, const MaterialObject& material) {
+		materials[name] = material;
+	}
+	void add(const ObjectDefinition& namedMaterialDef) {
+		ObjectDefinition materialDef;
+		materialDef.keyWord = "Material";
+		materialDef.objectName = namedMaterialDef.params.getString("type");
+		materialDef.params = namedMaterialDef.params;
+		materialDef.isDefined = true;
+		MaterialObject material = MaterialObject::createFromObjectDefinition(materialDef);
+		add(namedMaterialDef.objectName, material);
+	}
+	MaterialObject get(const std::string& name) {
+		if (!has(name)) {
+			SIGNAL_ERROR((std::string("NamedMaterial not found :")+name).c_str());
+		}
+		return materials.at(name);
+	}
+};
 
 
 std::vector<float> readNumList(TokenBuf& buf){
@@ -217,13 +242,15 @@ void parseSceneWideOptions(TokenBuf& buf,RenderSetup& result){
 
 
 
-void parseSubsection(TokenBuf& buf, RenderSetup& result, glm::mat4 transform,const std::filesystem::path& basePath) {
+void parseSubsection(TokenBuf& buf, RenderSetup& result, glm::mat4 transform,const std::filesystem::path& basePath, MaterialStorage& materialsStore) {
 	auto begin = buf.checkAndPop<KeyWordToken>();
 	if ( !endsWith(begin->word,"Begin") ) {
 		SIGNAL_PARSING_ERROR("XXXBegin expected.", buf.currentIndex, begin->print());
 	}
 
 	std::string subsectionName = begin->word.substr(0, begin->word.size() - std::string("Begin").size());
+
+	std::unique_ptr<MaterialObject> currentMaterial = nullptr;
 
 	while (true) {
 		auto nextToken = buf.peek();
@@ -237,16 +264,23 @@ void parseSubsection(TokenBuf& buf, RenderSetup& result, glm::mat4 transform,con
 				break;
 			}
 			else if (endsWith(keyWord->word,"Begin")) {
-				parseSubsection(buf, result, transform, basePath);
+				parseSubsection(buf, result, transform, basePath,materialsStore);
 			}
 			else if (keyWord->word == "Shape") {
 				auto shapeDef = readObjectDefinition(buf);
 				ShapeObject shape = ShapeObject::createFromObjectDefinition(shapeDef, transform, basePath);
 				Primitive prim;
-				Material lambertian;
-				lambertian.bsdf = LambertianBSDF(make_float3(1, 1, 1));
+				
 				prim.shape = shape;
-				prim.material = lambertian;
+
+				if (currentMaterial.get() != nullptr) {
+					prim.material = *currentMaterial;
+				}
+				else {
+					MaterialObject  matteGray = MatteMaterial(make_float3(1, 1, 1));
+					prim.material = matteGray;
+				}
+
 				result.scene.primitivesHost.push_back(prim);
 			}
 			else if (keyWord->word == "AreaLightSource") {
@@ -260,7 +294,6 @@ void parseSubsection(TokenBuf& buf, RenderSetup& result, glm::mat4 transform,con
 
 				result.scene.lightsHost.push_back(light);
 
-
 			}
 			else if (keyWord->word == "LightSource") {
 				auto lightDef = readObjectDefinition(buf);
@@ -272,6 +305,15 @@ void parseSubsection(TokenBuf& buf, RenderSetup& result, glm::mat4 transform,con
 			}
 			else if (readTransform(buf, transform)) {
 
+			}
+			else if (keyWord->word == "MakeNamedMaterial") {
+				auto namedMaterialDef = readObjectDefinition(buf);
+				materialsStore.add(namedMaterialDef);
+			}
+			else if (keyWord->word == "NamedMaterial") {
+				buf.moveForward();
+				std::string name = buf.checkAndPop<StringToken>()->all;
+				currentMaterial = std::make_unique<MaterialObject>(materialsStore.get(name));
 			}
 			else {
 				std::cout << "reading unrecognized object from " << buf.currentIndex ;
@@ -291,10 +333,11 @@ void parseSubsection(TokenBuf& buf, RenderSetup& result, glm::mat4 transform,con
 RenderSetup runParsing(TokenBuf tokens, const std::filesystem::path& basePath) {
 
 	RenderSetup result;
+	MaterialStorage materials;
 
 	parseSceneWideOptions(tokens, result);
 
-	parseSubsection(tokens,result,glm::mat4(1.0),basePath);
+	parseSubsection(tokens,result,glm::mat4(1.0),basePath,materials);
 
 	return result;
 }

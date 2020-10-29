@@ -1,7 +1,7 @@
 #pragma once
 
 #include "BSDF.h"
-#include "Material.h"
+#include "../Materials/MaterialObject.h"
 #include <vector>
 #include <memory>
 #include "Shape.h"
@@ -9,7 +9,7 @@
 
 class Primitive{
 public:
-    Material material;
+    MaterialObject material;
     ShapeObject shape;
 
     __host__ __device__

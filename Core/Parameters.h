@@ -51,7 +51,7 @@ struct Parameters{
         if (strings.find(name) != strings.end()) {
             return strings.at(name);
         }
-        if(stringLists.find(name)==stringLists.end()){
+        if(stringLists.find(name)!=stringLists.end()){
             return stringLists.at(name)[0];
         }
         SIGNAL_ERROR((std::string("Params String field not found: ") + name).c_str());

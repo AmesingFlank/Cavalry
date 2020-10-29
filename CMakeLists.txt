@@ -42,6 +42,9 @@ file(GLOB ALL_CODE
     "SceneLoading/*.h"
     "SceneLoading/*.cpp"
     "SceneLoading/*.cu"
+    "Materials/*.h"
+    "Materials/*.cpp"
+    "Materials/*.cu"
 )
 
 add_executable(Cavalry ${ALL_CODE})

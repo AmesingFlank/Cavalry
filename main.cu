@@ -17,11 +17,11 @@
 #include <variant>
 #include "SceneLoading/SceneLoading.h"
 #include "Utils/MathsCommons.h"
+#include "Materials/MaterialObject.h"
 
 
 Scene testScene0() {
-    Material lambertian;
-    lambertian.bsdf = LambertianBSDF(make_float3(1, 1, 1));
+    MaterialObject  matteGray = MatteMaterial(make_float3(1,1,1)) ;
 
     Scene scene;
 
@@ -29,12 +29,12 @@ Scene testScene0() {
 
     Primitive prim0;
     prim0.shape = Sphere(make_float3(0, 1, 3), 0.7);
-    prim0.material = Material(lambertian);
+    prim0.material =  matteGray;
     scene.primitivesHost.push_back(prim0);
 
     Primitive prim1;
     prim1.shape = Sphere(make_float3(0, -100, 17), 100);
-    prim1.material = Material(lambertian);
+    prim1.material =  matteGray;
     scene.primitivesHost.push_back(prim1);
 
 
@@ -48,7 +48,7 @@ Scene testScene0() {
     mesh.copyToDevice();
 
     prim2.shape = mesh;
-    prim2.material = Material(lambertian);
+    prim2.material =  matteGray;
     scene.primitivesHost.push_back(prim2);
     
 
@@ -63,8 +63,7 @@ Scene testScene0() {
 }
 
 Scene testScene1() {
-    Material lambertian;
-    lambertian.bsdf = LambertianBSDF(make_float3(1, 1, 1));
+    MaterialObject  matteGray = MatteMaterial(make_float3(1,1,1)) ;
 
     Scene scene;
 
@@ -75,7 +74,7 @@ Scene testScene1() {
     dragon.copyToDevice();
 
     prim3.shape = dragon;
-    prim3.material = Material(lambertian);
+    prim3.material =  matteGray;
     scene.primitivesHost.push_back(prim3);
 
 
@@ -89,8 +88,7 @@ Scene testScene1() {
 }
 
 Scene testScene2() {
-    Material lambertian;
-    lambertian.bsdf = LambertianBSDF(make_float3(1, 1, 1));
+    MaterialObject  matteGray = MatteMaterial(make_float3(1,1,1)) ;
 
     Scene scene;
 
@@ -98,12 +96,12 @@ Scene testScene2() {
 
     Primitive prim0;
     prim0.shape = Sphere(make_float3(0, 1, 3), 0.7);
-    prim0.material = Material(lambertian);
+    prim0.material =  matteGray;
     scene.primitivesHost.push_back(prim0);
 
     Primitive prim1;
     prim1.shape = Sphere(make_float3(0, -100, 17), 100);
-    prim1.material = Material(lambertian);
+    prim1.material =  matteGray;
     scene.primitivesHost.push_back(prim1);
 
 
@@ -117,7 +115,7 @@ Scene testScene2() {
     mesh.copyToDevice();
 
     prim2.shape = mesh;
-    prim2.material = Material(lambertian);
+    prim2.material =  matteGray;
     
     scene.primitivesHost.push_back(prim2);
 
@@ -131,7 +129,7 @@ Scene testScene2() {
     lightMesh.copyToDevice();
     
     lightPrim.shape = lightMesh;
-    lightPrim.material = Material(lambertian);
+    lightPrim.material = matteGray;
     scene.primitivesHost.push_back(lightPrim);
 
     auto light = DiffuseAreaLight(make_float3(2, 1, 0.1));
@@ -339,5 +337,5 @@ void testParsingCornell() {
 int main(){
     testParsingCornell();
     //testParsingHead();
-    //testDirectLightingGPU2();
+   // testDirectLightingGPU0();
 }
