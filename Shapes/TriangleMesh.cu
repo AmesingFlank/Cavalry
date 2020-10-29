@@ -70,8 +70,7 @@ TriangleMesh TriangleMesh::createFromPLY(const std::string& filename,const glm::
         int3 thisIndices = make_int3(indices[i][0],indices[i][1],indices[i][2]);
         mesh.indices.cpu.data[i] = thisIndices;
     }
-    mesh.computeArea();
-    mesh.copyToDevice();
+
     return mesh;
 
 }
@@ -118,12 +117,8 @@ TriangleMesh TriangleMesh::createFromParams(const Parameters& params,const glm::
             }
             mesh.normals.cpu = normals;
         }
-        mesh.computeArea();
 
-        mesh.copyToDevice();
         return mesh;
-
-
     }
     else {
         SIGNAL_ERROR("No valid inputs for triangle mesh");

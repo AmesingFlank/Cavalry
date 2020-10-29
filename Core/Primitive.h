@@ -18,4 +18,9 @@ public:
         result.primitive = this;
         return true;
     }
+
+    void prepareForRender() {
+        shape.prepareForRender();
+        material.prepareForRender();
+    }
 };

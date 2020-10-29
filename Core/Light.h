@@ -19,6 +19,7 @@ public:
     __device__
     virtual void buildGpuReferences(const SceneHandle& scene) = 0;
     
+    virtual void prepareForRender() {};
 
 };
 
@@ -51,5 +52,7 @@ public:
 
     __device__
     virtual void buildGpuReferences(const SceneHandle& scene) override {};
+
+    virtual void prepareForRender() {};
 
 };

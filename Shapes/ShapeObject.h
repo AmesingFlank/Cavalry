@@ -83,7 +83,49 @@ public:
 		return visit(visitor);
 	}
 
+	void buildCpuReferences(const SceneHandle& scene) {
+		auto visitor = [&](auto& arg) {
+			using T = typename std::remove_reference<decltype(arg)>::type;
+			if constexpr (std::is_base_of<Shape, typename T>::value) {
+				return arg.T::buildCpuReferences(scene);
+			}
+			else {
+				SIGNAL_VARIANT_ERROR;
+			}
+		};
+		return visit(visitor);
+	};
+
+
+	__device__
+	void buildGpuReferences(const SceneHandle& scene) {
+		auto visitor = [&](auto& arg) {
+			using T = typename std::remove_reference<decltype(arg)>::type;
+			if constexpr (std::is_base_of<Shape, typename T>::value) {
+				return arg.T::buildGpuReferences(scene);
+			}
+			else {
+				SIGNAL_VARIANT_ERROR;
+			}
+		};
+		return visit(visitor);
+	};
+
+
 	static ShapeObject createFromObjectDefinition(const ObjectDefinition& def,const glm::mat4 transform, const std::filesystem::path& basePath){
 		return ShapeObject(TriangleMesh::createFromParams(def.params,transform,basePath));
+	}
+
+	void prepareForRender() {
+		auto visitor = [&](auto& arg){
+			using T = typename std::remove_reference<decltype(arg)>::type;
+			if constexpr (std::is_base_of<Shape, typename T>::value) {
+				return arg.T::prepareForRender();
+			}
+			else {
+				SIGNAL_VARIANT_ERROR;
+			}
+		};
+		visit(visitor);
 	}
 };

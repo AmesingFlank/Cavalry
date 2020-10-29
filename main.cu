@@ -45,8 +45,6 @@ Scene testScene0() {
     mesh.positions.cpu.data[1] = make_float3(1, 1, 1);
     mesh.positions.cpu.data[2] = make_float3(0, 2, 3);
     mesh.indices.cpu.data[0] = make_int3(0, 1, 2);
-    mesh.computeArea();
-    mesh.copyToDevice();
 
     prim2.shape = mesh;
     prim2.material =  matteGray;
@@ -72,7 +70,7 @@ Scene testScene1() {
     Primitive prim3;
 
     TriangleMesh dragon = TriangleMesh::createFromPLY("../TestScenes/head.ply", glm::mat4(1.0));
-    dragon.copyToDevice();
+
 
     prim3.shape = dragon;
     prim3.material =  matteGray;
@@ -113,8 +111,7 @@ Scene testScene2() {
     mesh.positions.cpu.data[1] = make_float3(1, 1, 1);
     mesh.positions.cpu.data[2] = make_float3(0, 2, 3);
     mesh.indices.cpu.data[0] = make_int3(0, 1, 2);
-    mesh.computeArea();
-    mesh.copyToDevice();
+
 
     prim2.shape = mesh;
     prim2.material =  matteGray;
@@ -128,8 +125,7 @@ Scene testScene2() {
     lightMesh.positions.cpu.data[1] = make_float3(0, 5, 3);
     lightMesh.positions.cpu.data[2] = make_float3(1, 5, 2);
     lightMesh.indices.cpu.data[0] = make_int3(0, 1, 2);
-    lightMesh.computeArea();
-    lightMesh.copyToDevice();
+
     
     lightPrim.shape = lightMesh;
     lightPrim.material = matteGray;
@@ -174,7 +170,7 @@ void testSimpleCPU0() {
 
     Scene scene = testScene0();
 
-    scene.copyToDevice();
+    scene.prepareForRender();
 
     renderer.render(scene).saveToPNG("test.png");
 }
@@ -202,7 +198,7 @@ void testDirectLightingCPU0() {
     Scene scene = testScene0();
 
 
-    scene.copyToDevice();
+    scene.prepareForRender();
 
     renderer.render(scene).saveToPNG("test.png");
 }
@@ -229,7 +225,7 @@ void testDirectLightingGPU0() {
 
     Scene scene = testScene0();
 
-    scene.copyToDevice();
+    scene.prepareForRender();
 
     renderer.render(scene).saveToPNG("test.png");
 }
@@ -256,7 +252,7 @@ void testDirectLightingGPU1() {
 
     Scene scene = testScene1();
 
-    scene.copyToDevice();
+    scene.prepareForRender();
 
     renderer.render(scene).saveToPNG("test.png");
 }
@@ -264,7 +260,7 @@ void testDirectLightingGPU1() {
 void testParsingHead(){
     RenderSetup setup = readRenderSetup("../TestScenes/head/head.pbrt");
     setup.scene.lightsHost.push_back(PointLight(make_float3(0,2,3), make_float3(2, 1, 0.1)));
-    setup.scene.copyToDevice();
+    setup.scene.prepareForRender();
     setup.renderer.render(setup.scene).saveToPNG("test.png");
 }
 
@@ -289,8 +285,7 @@ void testDirectLightingCPU2() {
 
 
     Scene scene = testScene2();
-
-    scene.buildCpuReferences();
+    scene.prepareForRender();
 
     renderer.render(scene).saveToPNG("test.png");
 }
@@ -315,15 +310,7 @@ void testDirectLightingGPU2() {
 
 
     Scene scene = testScene2();
-    std::cout << scene.lightsHost[0].get<DiffuseAreaLight>()->shapeIndex << "    on host" << std::endl;
-    std::cout << scene.lightsHost.size() << "    lightscount on host" << std::endl;
-
-    printf("host size:%d\n", sizeof(LightObject));
-    scene.copyToDevice();
-
-    std::cout << scene.lightsDevice.data << "    lights device start seen on host" << std::endl;
-    scene.buildGpuReferences();
-    scene.buildCpuReferences();
+    scene.prepareForRender();
 
     renderer.render(scene).saveToPNG("test.png");
 }
@@ -331,8 +318,7 @@ void testDirectLightingGPU2() {
 void testParsingCornell() {
     RenderSetup setup = readRenderSetup("../TestScenes/cornellBox/scene.pbrt");
     //setup.scene.lightsHost.push_back(PointLight(make_float3(0, 2, 3), make_float3(1, 1, 1)));
-    setup.scene.copyToDevice();
-    setup.scene.buildGpuReferences();
+    setup.scene.prepareForRender();
     setup.renderer.render(setup.scene).saveToPNG("test.png");
 }
 
@@ -340,7 +326,7 @@ void testParsingCornell() {
 int main(){
     testParsingCornell();
     //testParsingHead();
-    //testDirectLightingCPU2();
+    //testDirectLightingCPU0();
 
     std::cout << "done!" << std::endl;
 }

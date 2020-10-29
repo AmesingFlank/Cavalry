@@ -197,5 +197,10 @@ public:
     }
 
 
+    virtual void prepareForRender() override {
+        computeArea();
+        copyToDevice();
+    };
+
 };
 

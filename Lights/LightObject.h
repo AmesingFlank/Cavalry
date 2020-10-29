@@ -84,4 +84,17 @@ public:
 		}
 		return LightObject(EnvironmentMap());
 	}
+
+	void prepareForRender() {
+		auto visitor = [&](auto& arg) {
+			using T = typename std::remove_reference<decltype(arg)>::type;
+			if constexpr (std::is_base_of<Light, typename T>::value) {
+				return arg.T::prepareForRender();
+			}
+			else {
+				SIGNAL_VARIANT_ERROR;
+			}
+		};
+		visit(visitor);
+	}
 };

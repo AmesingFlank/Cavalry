@@ -56,3 +56,16 @@ void Scene::buildGpuReferences() {
     buildLightsGpuReferences<<<1,1>>>(handle);
     CHECK_CUDA_ERROR("build lights gpu refs");
 };
+
+void Scene::prepareForRender() {
+    for (auto& light : lightsHost) {
+        light.prepareForRender();
+    }
+    for (auto& prim: primitivesHost) {
+        prim.prepareForRender();
+    }
+    buildCpuReferences();
+    
+    copyToDevice();
+    buildGpuReferences();
+}

@@ -81,7 +81,10 @@ public:
 
     SceneHandle getHostHandle() const;
 
-    SceneHandle getDeviceHandle()const;
+    SceneHandle getDeviceHandle() const;
+
+
+    void prepareForRender();
 
     void copyToDevice();
 

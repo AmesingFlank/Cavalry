@@ -52,4 +52,17 @@ public:
 		}
 		return MaterialObject(MatteMaterial(make_float3(1,1,1)));
 	}
+
+	void prepareForRender() {
+		auto visitor = [&](auto& arg) {
+			using T = typename std::remove_reference<decltype(arg)>::type;
+			if constexpr (std::is_base_of<Material, typename T>::value) {
+				return arg.T::prepareForRender();
+			}
+			else {
+				SIGNAL_VARIANT_ERROR;
+			}
+		};
+		visit(visitor);
+	}
 };
