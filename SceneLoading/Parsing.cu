@@ -8,6 +8,7 @@
 #include "../Utils/Utils.h"
 #include <unordered_map>
 #include <string>
+#include "Lexing.h"
 
 #define SIGNAL_PARSING_ERROR(err,pos,tokenString) SIGNAL_ERROR((std::string("Parsing Error: ")+err+std::string("\n at token ")+std::to_string(pos)+": "+tokenString).c_str())
 
@@ -168,6 +169,7 @@ bool readTransform(TokenBuf& buf, glm::mat4& transform){
 			transform = mat * transform;
 			return true;
 		}
+
 		else{
 			return false;
 		}
@@ -214,6 +216,7 @@ void parseSceneWideOptions(TokenBuf& buf,RenderSetup& result){
 			else if(keyWord->word == "Integrator"){
 				integratorDef = readObjectDefinition(buf);
 			}
+			
 			else{
 				std::cout<<"reading unrecognized object from "<<buf.currentIndex;
 				readUntilNextKeyWorkd(buf);
@@ -324,6 +327,13 @@ void parseSubsection(TokenBuf& buf, RenderSetup& result, glm::mat4 transform,con
 				buf.moveForward();
 				std::string name = buf.checkAndPop<StringToken>()->all;
 				currentMaterial = std::make_unique<MaterialObject>(materialsStore.get(name));
+			}
+			else if (keyWord->word == "Include") {
+				buf.moveForward();
+				std::string includeFile = buf.checkAndPop<StringToken>()->all;
+				std::filesystem::path includePath = basePath / std::filesystem::path(includeFile);
+				TokenBuf includedTokens = runLexing(includePath);
+				buf.insertHere(includedTokens);
 			}
 			else {
 				std::cout << "reading unrecognized object from " << buf.currentIndex ;

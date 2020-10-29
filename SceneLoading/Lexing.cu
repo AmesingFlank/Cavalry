@@ -5,7 +5,8 @@
 
 
 
-TokenBuf runLexing(const std::string& input){
+TokenBuf runLexing(const std::filesystem::path& inputPath){
+    std::string input = readTextFile(inputPath.string());
     TokenBuf result;
     int pos = 0;
     while(pos < input.size()){
@@ -100,4 +101,4 @@ void NumToken::read(const std::string& input, int& pos, TokenBuf& result){
 
 
 const std::unordered_set<std::string> KeyWordToken::recognized =
-{"PixelFilter","Transform", "NamedMaterial","TransformBegin","TransformEnd","AreaLightSource","MakeNamedMaterial", "Texture","Scale","Rotate","Translate","LightSource","LookAt","Camera","Film","WorldBegin","WorldEnd","AttributeBegin","AttributeEnd","Sampler","Material","Shape","Integrator" };
+{"Include","PixelFilter","Transform", "NamedMaterial","TransformBegin","TransformEnd","AreaLightSource","MakeNamedMaterial", "Texture","Scale","Rotate","Translate","LightSource","LookAt","Camera","Film","WorldBegin","WorldEnd","AttributeBegin","AttributeEnd","Sampler","Material","Shape","Integrator" };

@@ -8,6 +8,7 @@
 #include "../Utils/Utils.h"
 #include <vector> 
 #include <memory>
+#include <filesystem>
 
 enum class TokenType{
     KeyWord, String,Num, LeftSquareBracket, RightSquareBracket
@@ -44,9 +45,15 @@ struct TokenBuf {
         }
         SIGNAL_ERROR((std::string("Token checkAndPop failed. Token index: ")+std::to_string(currentIndex)+ "." + thisToken->print()).c_str());
     }
+
+    void insertHere(const TokenBuf& buf) {
+        for (auto& token : buf.tokens) {
+            tokens.insert(tokens.begin()+currentIndex, token);
+        }
+    }
 };
 
-TokenBuf runLexing(const std::string& input);
+TokenBuf runLexing(const std::filesystem::path& inputPath);
 
 
 class KeyWordToken: public Token{

@@ -5,7 +5,8 @@
 #include <filesystem>
 
 RenderSetup readRenderSetup(const std::string& pbrtFilePath){
-    std::string contents = readTextFile(pbrtFilePath);
-    TokenBuf tokens = runLexing(contents);
-    return runParsing(tokens,std::filesystem::path(pbrtFilePath).parent_path());
+    std::filesystem::path filePath = std::filesystem::path(pbrtFilePath);
+    std::filesystem::path basePath = filePath.parent_path();
+    TokenBuf tokens = runLexing(filePath);
+    return runParsing(tokens,basePath);
 }

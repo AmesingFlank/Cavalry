@@ -75,9 +75,16 @@ public:
 			
 			if (def.params.hasNumList("L")) {
 				std::vector<float> colorVec = def.params.getNumList("L");
-				color.x = colorVec[0];
-				color.y = colorVec[1];
-				color.z = colorVec[2];
+				if(colorVec.size()==3){
+					color.x = colorVec[0];
+					color.y = colorVec[1];
+					color.z = colorVec[2];
+				}
+				else{
+					float kelvin = colorVec[0];
+					float scale = colorVec[1];
+					color = colorTemperatureToRGB(kelvin)*scale;
+				}
 			}
 			
 			return DiffuseAreaLight(color);

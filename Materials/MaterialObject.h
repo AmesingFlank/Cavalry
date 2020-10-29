@@ -50,6 +50,10 @@ public:
 			std::vector<float> color = def.params.getNumList("Kd");
 			return MaterialObject(MatteMaterial(make_float3(color[0], color[1], color[2])));
 		}
+		if (def.params.hasNumList("Kd")) {
+			std::vector<float> color = def.params.getNumList("Kd");
+			return MaterialObject(MatteMaterial(make_float3(color[0], color[1], color[2])));
+		}
 		return MaterialObject(MatteMaterial(make_float3(1,1,1)));
 	}
 

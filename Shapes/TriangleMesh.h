@@ -20,6 +20,11 @@ inline bool rayTriangleIntersection(IntersectionResult& result, const Ray& r,
 
 	float det = dot(edge1, pvec);
 
+    if (det == 0) {
+        result.intersected = false;
+        return false;
+    }
+
 	det = 1.f/det;
 
 	u = dot(tvec, pvec) * det;
