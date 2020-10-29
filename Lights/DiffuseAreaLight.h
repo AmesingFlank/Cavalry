@@ -42,6 +42,10 @@ public:
         outputVisibilityTest.targetGeometry = shape->getID();
         outputVisibilityTest.setDistanceLimit(length(shapeSample.position - position));
 
+        if (dot(outputRay.direction, shapeSample.normal) >= 0) {
+            return make_float3(0, 0, 0);
+        }
+
         return color;
 
     }
