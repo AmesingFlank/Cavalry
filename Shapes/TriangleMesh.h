@@ -161,7 +161,7 @@ public:
     }
 
     __host__ __device__
-    virtual bool area() const override {
+    virtual float area() const override {
         return surfaceArea;
     }
 

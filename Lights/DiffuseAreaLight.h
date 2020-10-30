@@ -29,9 +29,10 @@ public:
 
         float shapeSampleProbability = 0;
 
-        //printf("samping shape %d %p\n", shapeIndex, shape);
+        
 
-        IntersectionResult shapeSample = shape->sample(randomSource,&shapeSampleProbability);
+        IntersectionResult shapeSample = shape->sample(position,randomSource,&shapeSampleProbability);
+
         
         outputProbability = shapeSampleProbability;
 

@@ -324,14 +324,15 @@ void testParsingCornell() {
 
 void testParsingBath() {
     RenderSetup setup = readRenderSetup("C:\\Users/Dunfan/Code/pbrt/pbrt-v3-scenes/bathroom/bathroom.pbrt");
+    //RenderSetup setup = readRenderSetup("../TestScenes/bathroom/bathroom.pbrt");
     setup.scene.prepareForRender();
     setup.renderer.render(setup.scene).saveToPNG("test.png");
 }
 
 
 int main(){
-    //testParsingBath();
-    testParsingCornell();
+    testParsingBath();
+    //testParsingCornell();
     //testParsingHead();
     //testDirectLightingCPU0();
 

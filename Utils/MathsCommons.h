@@ -58,3 +58,6 @@ inline float3 sampleSphere(const float2& randomSource){
 	);
 }
 
+inline float lengthQuared(const float3& v) {
+	return v.x * v.x + v.y * v.y + v.z * v.z;
+}

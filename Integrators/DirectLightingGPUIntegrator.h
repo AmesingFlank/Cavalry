@@ -51,6 +51,7 @@ public:
                 if (probability == 0) {
                     printf("probability is 0\n");
                 }
+                
                 result += prim->material.eval(rayToLight,incident,exitantRay,intersection) / probability;
             }
         }

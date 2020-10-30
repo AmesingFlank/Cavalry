@@ -70,6 +70,20 @@ public:
 	}
 
 	__host__ __device__
+	float area() const {
+		auto visitor = [&](auto& arg) -> float{
+			using T = typename std::remove_reference<decltype(arg)>::type;
+			if constexpr (std::is_base_of<Shape, typename T>::value) {
+				return arg.T::area();
+			}
+			else {
+				SIGNAL_VARIANT_ERROR;
+			}
+		};
+		return visit(visitor);
+	}
+
+	__host__ __device__
 	IntersectionResult sample(const float4& randomSource,float* outputProbability) const{
 		auto visitor = [&](auto& arg) -> IntersectionResult{
 			using T = typename std::remove_reference<decltype(arg)>::type;
@@ -81,6 +95,16 @@ public:
 			}
 		};
 		return visit(visitor);
+	}
+
+	__host__ __device__
+	IntersectionResult sample(const float3& seenFrom, const float4& randomSource, float* outputProbability) const {
+		float dummy;
+		IntersectionResult result = sample(randomSource, &dummy);
+		float3 lightToRay = seenFrom - result.position;
+		float cosine = abs(dot(result.normal, normalize(lightToRay)));
+		*outputProbability = lengthQuared(lightToRay) / ( cosine * area());
+		return result;
 	}
 
 
