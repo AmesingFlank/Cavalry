@@ -1,6 +1,7 @@
 #include "TriangleMesh.h"
 #include <iostream>
 #include <happly.h>
+#include "Scene.h"
 
 __host__ 
 TriangleMesh::TriangleMesh():
@@ -76,6 +77,14 @@ TriangleMesh TriangleMesh::createFromPLY(const std::string& filename,const glm::
 }
 
 
+TriangleMesh TriangleMesh::createFromObjectDefinition(const ObjectDefinition& def, const glm::mat4& transform, const std::filesystem::path& basePath) {
+    if (def.objectName != "plymesh" && def.objectName != "trianglemesh") {
+        SIGNAL_ERROR((std::string("unsupported shape type :")+def.objectName).c_str());
+    }
+    return TriangleMesh::createFromParams(def.params, transform, basePath);
+}
+
+
 TriangleMesh TriangleMesh::createFromParams(const Parameters& params,const glm::mat4& transform,const std::filesystem::path& basePath){
     
     if (params.hasString("filename")) {
@@ -134,5 +143,12 @@ void TriangleMesh::computeArea(){
         float3 p1 = positions.cpu.data[vertices.y];
         float3 p2 = positions.cpu.data[vertices.z];
         surfaceArea += length(cross(p1-p0,p2-p0)) * 0.5f;
+    }
+}
+
+void TriangleMesh::copyTrianglesToScene(Scene& scene,int meshID){
+    for(int i = 0;i<trianglesCount;++i){
+        Triangle triangle(meshID,i);
+        scene.trianglesHost.push_back(triangle);
     }
 }

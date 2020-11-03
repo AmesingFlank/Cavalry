@@ -4,9 +4,9 @@
 #include "../Materials/MaterialObject.h"
 #include <vector>
 #include <memory>
-#include "Shape.h"
-#include "../Shapes/ShapeObject.h"
+#include "TriangleMesh.h"
 
+class Scene;
 struct SceneHandle;
 struct LightObject;
 
@@ -14,17 +14,10 @@ class Primitive{
 public:
 
     MaterialObject material;
-    ShapeObject shape;
+    TriangleMesh shape;
 
-    __host__ __device__
-    bool intersect(IntersectionResult& result, const Ray& ray) const{
-        if(!shape.intersect(result, ray)) return false;
-        result.primitive = this;
-        return true;
-    }
-
-    void prepareForRender() {
-        shape.prepareForRender();
+    void prepareForRender(Scene& scene,int primID) {
+        shape.prepareForRender(scene,primID);
         material.prepareForRender();
     }
 

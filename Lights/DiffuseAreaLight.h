@@ -1,6 +1,5 @@
 #pragma once
 #include "../Core/Light.h"
-#include "../Shapes/ShapeObject.h"
 
 
 class DiffuseAreaLight:public AreaLight{
@@ -15,7 +14,7 @@ public:
     Spectrum color;
 
     int shapeIndex;
-    const ShapeObject* shape;
+    const TriangleMesh* shape;
 
     virtual void buildCpuReferences(const SceneHandle& scene) override;
 

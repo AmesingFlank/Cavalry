@@ -1,6 +1,5 @@
 #include "Parsing.h"
 #include "../Utils/MathsCommons.h"
-#include "../Shapes/ShapeObject.h"
 #include "../Core/Material.h"
 #include "../Core/Primitive.h"
 #include "../Samplers/NaiveCameraSampler.h"
@@ -273,7 +272,7 @@ void parseSubsection(TokenBuf& buf, RenderSetup& result, glm::mat4 transform,con
 			}
 			else if (keyWord->word == "Shape") {
 				auto shapeDef = readObjectDefinition(buf);
-				ShapeObject shape = ShapeObject::createFromObjectDefinition(shapeDef, transform, basePath);
+				TriangleMesh shape = TriangleMesh::createFromObjectDefinition(shapeDef, transform, basePath);
 				
 				Primitive prim;
 				

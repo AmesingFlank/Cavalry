@@ -2,7 +2,6 @@
 
 #include "Core/Renderer.h"
 #include "Core/Material.h"
-#include "Shapes/Sphere.h"
 #include "Integrators/SimpleCPUIntegrator.h"
 #include "Integrators/DirectLightingCPUIntegrator.h"
 #include "Integrators/DirectLightingGPUIntegrator.h"
@@ -26,19 +25,6 @@ Scene testScene0() {
     Scene scene;
 
     
-
-    Primitive prim0;
-    prim0.shape = Sphere(make_float3(0, 1, 3), 0.7);
-    prim0.material =  matteGray;
-    scene.primitivesHost.push_back(prim0);
-
-    Primitive prim1;
-    prim1.shape = Sphere(make_float3(0, -100, 17), 100);
-    prim1.material =  matteGray;
-    scene.primitivesHost.push_back(prim1);
-
-
-
     Primitive prim2;
     TriangleMesh mesh(1, 3, false, false);
     mesh.positions.cpu.data[0] = make_float3(0, 1, 1);
@@ -90,18 +76,6 @@ Scene testScene2() {
     MaterialObject  matteGray = MatteMaterial(make_float3(1,1,1)) ;
 
     Scene scene;
-
-
-
-    Primitive prim0;
-    prim0.shape = Sphere(make_float3(0, 1, 3), 0.7);
-    prim0.material =  matteGray;
-    scene.primitivesHost.push_back(prim0);
-
-    Primitive prim1;
-    prim1.shape = Sphere(make_float3(0, -100, 17), 100);
-    prim1.material =  matteGray;
-    scene.primitivesHost.push_back(prim1);
 
 
     
