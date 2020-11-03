@@ -22,7 +22,7 @@ public:
 
 
     __host__ __device__
-    virtual bool intersect(IntersectionResult& result, const Ray& ray) const override{
+    bool intersect(IntersectionResult& result, const Ray& ray) const {
         float3 oc = ray.origin - center;
         float a = 1;
         float b = 2 * dot(ray.direction, oc);
@@ -58,14 +58,16 @@ public:
     }
 
     __host__ __device__
-    virtual float area() const override {
+    float area() const  {
         return 4*M_PI*radius*radius;
     }
 
     __host__ __device__
-    virtual IntersectionResult sample(const float4& randomSource,float* outputProbability) const override{
+    IntersectionResult sample(const float4& randomSource,float* outputProbability) const {
         SIGNAL_ERROR("not implemented yet");
     }
+
+    void prepareForRender(){};
 
 
 

@@ -122,7 +122,7 @@ public:
 
 
     __host__ __device__
-    virtual bool intersect(IntersectionResult& result, const Ray& ray) const override{
+    bool intersect(IntersectionResult& result, const Ray& ray) const {
         // naive bruteforce
 #ifdef __CUDA_ARCH__
         float3* positionsData = positions.gpu.data;
@@ -161,14 +161,14 @@ public:
     }
 
     __host__ __device__
-    virtual float area() const override {
+    float area() const  {
         return surfaceArea;
     }
 
     void computeArea();
 
     __host__ __device__
-    virtual IntersectionResult sample(const float4& randomSource,float* outputProbability) const override{
+    IntersectionResult sample(const float4& randomSource,float* outputProbability) const {
         
         int triangleID = round(randomSource.z*(trianglesCount-1));
         float temp = sqrt(randomSource.x);
@@ -202,7 +202,7 @@ public:
     }
 
 
-    virtual void prepareForRender() override {
+    void prepareForRender()  {
         computeArea();
         copyToDevice();
     };

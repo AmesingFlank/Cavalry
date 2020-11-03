@@ -22,6 +22,8 @@ public:
         return this; 
     };
 
+    /*
+
     __host__ __device__
     virtual bool intersect(IntersectionResult& result, const Ray& ray) const = 0;
 
@@ -32,5 +34,7 @@ public:
     virtual IntersectionResult sample(const float4& randomSource, float* outputProbability) const = 0;
 
     virtual void prepareForRender() {};
+
+    */
     
 };

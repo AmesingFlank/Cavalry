@@ -331,8 +331,8 @@ void testParsingBath() {
 
 
 int main(){
-    testParsingBath();
-    //testParsingCornell();
+    //testParsingBath();
+    testParsingCornell();
     //testParsingHead();
     //testDirectLightingCPU0();
 
