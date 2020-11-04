@@ -11,6 +11,8 @@
 #include "Triangle.h"
 #include "../BVH/BVH.h"
 
+#define USE_BVH 1
+
 struct SceneHandle{
     Primitive* mutable primitives;
     size_t primitivesCount;
@@ -38,6 +40,9 @@ struct SceneHandle{
     
     __host__ __device__
     bool intersect(IntersectionResult& result, const Ray& ray) const{
+#if USE_BVH
+        return bvh.intersect(result, ray, triangles);
+#else
         /*
         bool foundIntersection = false;
         for(int i = 0;i<trianglesCount;++i){
@@ -52,11 +57,14 @@ struct SceneHandle{
         }
         return foundIntersection;
         */
-       return bvh.intersect(result,ray,triangles);
+#endif
     }
 
     __host__ __device__
     bool testVisibility(const VisibilityTest& test) const{
+#if USE_BVH
+        return bvh.testVisibility(test, triangles);
+#else
         Ray ray = test.ray;
         for(int i = 0;i<trianglesCount;++i){
             const Triangle& triangle = triangles[i];
@@ -76,6 +84,7 @@ struct SceneHandle{
             }
         }
         return true;
+#endif
     }
 };
 

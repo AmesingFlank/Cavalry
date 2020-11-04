@@ -125,8 +125,14 @@ void Scene::prepareForRender() {
 
     AABB sceneBounds = trianglesHost[0].getBoundingBox();
     for (int i = 1; i < trianglesHost.size(); ++i) {
+        //AABB temp = trianglesHost[i].getBoundingBox();
+        //std::cout << "triangle bounds " << temp.minimum.x << ", " << temp.minimum.y << ", " << temp.minimum.z << ",   to" << temp.maximum.x << ", " << temp.maximum.y << ", " << temp.maximum.z << std::endl;
         sceneBounds = unionBoxes(sceneBounds, trianglesHost[i].getBoundingBox());
     }
+
+    auto temp = sceneBounds;
+    std::cout << "scene bounds " << temp.minimum.x << ", " << temp.minimum.y << ", " << temp.minimum.z << ",   to  " << temp.maximum.x << ", " << temp.maximum.y << ", " << temp.maximum.z << std::endl;
+
     bvh = BVH::build(trianglesDevice.data,trianglesDevice.N,sceneBounds);
 
     std::cout << "done preparations. TrianglesCount: " << trianglesHost.size() << std::endl;

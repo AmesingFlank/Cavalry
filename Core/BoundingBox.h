@@ -18,17 +18,27 @@ struct AABB{
     }
 
     __host__ __device__
+    bool contains(const float3& point) {
+        return minimum.x <= point.x && point.x <= maximum.x &&
+            minimum.y <= point.y && point.y <= maximum.y &&
+            minimum.z <= point.z && point.z <= maximum.z;
+    }
+
+    __host__ __device__
     bool intersect(const Ray& r){
-        
+        if(contains(r.origin)){
+            return true;
+        }
+        //printf("%f %f %f,     %f %f %f,     %f %f %f\n", minimum, maximum, r.origin);
 
 		float3 tmin = (minimum - r.origin) / r.direction;
 		float3 tmax = (maximum - r.origin) / r.direction;
 
-		float3 real_min = fminf(tmin, tmax);
-		float3 real_max = fmaxf(tmin, tmax);
+		float3 realMin = fminf(tmin, tmax);
+		float3 realMax = fmaxf(tmin, tmax);
 
-		float minmax = min(min(real_max.x, real_max.y), real_max.z);
-		float maxmin = max(max(real_min.x, real_min.y), real_min.z);
+		float minmax = min(min(realMax.x, realMax.y), realMax.z);
+		float maxmin = max(max(realMin.x, realMin.y), realMin.z);
 
         
 		if (minmax >= maxmin) { 
