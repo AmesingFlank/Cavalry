@@ -1,6 +1,7 @@
 #pragma once
 
 #include "TriangleMesh.h"
+#include "BoundingBox.h"
 
 
 __host__ __device__ 
@@ -55,7 +56,7 @@ inline bool rayTriangleIntersection(IntersectionResult& result, const Ray& r,
     return true;
 }
 
-
+struct SceneHandle;
 class Triangle {
 public:
 
@@ -118,6 +119,34 @@ public:
     __device__
     void buildGpuReferences(const SceneHandle& scene);
 
+    __host__ __device__
+    AABB getBoundingBox(){
+#ifdef __CUDA_ARCH__
+        float3* positionsData = mesh->positions.gpu.data;
+        float3* normalsData = mesh->normals.gpu.data;
+        int3* indicesData = mesh->indices.gpu.data;
+#else
+        float3* positionsData = mesh->positions.cpu.data;
+        float3* normalsData = mesh->normals.cpu.data;
+        int3* indicesData = mesh->indices.cpu.data;
+#endif
+
+        int3 thisIndices = indicesData[triangleIndex];
+        float3 v0 = positionsData[thisIndices.x];
+        float3 v1 = positionsData[thisIndices.y];
+        float3 v2 = positionsData[thisIndices.z];
+
+        float minX = min(v0.x,min(v1.x,v2.x));
+        float minY = min(v0.y,min(v1.y,v2.y));
+        float minZ = min(v0.z,min(v1.z,v2.z));
+
+        float maxX = max(v0.x,max(v1.x,v2.x));
+        float maxY = max(v0.y,max(v1.y,v2.y));
+        float maxZ = max(v0.z,max(v1.z,v2.z));
+
+        return {make_float3(minX,minY,minZ),make_float3(maxX,maxY,maxZ)};
+
+    }
 
 };
 

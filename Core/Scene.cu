@@ -13,7 +13,8 @@ SceneHandle Scene::getHostHandle() const{
         trianglesHost.size(),
         (LightObject*)lightsHost.data(),
         lightsHost.size(), 
-        envMap
+        envMap,
+        bvh
     };
 }
 
@@ -29,7 +30,8 @@ SceneHandle Scene::getDeviceHandle()const {
         (size_t)trianglesDevice.N,
         lightsDevice.data,
         (size_t)lightsDevice.N,
-        envMap
+        envMap,
+        bvh
     };
 }
 
@@ -108,6 +110,7 @@ void Scene::buildGpuReferences() {
 };
 
 void Scene::prepareForRender() {
+
     for (auto& light : lightsHost) {
         light.prepareForRender();
     }
@@ -119,6 +122,12 @@ void Scene::prepareForRender() {
     
     copyToDevice();
     buildGpuReferences();
+
+    AABB sceneBounds = trianglesHost[0].getBoundingBox();
+    for (int i = 1; i < trianglesHost.size(); ++i) {
+        sceneBounds = unionBoxes(sceneBounds, trianglesHost[i].getBoundingBox());
+    }
+    bvh = BVH::build(trianglesDevice.data,trianglesDevice.N,sceneBounds);
 
     std::cout << "done preparations. TrianglesCount: " << trianglesHost.size() << std::endl;
 }

@@ -9,6 +9,7 @@
 #include <thrust/device_vector.h>
 #include "../Utils/Array.h"
 #include "Triangle.h"
+#include "../BVH/BVH.h"
 
 struct SceneHandle{
     Primitive* mutable primitives;
@@ -21,6 +22,8 @@ struct SceneHandle{
     size_t lightsCount;
 
     const LightObject* environmentMapLightObject;
+
+    BVH bvh;
 
     __host__ __device__
     const EnvironmentMap* getEnvironmentMap() const{
@@ -35,6 +38,7 @@ struct SceneHandle{
     
     __host__ __device__
     bool intersect(IntersectionResult& result, const Ray& ray) const{
+        /*
         bool foundIntersection = false;
         for(int i = 0;i<trianglesCount;++i){
             const Triangle& triangle = triangles[i];
@@ -47,6 +51,8 @@ struct SceneHandle{
             }
         }
         return foundIntersection;
+        */
+       return bvh.intersect(result,ray,triangles);
     }
 
     __host__ __device__
@@ -83,6 +89,8 @@ public:
 
     std::vector<LightObject> lightsHost;
     GpuArray<LightObject> lightsDevice = GpuArray<LightObject>(0,true);
+
+    BVH bvh;
 
     int environmentMapIndex  = -1;
 
