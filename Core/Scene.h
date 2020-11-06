@@ -43,7 +43,7 @@ struct SceneHandle{
 #if USE_BVH
         return bvh.intersect(result, ray, triangles);
 #else
-        /*
+        
         bool foundIntersection = false;
         for(int i = 0;i<trianglesCount;++i){
             const Triangle& triangle = triangles[i];
@@ -56,7 +56,7 @@ struct SceneHandle{
             }
         }
         return foundIntersection;
-        */
+        
 #endif
     }
 

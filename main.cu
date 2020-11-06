@@ -18,6 +18,8 @@
 #include "Utils/MathsCommons.h"
 #include "Materials/MaterialObject.h"
 
+#include "Utils/Timer.h"
+
 
 Scene testScene0() {
     MaterialObject  matteGray = MatteMaterial(make_float3(1,1,1)) ;
@@ -299,8 +301,13 @@ void testParsingCornell() {
 void testParsingBath() {
     RenderSetup setup = readRenderSetup("C:\\Users/Dunfan/Code/pbrt/pbrt-v3-scenes/bathroom/bathroom.pbrt");
     //RenderSetup setup = readRenderSetup("../TestScenes/bathroom/bathroom.pbrt");
+    Timer::getInstance().start("preparation");
+    Timer::getInstance().start("all");
     setup.scene.prepareForRender();
+    Timer::getInstance().stop("preparation");
     setup.renderer.render(setup.scene).saveToPNG("test.png");
+    Timer::getInstance().stop("all");
+    Timer::getInstance().printResults();
 }
 
 
