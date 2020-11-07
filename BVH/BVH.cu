@@ -11,16 +11,6 @@
 // do not change
 #define MORTEN_BITS_PER_DIMENSION 10
 
-__host__ __device__
-unsigned int shiftMorton(unsigned int x){
-    if (x >= (1 << MORTEN_BITS_PER_DIMENSION)) 
-        x= 1 << MORTEN_BITS_PER_DIMENSION-1;
-    x = (x | (x << 16)) & 0b00000011000000000000000011111111;
-    x = (x | (x << 8)) & 0b00000011000000001111000000001111;
-    x = (x | (x << 4)) & 0b00000011000011000011000011000011;
-    x = (x | (x << 2)) & 0b00001001001001001001001001001001;
-    return x;
-};
 
 
 BVH::BVH():primitivesCount(0),nodes(0,true){
@@ -40,7 +30,6 @@ BVH BVH::getCopyForKernel(){
 struct BVHLeafNode{
     AABB box;
     int primitiveIndex;
-    unsigned int mortonCode;
     int parent;
 };
 
@@ -65,20 +54,30 @@ void fillLeafBoundingBoxes(Triangle* primitivesDevice, int primitivesCount,BVHLe
 }
 
 
+__host__ __device__
+unsigned int shiftMorton(unsigned int x){
+    if (x >= (1 << MORTEN_BITS_PER_DIMENSION)) 
+        x= 1 << MORTEN_BITS_PER_DIMENSION-1;
+    x = (x | (x << 16)) & 0b00000011000000000000000011111111;
+    x = (x | (x << 8)) & 0b00000011000000001111000000001111;
+    x = (x | (x << 4)) & 0b00000011000011000011000011000011;
+    x = (x | (x << 2)) & 0b00001001001001001001001001001001;
+    return x;
+};
+
 
 __global__
-void fillLeafMortonCodes(Triangle* primitivesDevice, int primitivesCount,BVHLeafNode* nodes,unsigned int* leafMortonCodes,AABB sceneBounds ){
+void fillLeafMortonCodes(Triangle* primitivesDevice, int primitivesCount,BVHLeafNode* leaves,unsigned int* leafMortonCodes,AABB sceneBounds ){
     int index = blockIdx.x * blockDim.x + threadIdx.x;
     if(index >= primitivesCount) return;
 
-    float3 centroid = (nodes[index].box.centroid() - sceneBounds.centroid()) / sceneBounds.extent();
+    float3 centroid = (leaves[index].box.centroid() - sceneBounds.centroid()) / sceneBounds.extent();
     int factor = 1<<MORTEN_BITS_PER_DIMENSION;
     unsigned int x = centroid.x * factor;
     unsigned int y = centroid.y * factor;
     unsigned int z = centroid.z * factor;
 
     unsigned int code = (shiftMorton(x) << 2) | (shiftMorton(y) << 1) | shiftMorton(z);
-    nodes[index].mortonCode = code ;
     leafMortonCodes[index] = code;
 }
 
@@ -90,9 +89,9 @@ int sign(int val) {
 }
 
 __host__ __device__
-int commonPrefixLength(BVHLeafNode* leaves, unsigned int i,unsigned int j){
-    int mortonI = leaves[i].mortonCode;
-    int mortonJ = leaves[j].mortonCode;
+int commonPrefixLength(unsigned int* mortonCodes, unsigned int i,unsigned int j){
+    unsigned int mortonI = mortonCodes[i];
+    unsigned int mortonJ = mortonCodes[j];
     if(mortonI != mortonJ){
         for(int bit = 3*MORTEN_BITS_PER_DIMENSION-1; bit>=0;--bit){
             if(((mortonI >> bit) & 1) != ((mortonJ >> bit) & 1)){
@@ -111,23 +110,23 @@ int commonPrefixLength(BVHLeafNode* leaves, unsigned int i,unsigned int j){
 }
 
 __global__ 
-void buildRadixTree(int leavesCount, BVHLeafNode* leaves, BVHInternalNode* internals){
+void buildRadixTree(int leavesCount,unsigned int* leafMortonCodes, BVHLeafNode* leaves, BVHInternalNode* internals){
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if(i >= leavesCount - 1) return;
 
     int d = 1;
     if(i > 0){
-        d = sign(commonPrefixLength(leaves,i,i+1) - commonPrefixLength(leaves,i,i-1));
+        d = sign(commonPrefixLength(leafMortonCodes,i,i+1) - commonPrefixLength(leafMortonCodes,i,i-1));
     }
 
     int minCommonPrefixLength = 0;
     if(i > 0){
-        minCommonPrefixLength = commonPrefixLength(leaves,i,i-d);
+        minCommonPrefixLength = commonPrefixLength(leafMortonCodes,i,i-d);
     }
 
     unsigned int maxLength = 2;
 
-    while( i+ maxLength*d >=0 && i+maxLength*d < leavesCount && commonPrefixLength(leaves,i,i+maxLength*d) > minCommonPrefixLength){
+    while( i+ maxLength*d >=0 && i+maxLength*d < leavesCount && commonPrefixLength(leafMortonCodes,i,i+maxLength*d) > minCommonPrefixLength){
         maxLength *= 2;
     }
     
@@ -140,13 +139,13 @@ void buildRadixTree(int leavesCount, BVHLeafNode* leaves, BVHInternalNode* inter
             break;
         }
         int j = i+(length+t)*d;
-        if( j >= 0 && j <leavesCount && commonPrefixLength(leaves,i,j) > minCommonPrefixLength){
+        if( j >= 0 && j <leavesCount && commonPrefixLength(leafMortonCodes,i,j) > minCommonPrefixLength){
             length += t;
         }
     }
 
     int j = i + length *  d; // other end;
-    int prefixLength = commonPrefixLength(leaves,i,j);
+    int prefixLength = commonPrefixLength(leafMortonCodes,i,j);
 
     if (i == 0) {
         j = leavesCount - 1;
@@ -159,7 +158,7 @@ void buildRadixTree(int leavesCount, BVHLeafNode* leaves, BVHInternalNode* inter
         unsigned int t = ceil( (float)length / ((float) (1<<power)) );
         
         int j = i + (distanceToSplit + t)*d;
-        if(j >= 0 && j <leavesCount && commonPrefixLength(leaves,i,j) > prefixLength){
+        if(j >= 0 && j <leavesCount && commonPrefixLength(leafMortonCodes,i,j) > prefixLength){
             distanceToSplit += t;
         }
 
@@ -287,7 +286,7 @@ BVH BVH::build(Triangle* primitivesDevice, int primitivesCount,const AABB& scene
     CHECK_IF_CUDA_ERROR("fill leaf bounding boxes");
 
     GpuArray<unsigned int> leafMortonCodes(primitivesCount);
-    fillLeafMortonCodes<<< numBlocksPrimitives, numThreadsPrimitives >>> (primitivesDevice,primitivesCount, leaves.data, leafMortonCodes.data,sceneBounds);
+    fillLeafMortonCodes<<< numBlocksPrimitives, numThreadsPrimitives >>> (primitivesDevice,primitivesCount,leaves.data, leafMortonCodes.data,sceneBounds);
     CHECK_IF_CUDA_ERROR("fill leaf morton");
 
     thrust::stable_sort_by_key(thrust::device, leafMortonCodes.data,leafMortonCodes.data+primitivesCount,leaves.data,thrust::less<unsigned int>());
@@ -296,7 +295,7 @@ BVH BVH::build(Triangle* primitivesDevice, int primitivesCount,const AABB& scene
 
     int numThreadsInternals = min(primitivesCount-1,MAX_THREADS_PER_BLOCK);
     int numBlocksInternals = divUp(primitivesCount-1,numThreadsPrimitives);
-    buildRadixTree <<< numBlocksInternals, numThreadsInternals >>> (primitivesCount, leaves.data,internals.data);
+    buildRadixTree <<< numBlocksInternals, numThreadsInternals >>> (primitivesCount,leafMortonCodes.data, leaves.data,internals.data);
     CHECK_IF_CUDA_ERROR("build radix tree");
 
     computeBounds <<< numBlocksPrimitives, numThreadsPrimitives >>> (primitivesCount,leaves.data,internals.data);
