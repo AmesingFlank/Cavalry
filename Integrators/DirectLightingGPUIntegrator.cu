@@ -29,7 +29,6 @@ static Spectrum renderRay(const SceneHandle& scene, const Ray& ray, SamplerObjec
 
     Spectrum result = make_float3(0, 0, 0);
 
-
     const Primitive* prim = intersection.primitive;
 
     if (prim->areaLight) {
@@ -91,10 +90,11 @@ RenderResult DirectLightingGPUIntegrator::render(const Scene& scene, const Camer
     int numThreads = min(samplesCount, MAX_THREADS_PER_BLOCK);
     int numBlocks = divUp(samplesCount, numThreads);
 
-    GpuArray<CameraSample> results(samplesCount);
+    CHECK_IF_CUDA_ERROR("before render all samples");
+
 
     renderAllSamples << <numBlocks, numThreads >> > (allSamples.data, samplesCount, sceneHandle, camera, samplerObject.getCopyForKernel(), film.getCopyForKernel());
-    CHECK_CUDA_ERROR("render all samples");
+    CHECK_IF_CUDA_ERROR("render all samples");
 
 
 

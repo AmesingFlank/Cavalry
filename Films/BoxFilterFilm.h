@@ -22,6 +22,10 @@ public:
         int x = round(sample.x-0.5);
 		int y = round(sample.y-0.5);
 		int index = y*width + x;
+
+		if (x >= width || y >= height || x < 0 || y < 0) {
+			printf("error %f %f %d %d %d %d\n",sample.x,sample.y, x, y, width, height);
+		}
 		
         atomicAdd(&(samplesSum.data[index]),spectrum);
         atomicAdd(&(samplesCount.data[index]), 1);

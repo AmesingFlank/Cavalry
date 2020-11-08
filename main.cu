@@ -29,7 +29,7 @@ void testParsingCornell() {
 }
 
 void testParsingBath() {
-    RenderSetup setup = readRenderSetup("C:\\Users/Dunfan/Code/pbrt/pbrt-v3-scenes/bathroom/bathroom.pbrt");
+    RenderSetup setup = readRenderSetup("../TestScenes/bathroom/bathroom.pbrt");
     //RenderSetup setup = readRenderSetup("../TestScenes/bathroom/bathroom.pbrt");
     Timer::getInstance().start("preparation");
     Timer::getInstance().start("all");

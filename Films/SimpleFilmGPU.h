@@ -22,7 +22,7 @@ public:
         int x = round(sample.x-0.5);
 		int y = round(sample.y-0.5);
 		int index = y*width + x;
-		if (x >= width || y >= height) {
+		if (x >= width || y >= height || x<0 || y<0) {
 			printf("error %d %d %d %d\n", x, y, width, height);
 		}
 		writeColorAt(clampBetween0And1(spectrum),&(data.data[index*3]));

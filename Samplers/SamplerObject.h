@@ -112,6 +112,7 @@ public:
 
 	static SamplerObject createFromObjectDefinition(const ObjectDefinition& def) {
 		int samplesPerPixel = def.params.getNum("pixelsamples");
+		std::cout << "pixelsamples in file : " << samplesPerPixel << std::endl;
 		return SamplerObject(SimpleSamplerGPU(samplesPerPixel));
 	}
 };
