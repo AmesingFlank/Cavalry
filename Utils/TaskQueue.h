@@ -5,21 +5,32 @@
 template <typename T>
 struct TaskQueue{
     GpuArray<T> tasks;
-    int head = 0;
+    GpuArray<int> head;
 
-    TaskQueue(int capacity_,bool isCopyForKernel_):tasks(capacity,isCopyForKernel_){
-
+    TaskQueue(int capacity_,bool isCopyForKernel_):tasks(capacity,isCopyForKernel_),head(1,isCopyForKernel_){
+        if (!isCopyForKernel) {
+            HANDLE_ERROR(cudaMemset(head.data, 0, sizeof(int)));
+        }
     }
 
     TaskQueue<T> getCopyForKernel(){
-        TaskQueue
+        TaskQueue<T> copy(tasks.N,true);
+        copy.tasks.data = tasks.data;
+        copy.head.data = head.data;
+        return copy;
     }
 
 
     __device__
     void push(const T& task){
-        int index = atomicAdd(&head);
+        int index = atomicAdd(head);
         tasks.data[index]=task;
+    }
+
+    int count() {
+        int result;
+        HANDLE_ERROR(cudaMemcpy(&result,head.data, sizeof(int),cudaMemcpyDeviceToHost));
+        return result;
     }
 
 };

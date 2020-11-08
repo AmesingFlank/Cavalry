@@ -2,7 +2,7 @@
 #include "../Utils/MathsCommons.h"
 #include "../Core/Material.h"
 #include "../Core/Primitive.h"
-#include "../Samplers/NaiveCameraSampler.h"
+#include "../Samplers/SimpleSamplerGPU.h"
 #include "../Integrators/DirectLightingGPUIntegrator.h"
 #include "../Utils/Utils.h"
 #include <unordered_map>
@@ -232,7 +232,7 @@ void parseSceneWideOptions(TokenBuf& buf,RenderSetup& result){
 	}
 
 	auto integrator = std::make_unique<DirectLightingGPUIntegrator>();
-	integrator->cameraSampler = std::make_unique<NaiveCameraSampler>();
+	integrator->sampler = std::make_unique<SamplerObject>(SimpleSamplerGPU());
 
 	result.renderer.integrator = std::move(integrator);
 	result.renderer.film = std::make_unique<FilmObject>(FilmObject::createFromObjectDefinition(filmDef));

@@ -5,26 +5,24 @@
 #include "../Films/FilmObject.h"
 #include "Film.h"
 #include <vector>
-
+#include "../Utils/Array.h"
 #include <thrust/copy.h>
 #include <thrust/device_vector.h>
 
 class Sampler{
-	public:
+public:
+	__device__
+	virtual int randInt(int N) = 0;
 
-	__host__ __device__
+	__device__
 	virtual float rand1() = 0;
 
-	__host__ __device__
+	__device__
 	virtual float2 rand2() = 0;
 
-	__host__ __device__
+	__device__
 	virtual float4 rand4() = 0;
-};
 
-class CameraSampler {
-public:
-	virtual std::vector<CameraSample> genAllSamplesCPU(const CameraObject& camera, FilmObject& film)=0;
-	virtual thrust::device_vector<CameraSample> genAllSamplesGPU(const CameraObject& camera, FilmObject& film)=0;
+	virtual GpuArray<CameraSample> genAllCameraSamples(const CameraObject& camera, FilmObject& film) = 0;
 };
 

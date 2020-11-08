@@ -26,49 +26,56 @@ public:
     __host__
     SimpleSamplerGPU getCopyForKernel();
 
-    __host__ __device__
+    __device__
+    virtual int randInt(int N) {
+
+        int index = blockIdx.x * blockDim.x + threadIdx.x;
+        if (index >= maxThreads) {
+            return;
+        }
+        curandState* myState = states.getState(index);
+        return curand(myState) % N;
+
+    }
+
+    __device__
 	virtual float rand1() override {
-#ifdef __CUDA_ARCH__
+
         int index = blockIdx.x * blockDim.x + threadIdx.x;
         if(index >= maxThreads){
             return;
         }
         curandState* myState = states.getState(index);
         return curand_uniform(myState);
-#else
-        SIGNAL_ERROR("NOT Implemented on CPU");
-#endif
+
     };
 
-    __host__ __device__
+    __device__
 	virtual float2 rand2() override {
-#ifdef __CUDA_ARCH__
+
         int index = blockIdx.x * blockDim.x + threadIdx.x;
         if(index >= maxThreads){
             return;
         }
         curandState* myState = states.getState(index);
         return make_float2(curand_uniform(myState), curand_uniform(myState));
-#else
-        SIGNAL_ERROR("NOT Implemented on CPU");
-#endif
+
     };
 
 
-    __host__ __device__
+    __device__
 	virtual float4 rand4() override {
-#ifdef __CUDA_ARCH__
+
         int index = blockIdx.x * blockDim.x + threadIdx.x;
         if(index >= maxThreads){
             return;
         }
         curandState* myState = states.getState(index);
         return make_float4(curand_uniform(myState), curand_uniform(myState),curand_uniform(myState), curand_uniform(myState));
-#else
-        SIGNAL_ERROR("NOT Implemented on CPU");
-#endif
+
     };
 
 
+    virtual GpuArray<CameraSample> genAllCameraSamples(const CameraObject& camera, FilmObject& film)  override;
 
 };
