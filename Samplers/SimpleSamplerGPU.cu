@@ -4,16 +4,16 @@
 #include "../Utils/RandomUtils.h"
 
 
-SimpleSamplerGPU::SimpleSamplerGPU(int maxThreads_, bool isCopyForKernel_ ):maxThreads(maxThreads_),states(1024,isCopyForKernel_){
+SimpleSamplerGPU::SimpleSamplerGPU(int samplesPerPixel_, bool isCopyForKernel_ ):states(1024,isCopyForKernel_),samplesPerPixel(samplesPerPixel_){
     
 }
 
-SimpleSamplerGPU::SimpleSamplerGPU() : maxThreads(-1), states(0,true) {
+SimpleSamplerGPU::SimpleSamplerGPU() :states(0,true) {
 
 }
 
 SimpleSamplerGPU SimpleSamplerGPU::getCopyForKernel(){
-    SimpleSamplerGPU copy(maxThreads,true);
+    SimpleSamplerGPU copy(samplesPerPixel,true);
     copy.states = states.getCopyForKernel();
     return copy;
 }

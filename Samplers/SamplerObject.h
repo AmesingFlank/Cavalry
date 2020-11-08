@@ -110,5 +110,8 @@ public:
 		return visit(visitor);
 	}
 
-   
+	static SamplerObject createFromObjectDefinition(const ObjectDefinition& def) {
+		int samplesPerPixel = def.params.getNum("pixelsamples");
+		return SamplerObject(SimpleSamplerGPU(samplesPerPixel));
+	}
 };

@@ -232,7 +232,7 @@ void parseSceneWideOptions(TokenBuf& buf,RenderSetup& result){
 	}
 
 	auto integrator = std::make_unique<DirectLightingGPUIntegrator>();
-	integrator->sampler = std::make_unique<SamplerObject>(SimpleSamplerGPU());
+	integrator->sampler = std::make_unique<SamplerObject>(SamplerObject::createFromObjectDefinition(samplerDef));
 
 	result.renderer.integrator = std::move(integrator);
 	result.renderer.film = std::make_unique<FilmObject>(FilmObject::createFromObjectDefinition(filmDef));

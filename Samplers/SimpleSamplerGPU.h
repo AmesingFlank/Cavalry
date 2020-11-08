@@ -13,12 +13,13 @@
 
 class SimpleSamplerGPU: public Sampler{
 public:
-    int maxThreads;
+
+    int samplesPerPixel;
 
     CurandStateArray states;
 
     __host__
-    SimpleSamplerGPU(int maxThreads_,bool isCopyForKernel_ = false);
+    SimpleSamplerGPU(int samplesPerPixel_,bool isCopyForKernel_ = false);
 
     __host__ 
     SimpleSamplerGPU();
@@ -30,9 +31,7 @@ public:
     virtual int randInt(int N) {
 
         int index = blockIdx.x * blockDim.x + threadIdx.x;
-        if (index >= maxThreads) {
-            return;
-        }
+
         curandState* myState = states.getState(index);
         return curand(myState) % N;
 
@@ -42,9 +41,7 @@ public:
 	virtual float rand1() override {
 
         int index = blockIdx.x * blockDim.x + threadIdx.x;
-        if(index >= maxThreads){
-            return;
-        }
+
         curandState* myState = states.getState(index);
         return curand_uniform(myState);
 
@@ -54,9 +51,7 @@ public:
 	virtual float2 rand2() override {
 
         int index = blockIdx.x * blockDim.x + threadIdx.x;
-        if(index >= maxThreads){
-            return;
-        }
+
         curandState* myState = states.getState(index);
         return make_float2(curand_uniform(myState), curand_uniform(myState));
 
@@ -67,9 +62,7 @@ public:
 	virtual float4 rand4() override {
 
         int index = blockIdx.x * blockDim.x + threadIdx.x;
-        if(index >= maxThreads){
-            return;
-        }
+
         curandState* myState = states.getState(index);
         return make_float4(curand_uniform(myState), curand_uniform(myState),curand_uniform(myState), curand_uniform(myState));
 

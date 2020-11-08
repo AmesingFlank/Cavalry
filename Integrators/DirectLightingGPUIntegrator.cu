@@ -79,7 +79,6 @@ void renderAllSamples(CameraSample* samples, int samplesCount, SceneHandle scene
 
 
 RenderResult DirectLightingGPUIntegrator::render(const Scene& scene, const CameraObject& camera, FilmObject& film) {
-    sampler = std::make_unique<SamplerObject>( SimpleSamplerGPU( film.getWidth()*film.getHeight()) );
 
     GpuArray<CameraSample> allSamples = sampler->genAllCameraSamples(camera, film);
 
