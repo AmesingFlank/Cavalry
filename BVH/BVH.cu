@@ -23,7 +23,7 @@ BVH::BVH(int primitivesCount_,bool isCopyForKernel_):primitivesCount(primitivesC
 
 BVH BVH::getCopyForKernel(){
     BVH copy(primitivesCount,true);
-    copy.nodes.gpu.data = nodes.gpu.data;
+    copy.nodes.gpu = nodes.gpu.getCopyForKernel();
     return copy;
 }
 

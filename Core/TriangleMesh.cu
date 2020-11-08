@@ -32,10 +32,10 @@ indices(trianglesCount,isCopyForKernel_)
 
 TriangleMesh TriangleMesh::getCopyForKernel(){
     TriangleMesh copy(trianglesCount,verticesCount,hasVertexNormals,true);
-    copy.positions.gpu.data = positions.gpu.data;
-    copy.normals.gpu.data = normals.gpu.data;
-    copy.texCoords.gpu.data = texCoords.gpu.data;
-    copy.indices.gpu.data = indices.gpu.data;
+    copy.positions.gpu = positions.gpu.getCopyForKernel();
+    copy.normals.gpu = normals.gpu.getCopyForKernel();
+    copy.texCoords.gpu = texCoords.gpu.getCopyForKernel();
+    copy.indices.gpu = indices.gpu.getCopyForKernel();
     return copy;
 }
 
