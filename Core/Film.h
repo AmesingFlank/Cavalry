@@ -8,7 +8,7 @@ class Film{
 public:
     virtual RenderResult readCurrentResult()=0;
 
-    __host__ __device__
+    __device__
     virtual void addSample(const CameraSample& sample, const Spectrum& color) = 0;
 
     int width;

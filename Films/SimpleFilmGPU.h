@@ -16,9 +16,9 @@ public:
 	SimpleFilmGPU getCopyForKernel();
 
 
-	__host__ __device__
+	__device__
 	virtual void addSample(const CameraSample& sample, const Spectrum& spectrum) override{
-#ifdef __CUDA_ARCH__
+
         int x = round(sample.x-0.5);
 		int y = round(sample.y-0.5);
 		int index = y*width + x;
@@ -27,9 +27,7 @@ public:
 		}
 		writeColorAt(clampBetween0And1(spectrum),&(data.data[index*3]));
     	
-#else
-        SIGNAL_ERROR("Not Implemented on CPU");
-#endif
+		
 	}
 
 	virtual RenderResult readCurrentResult()  override;

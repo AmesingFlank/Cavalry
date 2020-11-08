@@ -8,9 +8,8 @@ struct TaskQueue{
     GpuArray<int> head;
 
     TaskQueue(int capacity_,bool isCopyForKernel_):tasks(capacity,isCopyForKernel_),head(1,isCopyForKernel_){
-        if (!isCopyForKernel) {
-            HANDLE_ERROR(cudaMemset(head.data, 0, sizeof(int)));
-        }
+       
+       
     }
 
     TaskQueue<T> getCopyForKernel(){

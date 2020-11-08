@@ -65,3 +65,10 @@ inline void writeColorAt(const Spectrum&  color, unsigned char* address){
     address[1] = color.y * 255;
     address[2] = color.z * 255;
 }
+
+__device__
+inline void atomicAdd(Spectrum* target, Spectrum toAdd){
+    atomicAdd(&(target->x),toAdd.x);
+    atomicAdd(&(target->y),toAdd.y);
+    atomicAdd(&(target->z),toAdd.z);
+}

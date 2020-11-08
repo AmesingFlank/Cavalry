@@ -103,6 +103,7 @@ struct GpuArray{
         if (!isCopyForKernel) {
             //std::cout << "allocing Ts " << N << "    " << N * sizeof(T) << std::endl;
             HANDLE_ERROR(cudaMalloc(&data, N * sizeof(T)));
+            HANDLE_ERROR(cudaMemset(data,0,N*sizeof(T)));
         }
     }
 

@@ -1,11 +1,11 @@
 #pragma once
 
 #include "SimpleFilmGPU.h"
-
+#include "BoxFilterFilm.h"
 #include "../Utils/Variant.h"
 #include "../Core/Parameters.h"
 
-using FilmVariant = Variant<SimpleFilmGPU>;
+using FilmVariant = Variant<SimpleFilmGPU,BoxFilterFilm>;
 
 class FilmObject : public FilmVariant {
 public:
@@ -27,7 +27,7 @@ public:
 		return *this;
 	}
 
-	__host__ __device__
+	__device__
 	void addSample(const CameraSample& sample, const Spectrum& spectrum) {
 		auto visitor = [&](auto& arg) {
 			using T = typename std::remove_reference<decltype(arg)>::type;
@@ -98,6 +98,6 @@ public:
     }
 
 	static FilmObject createFromObjectDefinition(const ObjectDefinition& def){
-		return FilmObject(SimpleFilmGPU::createFromParams(def.params));
+		return FilmObject(BoxFilterFilm::createFromParams(def.params));
 	}
 };
