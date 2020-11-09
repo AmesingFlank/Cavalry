@@ -9,9 +9,17 @@
 #include <iostream>
 #include <vector>
 
-#define SIGNAL_ERROR( msg ) \
-    printf(msg); \
+
+#ifdef __CUDA_ARCH__
+#define SIGNAL_ERROR(...) \
+    printf(__VA_ARGS__); 
+#else
+#define SIGNAL_ERROR(...) \
+    printf(__VA_ARGS__); \
     exit(EXIT_FAILURE);
+#endif
+
+
 
 
 inline static void HandleError(cudaError_t err, const char* file, int line) {
