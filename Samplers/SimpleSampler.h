@@ -11,7 +11,7 @@
 #include <iostream>
 
 
-class SimpleSamplerGPU: public Sampler{
+class SimpleSampler: public Sampler{
 public:
 
     int samplesPerPixel;
@@ -19,13 +19,13 @@ public:
     CurandStateArray states;
 
     __host__
-    SimpleSamplerGPU(int samplesPerPixel_,bool isCopyForKernel_ = false);
+    SimpleSampler(int samplesPerPixel_,bool isCopyForKernel_ = false);
 
     __host__ 
-    SimpleSamplerGPU();
+    SimpleSampler();
 
     __host__
-    SimpleSamplerGPU getCopyForKernel();
+    SimpleSampler getCopyForKernel();
 
     __device__
     virtual int randInt(int N) {

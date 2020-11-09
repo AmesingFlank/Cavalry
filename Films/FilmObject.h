@@ -1,11 +1,11 @@
 #pragma once
 
-#include "SimpleFilmGPU.h"
+#include "SimpleFilm.h"
 #include "BoxFilterFilm.h"
 #include "../Utils/Variant.h"
 #include "../Core/Parameters.h"
 
-using FilmVariant = Variant<SimpleFilmGPU,BoxFilterFilm>;
+using FilmVariant = Variant<SimpleFilm,BoxFilterFilm>;
 
 class FilmObject : public FilmVariant {
 public:

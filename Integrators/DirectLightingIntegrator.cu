@@ -1,8 +1,8 @@
-#include "DirectLightingGPUIntegrator.h"
-#include "../Samplers/SimpleSamplerGPU.h"
+#include "DirectLightingIntegrator.h"
+#include "../Samplers/SimpleSampler.h"
 #include "../Utils/TaskQueue.h"
 
-DirectLightingGPUIntegrator::DirectLightingGPUIntegrator() {
+DirectLightingIntegrator::DirectLightingIntegrator() {
 
 }
 
@@ -103,7 +103,7 @@ void addSamplesToFilm(FilmObject film, Spectrum* result,CameraSample* samples, i
 }
 
 
-RenderResult DirectLightingGPUIntegrator::render(const Scene& scene, const CameraObject& camera, FilmObject& film) {
+RenderResult DirectLightingIntegrator::render(const Scene& scene, const CameraObject& camera, FilmObject& film) {
 
     GpuArray<CameraSample> allSamples = sampler->genAllCameraSamples(camera, film);
 

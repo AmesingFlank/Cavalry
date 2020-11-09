@@ -1,10 +1,10 @@
 #pragma once
 
-#include "SimpleSamplerGPU.h"
+#include "SimpleSampler.h"
 
 #include "../Utils/Variant.h"
 
-using SamplerVariant = Variant<SimpleSamplerGPU>;
+using SamplerVariant = Variant<SimpleSampler>;
 
 class SamplerObject : public SamplerVariant {
 public:
@@ -113,6 +113,6 @@ public:
 	static SamplerObject createFromObjectDefinition(const ObjectDefinition& def) {
 		int samplesPerPixel = def.params.getNum("pixelsamples");
 		std::cout << "pixelsamples in file : " << samplesPerPixel << std::endl;
-		return SamplerObject(SimpleSamplerGPU(samplesPerPixel));
+		return SamplerObject(SimpleSampler(samplesPerPixel));
 	}
 };

@@ -3,7 +3,7 @@
 #include "Core/Renderer.h"
 #include "Core/Material.h"
 
-#include "Integrators/DirectLightingGPUIntegrator.h"
+#include "Integrators/DirectLightingIntegrator.h"
 
 #include "Cameras/PerspectiveCamera.h"
 

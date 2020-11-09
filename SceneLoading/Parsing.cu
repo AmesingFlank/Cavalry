@@ -2,8 +2,8 @@
 #include "../Utils/MathsCommons.h"
 #include "../Core/Material.h"
 #include "../Core/Primitive.h"
-#include "../Samplers/SimpleSamplerGPU.h"
-#include "../Integrators/DirectLightingGPUIntegrator.h"
+#include "../Samplers/SimpleSampler.h"
+#include "../Integrators/DirectLightingIntegrator.h"
 #include "../Utils/Utils.h"
 #include <unordered_map>
 #include <string>
@@ -231,7 +231,7 @@ void parseSceneWideOptions(TokenBuf& buf,RenderSetup& result){
 		SIGNAL_ERROR("incomplete scene-wide options");
 	}
 
-	auto integrator = std::make_unique<DirectLightingGPUIntegrator>();
+	auto integrator = std::make_unique<DirectLightingIntegrator>();
 	integrator->sampler = std::make_unique<SamplerObject>(SamplerObject::createFromObjectDefinition(samplerDef));
 
 	result.renderer.integrator = std::move(integrator);

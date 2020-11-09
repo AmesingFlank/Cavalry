@@ -6,14 +6,14 @@
 #include "../Core/Parameters.h"
 
 
-class SimpleFilmGPU : public Film {
+class SimpleFilm : public Film {
 public:
 
-	SimpleFilmGPU();
+	SimpleFilm();
 
-	SimpleFilmGPU(int width_, int height_, bool isCopyForKernel_ = false);
+	SimpleFilm(int width_, int height_, bool isCopyForKernel_ = false);
 
-	SimpleFilmGPU getCopyForKernel();
+	SimpleFilm getCopyForKernel();
 
 
 	__device__
@@ -34,6 +34,6 @@ public:
 
 	GpuArray<unsigned char> data;
 
-	static SimpleFilmGPU createFromParams(const Parameters& params);
+	static SimpleFilm createFromParams(const Parameters& params);
 
 };
