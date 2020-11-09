@@ -1,5 +1,6 @@
 #include "DirectLightingGPUIntegrator.h"
 #include "../Samplers/SimpleSamplerGPU.h"
+#include "../Utils/TaskQueue.h"
 
 DirectLightingGPUIntegrator::DirectLightingGPUIntegrator() {
 
@@ -10,30 +11,36 @@ struct MaterialEvalTask {
     Ray rayToLight;
     Spectrum incident;
     Ray exitantRay;
-    float probability;
+    float multiplier;
+    Spectrum* result;
 };
 
 __device__
-static Spectrum renderRay(const SceneHandle& scene, const Ray& ray, SamplerObject& sampler) {
+static void renderRay(const SceneHandle& scene, const Ray& ray, SamplerObject& sampler, Spectrum* result, TaskQueue<MaterialEvalTask>& materialEvalQueue) {
     IntersectionResult intersection;
     scene.intersect(intersection, ray);
 
+    *result = make_float3(0, 0, 0);
+   
 
     if (!intersection.intersected) {
         if (scene.hasEnvironmentMap()) {
-            return scene.getEnvironmentMap()->EnvironmentMap::evaluateRay(ray);
+            *result = scene.getEnvironmentMap()->EnvironmentMap::evaluateRay(ray);
         }
-        return make_float3(0, 0, 0);
+        return;
     }
+    
 
-
-    Spectrum result = make_float3(0, 0, 0);
 
     const Primitive* prim = intersection.primitive;
 
+    
+
     if (prim->areaLight) {
-        result += prim->areaLight->get<DiffuseAreaLight>()->DiffuseAreaLight::evaluateRay(ray);
+        *result += prim->areaLight->get<DiffuseAreaLight>()->DiffuseAreaLight::evaluateRay(ray);
     }
+
+    
 
     Ray exitantRay = { intersection.position,ray.direction * -1 };
 
@@ -55,25 +62,44 @@ static Spectrum renderRay(const SceneHandle& scene, const Ray& ray, SamplerObjec
         if (probability == 0) {
             printf("probability is 0\n");
         }
-
-        result += prim->material.eval(rayToLight, incident, exitantRay, intersection) * scene.lightsCount / probability;
+        MaterialEvalTask task = {intersection,rayToLight,incident,exitantRay,(float)scene.lightsCount/probability,result};
+        materialEvalQueue.push(task);
+        //result += prim->material.eval(rayToLight, incident, exitantRay, intersection) * scene.lightsCount / probability;
     }
-    
-    return result;
+
 }
 
 
 __global__
-void renderAllSamples(CameraSample* samples, int samplesCount, SceneHandle scene, CameraObject camera, SamplerObject sampler, FilmObject film) {
+void renderAllSamples(CameraSample* samples, int samplesCount, SceneHandle scene, CameraObject camera, SamplerObject sampler, Spectrum* results,TaskQueue<MaterialEvalTask> materialEvalQueue) {
     int index = blockIdx.x * blockDim.x + threadIdx.x;
     if (index >= samplesCount) {
         return;
     }
 
     Ray ray = camera.genRay(samples[index]);
-    Spectrum color = renderRay(scene, ray, sampler);
-    film.addSample(samples[index], color);
+    Spectrum* result = &results[index];
 
+    renderRay(scene, ray, sampler,result,materialEvalQueue);
+
+}
+
+
+__device__
+void runMaterialEval(MaterialEvalTask& task) {
+    const Primitive* prim = task.intersection.primitive;
+
+    *(task.result) += prim->material.eval(task.rayToLight, task.incident, task.exitantRay, task.intersection) * task.multiplier;
+}
+
+
+__global__
+void addSamplesToFilm(FilmObject film, Spectrum* result,CameraSample* samples, int count) {
+    int index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index >= count) {
+        return;
+    }
+    film.addSample(samples[index], result[index]);
 }
 
 
@@ -90,12 +116,24 @@ RenderResult DirectLightingGPUIntegrator::render(const Scene& scene, const Camer
     int numThreads = min(samplesCount, MAX_THREADS_PER_BLOCK);
     int numBlocks = divUp(samplesCount, numThreads);
 
+
+    GpuArray<Spectrum> result(samplesCount);
+    TaskQueue<MaterialEvalTask> materialEvalQueue(samplesCount);
+
     CHECK_IF_CUDA_ERROR("before render all samples");
-
-
-    renderAllSamples << <numBlocks, numThreads >> > (allSamples.data, samplesCount, sceneHandle, camera, samplerObject.getCopyForKernel(), film.getCopyForKernel());
+    renderAllSamples << <numBlocks, numThreads >> > 
+        (allSamples.data, samplesCount, sceneHandle, camera, samplerObject.getCopyForKernel(), result.data,materialEvalQueue.getCopyForKernel());
     CHECK_IF_CUDA_ERROR("render all samples");
 
+    materialEvalQueue.forAll(
+    [] __device__
+    (MaterialEvalTask& task) {
+        runMaterialEval(task);
+    }
+    );
+
+    addSamplesToFilm << <numBlocks, numThreads >> > (film.getCopyForKernel(), result.data, allSamples.data, samplesCount);
+    CHECK_CUDA_ERROR("add sample to film");
 
 
     return film.readCurrentResult();
