@@ -4,14 +4,15 @@
 #include "../Core/Sampler.h"
 #include <memory>
 
-class DirectLightingIntegrator : public Integrator{
-public:
+namespace DirectLighting {
+    class DirectLightingIntegrator : public Integrator {
+    public:
 
 
-	DirectLightingIntegrator();
+        DirectLightingIntegrator();
 
-    virtual RenderResult render(const Scene& scene, const CameraObject& camera, FilmObject& film) override;
+        virtual RenderResult render(const Scene& scene, const CameraObject& camera, FilmObject& film) override;
 
-    
-    
-};
+    };
+}
+

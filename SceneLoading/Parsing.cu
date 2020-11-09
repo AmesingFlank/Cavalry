@@ -231,7 +231,7 @@ void parseSceneWideOptions(TokenBuf& buf,RenderSetup& result){
 		SIGNAL_ERROR("incomplete scene-wide options");
 	}
 
-	auto integrator = std::make_unique<DirectLightingIntegrator>();
+	auto integrator = std::make_unique<DirectLighting::DirectLightingIntegrator>();
 	integrator->sampler = std::make_unique<SamplerObject>(SamplerObject::createFromObjectDefinition(samplerDef));
 
 	result.renderer.integrator = std::move(integrator);
