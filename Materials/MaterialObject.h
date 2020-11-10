@@ -31,12 +31,26 @@ public:
 		return *this;
 	}
 
-	__host__ __device__
+	__device__
 	Spectrum eval(const Ray& incidentRay, const Spectrum& incidentSpectrum, const Ray& exitantRay, const IntersectionResult& intersection) const {
 		auto visitor = [&](auto& arg) -> Spectrum {
 			using T = typename std::remove_reference<decltype(arg)>::type;
 			if constexpr (std::is_base_of<Material,typename T>::value) {
 				return arg.T::eval(incidentRay,incidentSpectrum,exitantRay,intersection);
+			}
+			else {
+				SIGNAL_VARIANT_ERROR;
+			}
+		};
+		return visit(visitor);
+	}
+
+	__device__
+	BSDFObject getBSDF() const {
+		auto visitor = [&](auto& arg) -> BSDFObject {
+			using T = typename std::remove_reference<decltype(arg)>::type;
+			if constexpr (std::is_base_of<Material, typename T>::value) {
+				return arg.T::getBSDF();
 			}
 			else {
 				SIGNAL_VARIANT_ERROR;

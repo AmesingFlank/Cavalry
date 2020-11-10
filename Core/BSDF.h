@@ -7,8 +7,12 @@
 
 class BSDF {
 public:
-    __host__ __device__
+    __device__
     virtual Spectrum eval(const float3& incident, const float3& exitant) const = 0;
+
+    __device__
+    virtual Spectrum sample(const float2& randomSource,float3& incidentOutput, const float3& exitant,float* probabilityOutput) const = 0;
+
 };
 
 

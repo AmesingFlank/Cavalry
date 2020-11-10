@@ -1,6 +1,7 @@
 #pragma once
 #include "GpuCommons.h"
 #include "Array.h"
+#include <iostream>
 
 template<typename Func,typename T>
 __global__
@@ -47,6 +48,10 @@ struct TaskQueue{
     template<typename Func>
     void forAll(Func f) {
         int tasksCount = count();
+        if (tasksCount == 0) {
+            std::cout << "no tasks to be done!" << std::endl;
+            return;
+        }
         int numThreads = min(tasksCount, MAX_THREADS_PER_BLOCK);
         int numBlocks = divUp(tasksCount, numThreads);
         std::cout << "tasksCount " << tasksCount << std::endl;

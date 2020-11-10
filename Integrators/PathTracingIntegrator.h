@@ -4,14 +4,15 @@
 #include "../Core/Sampler.h"
 #include <memory>
 
-class PathTracingIntegrator : public Integrator {
-public:
+namespace PathTracing {
+    class PathTracingIntegrator : public Integrator {
+    public:
 
 
-    PathTracingIntegrator();
+        PathTracingIntegrator();
 
-    virtual RenderResult render(const Scene& scene, const CameraObject& camera, FilmObject& film) override;
+        virtual RenderResult render(const Scene& scene, const CameraObject& camera, FilmObject& film) override;
 
+    };
+}
 
-
-};

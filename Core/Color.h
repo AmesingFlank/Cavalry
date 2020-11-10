@@ -50,6 +50,12 @@ inline Spectrum colorTemperatureToRGB(float kelvin){
 }
 
 
+__host__ __device__
+inline float gammaCorrect(float value) {
+    if (value <= 0.0031308f) return 12.92f * value;
+    return 1.055f * pow(value, (float)(1.f / 2.4f)) - 0.055f;
+}
+
 
 __host__ __device__
 inline Spectrum clampBetween0And1(const Spectrum& spectrum) {
@@ -61,9 +67,9 @@ inline Spectrum clampBetween0And1(const Spectrum& spectrum) {
 
 __host__ __device__
 inline void writeColorAt(const Spectrum&  color, unsigned char* address){
-    address[0] = color.x * 255;
-    address[1] = color.y * 255;
-    address[2] = color.z * 255;
+    address[0] = gammaCorrect(color.x) * 255;
+    address[1] = gammaCorrect(color.y) * 255;
+    address[2] = gammaCorrect(color.z) * 255;
 }
 
 __device__
@@ -72,3 +78,5 @@ inline void atomicAdd(Spectrum* target, Spectrum toAdd){
     atomicAdd(&(target->y),toAdd.y);
     atomicAdd(&(target->z),toAdd.z);
 }
+
+

@@ -30,12 +30,26 @@ public:
 		return *this;
 	}
 
-	__host__ __device__
+	__device__
 	Spectrum eval(float3 incident, float3 exitant) const {
 		auto visitor = [&](auto& arg) -> Spectrum {
 			using T = typename std::remove_reference<decltype(arg)>::type;
 			if constexpr (std::is_base_of<BSDF,typename T>::value) {
 				return arg.T::eval(incident, exitant);
+			}
+			else {
+				SIGNAL_VARIANT_ERROR;
+			}
+		};
+		return visit(visitor);
+	}
+
+	__device__
+	Spectrum sample(const float2& randomSource, float3& incidentOutput, const float3& exitant, float* probabilityOutput) const {
+		auto visitor = [&](auto& arg) -> Spectrum {
+			using T = typename std::remove_reference<decltype(arg)>::type;
+			if constexpr (std::is_base_of<BSDF, typename T>::value) {
+				return arg.T::sample(randomSource,incidentOutput,exitant,probabilityOutput);
 			}
 			else {
 				SIGNAL_VARIANT_ERROR;

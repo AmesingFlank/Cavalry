@@ -4,6 +4,8 @@
 #include "../Core/Primitive.h"
 #include "../Samplers/SimpleSampler.h"
 #include "../Integrators/DirectLightingIntegrator.h"
+#include "../Integrators/PathTracingIntegrator.h"
+
 #include "../Utils/Utils.h"
 #include <unordered_map>
 #include <string>
@@ -231,7 +233,7 @@ void parseSceneWideOptions(TokenBuf& buf,RenderSetup& result){
 		SIGNAL_ERROR("incomplete scene-wide options");
 	}
 
-	auto integrator = std::make_unique<DirectLighting::DirectLightingIntegrator>();
+	auto integrator = std::make_unique<PathTracing::PathTracingIntegrator>();
 	integrator->sampler = std::make_unique<SamplerObject>(SamplerObject::createFromObjectDefinition(samplerDef));
 
 	result.renderer.integrator = std::move(integrator);
