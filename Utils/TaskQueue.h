@@ -39,10 +39,19 @@ struct TaskQueue{
         tasks.data[index]=task;
     }
 
+    __host__ __device__
     int count() {
+#ifdef __CUDA_ARCH__
+        return *head.data;
+#else
         int result;
         HANDLE_ERROR(cudaMemcpy(&result,head.data, sizeof(int),cudaMemcpyDeviceToHost));
         return result;
+#endif
+    }
+
+    void clear() {
+        HANDLE_ERROR(cudaMemset(head.data, 0, sizeof(int)));
     }
 
     template<typename Func>
