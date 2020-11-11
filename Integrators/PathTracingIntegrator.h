@@ -8,8 +8,8 @@ namespace PathTracing {
     class PathTracingIntegrator : public Integrator {
     public:
 
-
-        PathTracingIntegrator();
+        int maxDepth;
+        PathTracingIntegrator(int maxDepth_);
 
         virtual RenderResult render(const Scene& scene, const CameraObject& camera, FilmObject& film) override;
 

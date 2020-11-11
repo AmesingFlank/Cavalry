@@ -11,6 +11,12 @@
 
 class Sampler{
 public:
+
+	virtual void prepare(int threadsCount) {};
+
+	__device__
+	virtual void startPixel() {};
+
 	__device__
 	virtual int randInt(int N) = 0;
 

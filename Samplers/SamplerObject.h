@@ -1,10 +1,11 @@
 #pragma once
 
 #include "SimpleSampler.h"
+#include "HaltonSampler.h"
 
 #include "../Utils/Variant.h"
 
-using SamplerVariant = Variant<SimpleSampler>;
+using SamplerVariant = Variant<SimpleSampler,HaltonSampler>;
 
 class SamplerObject : public SamplerVariant {
 public:
@@ -113,6 +114,34 @@ public:
 	static SamplerObject createFromObjectDefinition(const ObjectDefinition& def) {
 		int samplesPerPixel = def.params.getNum("pixelsamples");
 		std::cout << "pixelsamples in file : " << samplesPerPixel << std::endl;
-		return SamplerObject(SimpleSampler(samplesPerPixel));
+		return SamplerObject(HaltonSampler(samplesPerPixel));
+	}
+
+
+	__device__
+	void startPixel(){
+		auto visitor = [&](auto& arg){
+			using T = typename std::remove_reference<decltype(arg)>::type;
+			if constexpr (std::is_base_of<Sampler,typename T>::value) {
+				arg.T::startPixel();
+			}
+			else {
+				SIGNAL_VARIANT_ERROR;
+			}
+		};
+		visit(visitor);
+	}
+
+	void prepare(int threadsCount) {
+		auto visitor = [&](auto& arg) {
+			using T = typename std::remove_reference<decltype(arg)>::type;
+			if constexpr (std::is_base_of<Sampler, typename T>::value) {
+				arg.T::prepare(threadsCount);
+			}
+			else {
+				SIGNAL_VARIANT_ERROR;
+			}
+		};
+		visit(visitor);
 	}
 };

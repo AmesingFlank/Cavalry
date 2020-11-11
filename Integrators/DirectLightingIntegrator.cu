@@ -26,7 +26,7 @@ namespace DirectLighting {
     
         *result = make_float3(0, 0, 0);
        
-    
+        sampler.startPixel();
         if (!intersection.intersected) {
             if (scene.hasEnvironmentMap()) {
                 *result = scene.getEnvironmentMap()->EnvironmentMap::evaluateRay(ray);
@@ -121,6 +121,7 @@ namespace DirectLighting {
         int numThreads = min(samplesCount, MAX_THREADS_PER_BLOCK);
         int numBlocks = divUp(samplesCount, numThreads);
 
+        sampler->prepare(samplesCount);
 
         GpuArray<Spectrum> result(samplesCount);
         TaskQueue<DirectLighting::MaterialEvalTask> materialEvalQueue(samplesCount);

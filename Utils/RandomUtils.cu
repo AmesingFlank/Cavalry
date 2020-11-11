@@ -10,3 +10,15 @@ __global__ void initCurandStates ( curandState * states, unsigned long seed, int
     curand_init ( seed, index, 0, &states[index] );
 }
 
+
+
+/*
+__global__ void initSobolCurandStates ( curandStateSobol32 * states,int N, unsigned int* directionVectors){
+    int index = blockIdx.x * blockDim.x + threadIdx.x;
+    if(index >= N){
+        return;
+    }
+
+    curand_init ( directionVectors, index, &states[index] );
+}
+*/

@@ -6,7 +6,7 @@
 
 namespace PathTracing {
 
-    PathTracingIntegrator::PathTracingIntegrator() {
+    PathTracingIntegrator::PathTracingIntegrator(int maxDepth_):maxDepth(maxDepth_) {
 
     }
 
@@ -22,14 +22,17 @@ namespace PathTracing {
 
 
     __device__
-    static void renderRay(const SceneHandle& scene, const Ray& ray, SamplerObject& sampler, Spectrum* result, TaskQueue<MaterialEvalTask>& materialEvalQueue) {
+    static void renderRay(const SceneHandle& scene, const Ray& ray, SamplerObject& sampler, Spectrum* result, TaskQueue<MaterialEvalTask>& materialEvalQueue,int maxDepth) {
         
         *result = make_float3(0,0,0);
         Spectrum multiplier = make_float3(1, 1, 1);
 
         Ray thisRay = ray;
 
-        for (int i = 0; i < 16; ++i) {
+        sampler.startPixel();
+        
+
+        for (int i = 0; i < maxDepth; ++i) {
             IntersectionResult intersection;
             scene.intersect(intersection, thisRay);
 
@@ -44,18 +47,14 @@ namespace PathTracing {
             
             const Primitive* prim = intersection.primitive;
 
-
-
             if (prim->areaLight && i == 0) {
                 *result += prim->areaLight->get<DiffuseAreaLight>()->DiffuseAreaLight::evaluateRay(thisRay)*multiplier;
             }
 
 
-
             Ray exitantRay = { intersection.position,thisRay.direction * -1 };
 
             int lightIndex = sampler.randInt(scene.lightsCount);
-
 
             const LightObject& light = scene.lights[lightIndex];
             Ray rayToLight;
@@ -64,8 +63,8 @@ namespace PathTracing {
 
             VisibilityTest visibilityTest;
             visibilityTest.sourceGeometry = prim->shape.getID();
-
-
+            
+            
             Spectrum incident = light.sampleRayToPoint(intersection.position, randomSource, probability, rayToLight, visibilityTest);
 
             if (scene.testVisibility(visibilityTest) && dot(rayToLight.direction, intersection.normal) > 0) {
@@ -94,7 +93,7 @@ namespace PathTracing {
 
 
     __global__
-    void renderAllSamples(CameraSample* samples, int samplesCount, SceneHandle scene, CameraObject camera, SamplerObject sampler, Spectrum* results, TaskQueue<MaterialEvalTask> materialEvalQueue) {
+    void renderAllSamples(CameraSample* samples, int samplesCount, SceneHandle scene, CameraObject camera, SamplerObject sampler, Spectrum* results, TaskQueue<MaterialEvalTask> materialEvalQueue,int maxDepth) {
         int index = blockIdx.x * blockDim.x + threadIdx.x;
         if (index >= samplesCount) {
             return;
@@ -103,13 +102,13 @@ namespace PathTracing {
         Ray ray = camera.genRay(samples[index]);
         Spectrum* result = &results[index];
 
-        renderRay(scene, ray, sampler, result, materialEvalQueue);
+        renderRay(scene, ray, sampler, result, materialEvalQueue,maxDepth);
 
     }
 
 
     __device__
-        void runMaterialEval(MaterialEvalTask& task) {
+    void runMaterialEval(MaterialEvalTask& task) {
         const Primitive* prim = task.intersection.primitive;
 
         *(task.result) += prim->material.eval(task.rayToLight, task.incident, task.exitantRay, task.intersection) * task.multiplier;
@@ -117,7 +116,7 @@ namespace PathTracing {
 
 
     __global__
-        void addSamplesToFilm(FilmObject film, Spectrum* result, CameraSample* samples, int count) {
+    void addSamplesToFilm(FilmObject film, Spectrum* result, CameraSample* samples, int count) {
         int index = blockIdx.x * blockDim.x + threadIdx.x;
         if (index >= count) {
             return;
@@ -140,13 +139,14 @@ namespace PathTracing {
         int numThreads = min(samplesCount, MAX_THREADS_PER_BLOCK);
         int numBlocks = divUp(samplesCount, numThreads);
 
+        sampler->prepare(samplesCount);
 
         GpuArray<Spectrum> result(samplesCount);
         TaskQueue<PathTracing::MaterialEvalTask> materialEvalQueue(samplesCount);
 
         CHECK_IF_CUDA_ERROR("before render all samples");
         PathTracing::renderAllSamples << <numBlocks, numThreads >> >
-            (allSamples.data, samplesCount, sceneHandle, camera, samplerObject.getCopyForKernel(), result.data, materialEvalQueue.getCopyForKernel());
+            (allSamples.data, samplesCount, sceneHandle, camera, samplerObject.getCopyForKernel(), result.data, materialEvalQueue.getCopyForKernel(),maxDepth);
         CHECK_IF_CUDA_ERROR("render all samples");
 
         
