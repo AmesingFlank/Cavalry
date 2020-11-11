@@ -10,14 +10,7 @@ namespace PathTracing {
 
     }
 
-    struct MaterialEvalTask {
-        IntersectionResult intersection;
-        Ray rayToLight;
-        Spectrum incident;
-        Ray exitantRay;
-        float multiplier;
-        Spectrum* result;
-    };
+    
 
     struct PrimaryRayTask {
         Ray ray;
@@ -25,9 +18,16 @@ namespace PathTracing {
         Spectrum* result;
     };
 
+    struct LightingTask {
+        IntersectionResult intersection;
+        Ray thisRay;
+        Spectrum multiplier;
+        Spectrum* result;
+    };
+
 
     __global__
-    void renderRay( SceneHandle scene, SamplerObject sampler, TaskQueue<MaterialEvalTask> materialEvalQueue,TaskQueue<PrimaryRayTask> thisRoundRayQueue, TaskQueue<PrimaryRayTask> nextRoundRayQueue, int depth) {
+    void renderRay( SceneHandle scene, SamplerObject sampler, TaskQueue<LightingTask> lightingQueue,TaskQueue<PrimaryRayTask> thisRoundRayQueue, TaskQueue<PrimaryRayTask> nextRoundRayQueue) {
         int raysCount = thisRoundRayQueue.count();
         int index = blockIdx.x * blockDim.x + threadIdx.x;
         if (index >= raysCount) {
@@ -45,19 +45,51 @@ namespace PathTracing {
 
         if (!intersection.intersected) {
             if (scene.hasEnvironmentMap()) {
-                *result += scene.getEnvironmentMap()->EnvironmentMap::evaluateRay(thisRay)*multiplier;
+                *result += scene.getEnvironmentMap()->EnvironmentMap::evaluateRay(thisRay) * multiplier;
             }
             return;
         }
+        
+        LightingTask lightingTask = { intersection,thisRay,multiplier,result };
+        lightingQueue.push(lightingTask);
+        
+
+        const Primitive* prim = intersection.primitive;
+
+
+        Ray nextRay;
+        float nextRayProbability;
+        Spectrum nextMultiplier = prim->material.getBSDF().sample(sampler.rand2(), nextRay.direction, thisRay.direction * -1.f, &nextRayProbability);
+        nextRay.origin = intersection.position + nextRay.direction * 0.0001f;
+        multiplier = multiplier * nextMultiplier * abs(dot(nextRay.direction,intersection.normal)) / nextRayProbability;
+
+        PrimaryRayTask nextTask = {nextRay,multiplier,result};
+        nextRoundRayQueue.push(nextTask);
+    }
+
+
+    __global__
+    void computeLighting(SceneHandle scene, SamplerObject sampler, TaskQueue<LightingTask> tasks,int depth) {
+        int tasksCount = tasks.count();
+        int index = blockIdx.x * blockDim.x + threadIdx.x;
+        if (index >= tasksCount) {
+            return;
+        }
+
+        IntersectionResult intersection = tasks.tasks.data[index].intersection;
+        Spectrum* result = tasks.tasks.data[index].result;
+        Ray thisRay = tasks.tasks.data[index].thisRay;
+        Spectrum multiplier = tasks.tasks.data[index].multiplier;
 
 
         
+
+
         const Primitive* prim = intersection.primitive;
 
         if (prim->areaLight && depth == 0) {
-            *result += prim->areaLight->get<DiffuseAreaLight>()->DiffuseAreaLight::evaluateRay(thisRay)*multiplier;
+            *result += prim->areaLight->get<DiffuseAreaLight>()->DiffuseAreaLight::evaluateRay(thisRay) * multiplier;
         }
-
 
         Ray exitantRay = { intersection.position,thisRay.direction * -1 };
 
@@ -70,28 +102,14 @@ namespace PathTracing {
 
         VisibilityTest visibilityTest;
         visibilityTest.sourceGeometry = prim->shape.getID();
-        
-        
+
+
         Spectrum incident = light.sampleRayToPoint(intersection.position, randomSource, probability, rayToLight, visibilityTest);
 
         if (scene.testVisibility(visibilityTest) && dot(rayToLight.direction, intersection.normal) > 0) {
-            if (probability == 0) {
-                printf("probability is 0\n");
-            }
-            //MaterialEvalTask task = { intersection,rayToLight,incident,exitantRay,(float)scene.lightsCount / probability,result };
-            //materialEvalQueue.push(task);
-            *result += prim->material.eval(rayToLight, incident, exitantRay, intersection) * scene.lightsCount*multiplier / probability;
+
+            *result += prim->material.eval(rayToLight, incident, exitantRay, intersection) * scene.lightsCount * multiplier / probability;
         }
-
-        Ray nextRay;
-        float nextRayProbability;
-        Spectrum nextMultiplier = prim->material.getBSDF().sample(sampler.rand2(), nextRay.direction, thisRay.direction * -1.f, &nextRayProbability);
-        nextRay.origin = intersection.position + nextRay.direction * 0.0001f;
-        multiplier = multiplier * nextMultiplier * abs(dot(nextRay.direction,intersection.normal)) / nextRayProbability;
-
-        PrimaryRayTask nextTask = {nextRay,multiplier,result};
-        nextRoundRayQueue.push(nextTask);
-
     }
 
 
@@ -111,13 +129,7 @@ namespace PathTracing {
         sampler.startPixel();
     }
 
-
-    __device__
-    void runMaterialEval(MaterialEvalTask& task) {
-        const Primitive* prim = task.intersection.primitive;
-
-        *(task.result) += prim->material.eval(task.rayToLight, task.incident, task.exitantRay, task.intersection) * task.multiplier;
-    }
+     
 
 
     __global__
@@ -147,7 +159,7 @@ namespace PathTracing {
         sampler->prepare(samplesCount);
 
         GpuArray<Spectrum> result(samplesCount);
-        TaskQueue<PathTracing::MaterialEvalTask> materialEvalQueue(samplesCount);
+        TaskQueue<LightingTask> lightingQueue(samplesCount);
 
         TaskQueue<PrimaryRayTask> primaryRayQueue0(samplesCount);
         TaskQueue<PrimaryRayTask> primaryRayQueue1(samplesCount);
@@ -163,23 +175,21 @@ namespace PathTracing {
         int depth = 0;
 
         while (thisRoundRayQueue->count() > 0 && depth < maxDepth) {
-
-            CHECK_IF_CUDA_ERROR("before render all samples");
+            std::cout << "doing depth " << depth << std::endl;
+            CHECK_IF_CUDA_ERROR("before render ray");
             renderRay << <numBlocks, numThreads >> >
-                (sceneHandle,samplerObject.getCopyForKernel(), materialEvalQueue.getCopyForKernel(), thisRoundRayQueue->getCopyForKernel(),nextRoundRayQueue->getCopyForKernel(),depth);
-            CHECK_IF_CUDA_ERROR("render all samples");
+                (sceneHandle,samplerObject.getCopyForKernel(), lightingQueue.getCopyForKernel(), thisRoundRayQueue->getCopyForKernel(),nextRoundRayQueue->getCopyForKernel());
+            CHECK_IF_CUDA_ERROR("render ray");
 
             thisRoundRayQueue->clear();
-            std::swap(thisRoundRayQueue, nextRoundRayQueue);
+            
 
-            materialEvalQueue.forAll(
-                [] __device__
-                (PathTracing::MaterialEvalTask & task) {
-                PathTracing::runMaterialEval(task);
-            }
-            );
+            computeLighting << <numBlocks, numThreads >> > (sceneHandle, samplerObject.getCopyForKernel(), lightingQueue.getCopyForKernel(),depth);
+            CHECK_CUDA_ERROR("do lighting");
+            lightingQueue.clear();
 
             ++depth;
+            std::swap(thisRoundRayQueue, nextRoundRayQueue);
 
         }
 
