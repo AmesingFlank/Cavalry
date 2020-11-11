@@ -19,6 +19,11 @@ namespace PathTracing {
         Spectrum* result;
     };
 
+    struct PrimaryRayTask {
+        Ray ray;
+        Spectrum multipler;
+        Spectrum* result;
+    };
 
 
     __device__

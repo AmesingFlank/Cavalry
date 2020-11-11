@@ -21,16 +21,11 @@
 
 
 
-void testParsingCornell() {
-    RenderSetup setup = readRenderSetup("../TestScenes/cornellBox/scene.pbrt");
-    //setup.scene.lightsHost.push_back(PointLight(make_float3(0, 2, 3), make_float3(1, 1, 1)));
-    setup.scene.prepareForRender();
-    setup.renderer.render(setup.scene).saveToPNG("test.png");
-}
 
-void testParsingBath() {
-    RenderSetup setup = readRenderSetup("../TestScenes/bathroom/bathroom.pbrt");
-    //RenderSetup setup = readRenderSetup("../TestScenes/bathroom/bathroom.pbrt");
+
+void test(const std::string& scenePath) {
+    RenderSetup setup = readRenderSetup(scenePath);
+
     Timer::getInstance().start("preparation");
     Timer::getInstance().start("all");
     setup.scene.prepareForRender();
@@ -42,10 +37,7 @@ void testParsingBath() {
 
 
 int main(){
-    //testParsingBath();
-    testParsingCornell();
-    //testParsingHead();
-    //testDirectLightingCPU0();
+    test("../TestScenes/cornellBox/scene.pbrt");
+    //test("../TestScenes/bathroom/bathroom.pbrt");
 
-    std::cout << "done!" << std::endl;
 }
