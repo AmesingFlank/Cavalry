@@ -14,6 +14,16 @@ public:
     int width;
     int height;
 
+    int completedSamplesPerPixel = 0;
+
+    int getCompletedSamplesPerPixel(){
+        return completedSamplesPerPixel;
+    }
+
+    void setCompletedSamplesPerPixel(int spp){
+        completedSamplesPerPixel = spp;
+    }
+
     __host__ __device__
     int getWidth() const{
         return width;

@@ -14,7 +14,7 @@
 class SimpleSampler: public Sampler{
 public:
 
-    int samplesPerPixel;
+    
 
     CurandStateArray states;
 

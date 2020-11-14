@@ -108,41 +108,42 @@ namespace DirectLighting {
 
 
 
-    RenderResult DirectLightingIntegrator::render(const Scene& scene, const CameraObject& camera, FilmObject& film) {
+    void DirectLightingIntegrator::render(const Scene& scene, const CameraObject& camera, FilmObject& film) {
 
-        GpuArray<CameraSample> allSamples = sampler->genAllCameraSamples(camera, film);
+        while(!isFinished(scene,camera,film)){
+            GpuArray<CameraSample> allSamples = sampler->genAllCameraSamples(camera, film);
 
-        SceneHandle sceneHandle = scene.getDeviceHandle();
+            SceneHandle sceneHandle = scene.getDeviceHandle();
 
-        SamplerObject& samplerObject = *sampler;
+            SamplerObject& samplerObject = *sampler;
 
 
-        int samplesCount = (int)allSamples.N;
-        int numThreads = min(samplesCount, MAX_THREADS_PER_BLOCK);
-        int numBlocks = divUp(samplesCount, numThreads);
+            int samplesCount = (int)allSamples.N;
+            int numThreads = min(samplesCount, MAX_THREADS_PER_BLOCK);
+            int numBlocks = divUp(samplesCount, numThreads);
 
-        sampler->prepare(samplesCount);
+            sampler->prepare(samplesCount);
 
-        GpuArray<Spectrum> result(samplesCount);
-        TaskQueue<DirectLighting::MaterialEvalTask> materialEvalQueue(samplesCount);
+            GpuArray<Spectrum> result(samplesCount);
+            TaskQueue<DirectLighting::MaterialEvalTask> materialEvalQueue(samplesCount);
 
-        CHECK_IF_CUDA_ERROR("before render all samples");
-        DirectLighting::renderAllSamples << <numBlocks, numThreads >> >
-            (allSamples.data, samplesCount, sceneHandle, camera, samplerObject.getCopyForKernel(), result.data, materialEvalQueue.getCopyForKernel());
-        CHECK_IF_CUDA_ERROR("render all samples");
+            CHECK_IF_CUDA_ERROR("before render all samples");
+            DirectLighting::renderAllSamples << <numBlocks, numThreads >> >
+                (allSamples.data, samplesCount, sceneHandle, camera, samplerObject.getCopyForKernel(), result.data, materialEvalQueue.getCopyForKernel());
+            CHECK_IF_CUDA_ERROR("render all samples");
 
-        materialEvalQueue.forAll(
-            [] __device__
-            (DirectLighting::MaterialEvalTask & task) {
-            DirectLighting::runMaterialEval(task);
+            materialEvalQueue.forAll(
+                [] __device__
+                (DirectLighting::MaterialEvalTask & task) {
+                DirectLighting::runMaterialEval(task);
+            }
+            );
+
+            DirectLighting::addSamplesToFilm << <numBlocks, numThreads >> > (film.getCopyForKernel(), result.data, allSamples.data, samplesCount);
+            CHECK_CUDA_ERROR("add sample to film");
         }
-        );
 
-        DirectLighting::addSamplesToFilm << <numBlocks, numThreads >> > (film.getCopyForKernel(), result.data, allSamples.data, samplesCount);
-        CHECK_CUDA_ERROR("add sample to film");
-
-
-        return film.readCurrentResult();
+        
     }
     
 }

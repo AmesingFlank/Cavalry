@@ -111,6 +111,21 @@ public:
 		return visit(visitor);
 	}
 
+	__device__ __host__
+	int getSamplesPerPixel(){
+		auto visitor = [&](auto& arg) -> int{
+			using T = typename std::remove_reference<decltype(arg)>::type;
+			if constexpr (std::is_base_of<Sampler,typename T>::value) {
+				return arg.samplesPerPixel;
+			}
+			else {
+				SIGNAL_VARIANT_ERROR;
+			}
+		};
+		return visit(visitor);
+	}
+
+
 	static SamplerObject createFromObjectDefinition(const ObjectDefinition& def) {
 		int samplesPerPixel = def.params.getNum("pixelsamples");
 		std::cout << "pixelsamples in file : " << samplesPerPixel << std::endl;

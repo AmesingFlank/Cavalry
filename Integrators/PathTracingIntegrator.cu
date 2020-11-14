@@ -143,60 +143,63 @@ namespace PathTracing {
 
 
 
-    RenderResult PathTracingIntegrator::render(const Scene& scene, const CameraObject& camera, FilmObject& film) {
+    void PathTracingIntegrator::render(const Scene& scene, const CameraObject& camera, FilmObject& film) {
 
-        GpuArray<CameraSample> allSamples = sampler->genAllCameraSamples(camera, film);
+        while(!isFinished( scene, camera,  film)){
+            GpuArray<CameraSample> allSamples = sampler->genAllCameraSamples(camera, film);
 
-        SceneHandle sceneHandle = scene.getDeviceHandle();
+            SceneHandle sceneHandle = scene.getDeviceHandle();
+    
+            SamplerObject& samplerObject = *sampler;
+    
+    
+            int samplesCount = (int)allSamples.N;
+            int numThreads = min(samplesCount, MAX_THREADS_PER_BLOCK);
+            int numBlocks = divUp(samplesCount, numThreads);
+    
+            sampler->prepare(samplesCount);
+    
+            GpuArray<Spectrum> result(samplesCount);
+            TaskQueue<LightingTask> lightingQueue(samplesCount);
+    
+            TaskQueue<PrimaryRayTask> primaryRayQueue0(samplesCount);
+            TaskQueue<PrimaryRayTask> primaryRayQueue1(samplesCount);
+    
+            TaskQueue<PrimaryRayTask>* thisRoundRayQueue = &primaryRayQueue0;
+            TaskQueue<PrimaryRayTask>* nextRoundRayQueue = &primaryRayQueue1;
 
-        SamplerObject& samplerObject = *sampler;
+            genInitialRays << <numBlocks, numThreads >> > (allSamples.data,samplesCount,camera,result.data,thisRoundRayQueue->getCopyForKernel(), samplerObject.getCopyForKernel());
+            CHECK_CUDA_ERROR("gen initial rays");
 
+            int depth = 0;
 
-        int samplesCount = (int)allSamples.N;
-        int numThreads = min(samplesCount, MAX_THREADS_PER_BLOCK);
-        int numBlocks = divUp(samplesCount, numThreads);
+            while (thisRoundRayQueue->count() > 0 && depth < maxDepth) {
+                std::cout << "doing depth " << depth << std::endl;
+                CHECK_IF_CUDA_ERROR("before render ray");
+                renderRay << <numBlocks, numThreads >> >
+                    (sceneHandle,samplerObject.getCopyForKernel(), lightingQueue.getCopyForKernel(), thisRoundRayQueue->getCopyForKernel(),nextRoundRayQueue->getCopyForKernel());
+                CHECK_IF_CUDA_ERROR("render ray");
 
-        sampler->prepare(samplesCount);
+                thisRoundRayQueue->clear();
+                
 
-        GpuArray<Spectrum> result(samplesCount);
-        TaskQueue<LightingTask> lightingQueue(samplesCount);
+                computeLighting << <numBlocks, numThreads >> > (sceneHandle, samplerObject.getCopyForKernel(), lightingQueue.getCopyForKernel(),depth);
+                CHECK_CUDA_ERROR("do lighting");
+                lightingQueue.clear();
 
-        TaskQueue<PrimaryRayTask> primaryRayQueue0(samplesCount);
-        TaskQueue<PrimaryRayTask> primaryRayQueue1(samplesCount);
+                ++depth;
+                std::swap(thisRoundRayQueue, nextRoundRayQueue);
 
-        TaskQueue<PrimaryRayTask>* thisRoundRayQueue = &primaryRayQueue0;
-        TaskQueue<PrimaryRayTask>* nextRoundRayQueue = &primaryRayQueue1;
+            }
 
+            PathTracing::addSamplesToFilm << <numBlocks, numThreads >> > (film.getCopyForKernel(), result.data, allSamples.data, samplesCount);
+            CHECK_CUDA_ERROR("add sample to film");
 
-
-        genInitialRays << <numBlocks, numThreads >> > (allSamples.data,samplesCount,camera,result.data,thisRoundRayQueue->getCopyForKernel(), samplerObject.getCopyForKernel());
-        CHECK_CUDA_ERROR("gen initial rays");
-
-        int depth = 0;
-
-        while (thisRoundRayQueue->count() > 0 && depth < maxDepth) {
-            std::cout << "doing depth " << depth << std::endl;
-            CHECK_IF_CUDA_ERROR("before render ray");
-            renderRay << <numBlocks, numThreads >> >
-                (sceneHandle,samplerObject.getCopyForKernel(), lightingQueue.getCopyForKernel(), thisRoundRayQueue->getCopyForKernel(),nextRoundRayQueue->getCopyForKernel());
-            CHECK_IF_CUDA_ERROR("render ray");
-
-            thisRoundRayQueue->clear();
             
 
-            computeLighting << <numBlocks, numThreads >> > (sceneHandle, samplerObject.getCopyForKernel(), lightingQueue.getCopyForKernel(),depth);
-            CHECK_CUDA_ERROR("do lighting");
-            lightingQueue.clear();
-
-            ++depth;
-            std::swap(thisRoundRayQueue, nextRoundRayQueue);
 
         }
 
-        PathTracing::addSamplesToFilm << <numBlocks, numThreads >> > (film.getCopyForKernel(), result.data, allSamples.data, samplesCount);
-        CHECK_CUDA_ERROR("add sample to film");
-
-        return film.readCurrentResult();
     }
 
 }

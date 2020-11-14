@@ -101,4 +101,4 @@ void NumToken::read(const std::string& input, int& pos, TokenBuf& result){
 
 
 const std::unordered_set<std::string> KeyWordToken::recognized =
-{"Include","PixelFilter","Transform", "NamedMaterial","TransformBegin","TransformEnd","AreaLightSource","MakeNamedMaterial", "Texture","Scale","Rotate","Translate","LightSource","LookAt","Camera","Film","WorldBegin","WorldEnd","AttributeBegin","AttributeEnd","Sampler","Material","Shape","Integrator" };
+{"MakeNamedMedium","MediumInterface","NamedMedium","Include","PixelFilter","Transform", "NamedMaterial","TransformBegin","TransformEnd","AreaLightSource","MakeNamedMaterial", "Texture","Scale","Rotate","Translate","LightSource","LookAt","Camera","Film","WorldBegin","WorldEnd","AttributeBegin","AttributeEnd","Sampler","Material","Shape","Integrator" };

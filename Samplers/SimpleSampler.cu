@@ -1,12 +1,12 @@
 #include "SimpleSampler.h"
 #include "../Utils/GpuCommons.h"
-
+#include "DecideSampleCount.h"
 #include "../Utils/RandomUtils.h"
 #include <iostream>
 
 
-SimpleSampler::SimpleSampler(int samplesPerPixel_, bool isCopyForKernel_ ):states(1024,isCopyForKernel_),samplesPerPixel(samplesPerPixel_){
-    
+SimpleSampler::SimpleSampler(int samplesPerPixel_, bool isCopyForKernel_ ):states(1024,isCopyForKernel_){
+    samplesPerPixel = samplesPerPixel_;
 }
 
 SimpleSampler::SimpleSampler() :states(0,true) {
@@ -43,16 +43,19 @@ void genNaiveSample(CameraSample* resultPointer, int samplesCount, int width, in
 GpuArray<CameraSample> SimpleSampler::genAllCameraSamples(const CameraObject& camera, FilmObject& film) {
     int width = film.getWidth();
     int height = film.getHeight();
-    int count = width*height * samplesPerPixel;
 
-    std::cout << "about to alloc cam samples " << samplesPerPixel << std::endl;
+    int thisSPP = decideSamplesPerPixel(film,samplesPerPixel);
+
+    int count = width*height * thisSPP;
+
+    std::cout << "about to alloc cam samples " << thisSPP << std::endl;
 
     GpuArray<CameraSample> result(count);
 
     int numThreads = min(count,MAX_THREADS_PER_BLOCK);
     int numBlocks = divUp(count,numThreads);
 
-    genNaiveSample <<<numBlocks,numThreads>>> (result.data,count,width,height,samplesPerPixel,getCopyForKernel());
+    genNaiveSample <<<numBlocks,numThreads>>> (result.data,count,width,height,thisSPP,getCopyForKernel());
     CHECK_IF_CUDA_ERROR("gen naive samples");
     return result;
 }

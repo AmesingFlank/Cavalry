@@ -11,8 +11,13 @@
 
 class Integrator{
 public:
-    virtual RenderResult render(const Scene& scene, const CameraObject& camera, FilmObject& film) = 0;
+    virtual void render(const Scene& scene, const CameraObject& camera, FilmObject& film) = 0;
     std::unique_ptr<SamplerObject> sampler;
+
+    // a single call to render might not finish the entire rendering task.
+    virtual bool isFinished(const Scene& scene, const CameraObject& camera, FilmObject& film) {
+        return film.getCompletedSamplesPerPixel() == sampler->getSamplesPerPixel();
+    }    
 };
 
 

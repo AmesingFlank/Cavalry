@@ -83,6 +83,34 @@ public:
 		return visit(visitor);
     }
 
+	 __host__ __device__
+    int getCompletedSamplesPerPixel(){
+        auto visitor = [&](auto& arg) -> int{
+			using T = typename std::remove_reference<decltype(arg)>::type;
+			if constexpr (std::is_base_of<Film,typename T>::value) {
+				return arg.T::getCompletedSamplesPerPixel();
+			}
+			else {
+				SIGNAL_VARIANT_ERROR;
+			}
+		};
+		return visit(visitor);
+    }
+
+	 __host__ __device__
+    void setCompletedSamplesPerPixel(int spp){
+        auto visitor = [&](auto& arg) {
+			using T = typename std::remove_reference<decltype(arg)>::type;
+			if constexpr (std::is_base_of<Film,typename T>::value) {
+				return arg.T::setCompletedSamplesPerPixel(spp);
+			}
+			else {
+				SIGNAL_VARIANT_ERROR;
+			}
+		};
+		return visit(visitor);
+    }
+
 	__host__
 	FilmObject getCopyForKernel(){
         auto visitor = [&](auto& arg) -> FilmObject{

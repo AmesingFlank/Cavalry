@@ -12,6 +12,8 @@
 class Sampler{
 public:
 
+	int samplesPerPixel;
+
 	virtual void prepare(int threadsCount) {};
 
 	__device__
