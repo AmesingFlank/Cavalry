@@ -7,7 +7,7 @@
 #include "Color.h"
 #include "IntersectionResult.h"
 #include "../Core/Material.h"
-
+#include "../Core/Texture.h"
 
 class MatteMaterial:public Material{
 public:
