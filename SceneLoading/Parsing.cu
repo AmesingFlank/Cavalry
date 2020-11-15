@@ -14,31 +14,36 @@
 
 #define SIGNAL_PARSING_ERROR(err,pos,tokenString) SIGNAL_ERROR((std::string("Parsing Error: ")+err+std::string("\n at token ")+std::to_string(pos)+": "+tokenString).c_str())
 
+template<typename T>
+struct NamedStorage {
+	NamedStorage(const std::string& keyword_) :keyword(keyword_) {
 
-struct MaterialStorage {
-	std::unordered_map<std::string, MaterialObject> materials;
+	}
+	std::string keyword;
+	std::unordered_map<std::string, T> items;
 	bool has(const std::string& name) {
-		return materials.find(name) != materials.end();
+		return items.find(name) != items.end();
 	}
-	void add(const std::string& name, const MaterialObject& material) {
-		materials[name] = material;
+	void add(const std::string& name, const T& item) {
+		items[name] = item;
 	}
-	void add(const ObjectDefinition& namedMaterialDef) {
-		ObjectDefinition materialDef;
-		materialDef.keyWord = "Material";
-		materialDef.objectName = namedMaterialDef.params.getString("type");
-		materialDef.params = namedMaterialDef.params;
-		materialDef.isDefined = true;
-		MaterialObject material = MaterialObject::createFromObjectDefinition(materialDef);
-		add(namedMaterialDef.objectName, material);
+	void add(const ObjectDefinition& namedDef) {
+		ObjectDefinition def;
+		def.keyWord = keyword;
+		def.objectName = namedDef.params.getString("type");
+		def.params = namedDef.params;
+		def.isDefined = true;
+		T item = T::createFromObjectDefinition(def);
+		add(namedDef.objectName, item);
 	}
-	MaterialObject get(const std::string& name) {
+	T get(const std::string& name) {
 		if (!has(name)) {
-			SIGNAL_ERROR((std::string("NamedMaterial not found :")+name).c_str());
+			SIGNAL_ERROR((std::string("Named T not found :")+name).c_str());
 		}
-		return materials.at(name);
+		return items.at(name);
 	}
 };
+using MaterialStorage = NamedStorage<MaterialObject>;
 
 
 std::vector<float> readNumList(TokenBuf& buf){
@@ -355,7 +360,7 @@ void parseSubsection(TokenBuf& buf, RenderSetup& result, glm::mat4 transform,con
 RenderSetup runParsing(TokenBuf tokens, const std::filesystem::path& basePath) {
 
 	RenderSetup result;
-	MaterialStorage materials;
+	MaterialStorage materials("Material");
 
 	parseSceneWideOptions(tokens, result);
 
