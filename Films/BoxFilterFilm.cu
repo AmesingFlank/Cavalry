@@ -3,6 +3,8 @@
 #include <iostream>
 #include "../Utils/GpuCommons.h"
 
+
+
 BoxFilterFilm::BoxFilterFilm():samplesSum(0,true),samplesCount(0,true){}
 
 BoxFilterFilm::BoxFilterFilm(int width_, int height_,bool isCopyForKernel_):

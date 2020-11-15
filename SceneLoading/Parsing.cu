@@ -10,6 +10,7 @@
 #include <unordered_map>
 #include <string>
 #include "Lexing.h"
+#include "../Core/Impl.h"
 
 #define SIGNAL_PARSING_ERROR(err,pos,tokenString) SIGNAL_ERROR((std::string("Parsing Error: ")+err+std::string("\n at token ")+std::to_string(pos)+": "+tokenString).c_str())
 

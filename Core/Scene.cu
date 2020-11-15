@@ -1,4 +1,5 @@
 #include "Scene.h"
+#include "../Core/Impl.h"
 
 
 SceneHandle Scene::getHostHandle() const{

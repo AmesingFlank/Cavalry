@@ -38,10 +38,14 @@ struct SceneHandle{
     }
     
     
-    __host__ __device__
+    __device__
     bool intersect(IntersectionResult& result, const Ray& ray) const{
 #if USE_BVH
-        return bvh.intersect(result, ray, triangles);
+        if (bvh.intersect(result, ray, triangles)) {
+            result.findBSDF();
+            return true;
+        }
+        return false;
 #else
         
         bool foundIntersection = false;
@@ -55,6 +59,7 @@ struct SceneHandle{
                 }
             }
         }
+        if (foundIntersection) result.findBSDF();
         return foundIntersection;
         
 #endif
@@ -116,7 +121,3 @@ public:
     void buildGpuReferences() ;
     
 };
-
-#include "../Lights/DiffuseAreaLightImpl.h"
-#include "PrimitiveImpl.h"
-#include "TriangleImpl.h"

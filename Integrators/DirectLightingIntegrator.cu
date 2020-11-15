@@ -1,7 +1,7 @@
 #include "DirectLightingIntegrator.h"
 #include "../Samplers/SimpleSampler.h"
 #include "../Utils/TaskQueue.h"
-
+#include "../Core/Impl.h"
 
 
 namespace DirectLighting {

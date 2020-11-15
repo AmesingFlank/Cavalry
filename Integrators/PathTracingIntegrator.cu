@@ -1,6 +1,7 @@
 #include "PathTracingIntegrator.h"
 #include "../Samplers/SimpleSampler.h"
 #include "../Utils/TaskQueue.h"
+#include "../Core/Impl.h"
 
 
 
@@ -59,7 +60,7 @@ namespace PathTracing {
 
         Ray nextRay;
         float nextRayProbability;
-        Spectrum nextMultiplier = prim->material.getBSDF().sample(sampler.rand2(), nextRay.direction, thisRay.direction * -1.f, &nextRayProbability);
+        Spectrum nextMultiplier = intersection.bsdf.sample(sampler.rand2(), nextRay.direction, thisRay.direction * -1.f, &nextRayProbability);
         nextRay.origin = intersection.position + nextRay.direction * 0.0001f;
         multiplier = multiplier * nextMultiplier * abs(dot(nextRay.direction,intersection.normal)) / nextRayProbability;
 

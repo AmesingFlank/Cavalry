@@ -46,11 +46,11 @@ public:
 	}
 
 	__device__
-	BSDFObject getBSDF() const {
+	BSDFObject getBSDF(const IntersectionResult& intersection) const {
 		auto visitor = [&](auto& arg) -> BSDFObject {
 			using T = typename std::remove_reference<decltype(arg)>::type;
 			if constexpr (std::is_base_of<Material, typename T>::value) {
-				return arg.T::getBSDF();
+				return arg.T::getBSDF(intersection);
 			}
 			else {
 				SIGNAL_VARIANT_ERROR;
