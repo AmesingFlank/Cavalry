@@ -43,6 +43,7 @@ struct SceneHandle{
 #if USE_BVH
         if (bvh.intersect(result, ray, triangles)) {
             result.findBSDF();
+            result.findTangents();
             return true;
         }
         return false;
@@ -59,7 +60,10 @@ struct SceneHandle{
                 }
             }
         }
-        if (foundIntersection) result.findBSDF();
+        if (foundIntersection) {
+            result.findBSDF();
+            result.findTangents();
+        } 
         return foundIntersection;
         
 #endif

@@ -47,6 +47,23 @@ inline glm::mat4 to_mat4(std::vector<float> data) {
 	return result;
 }
 
+template <typename T>
+__host__ __device__
+inline glm::mat3 buildMat3UsingVecsAsRows(const T& v1, const T& v2, const T& v3) {
+	return glm::mat3{ 
+		v1.x, v2.x, v3.x, 
+		v1.y, v2.y, v3.y,  
+		v1.z, v2.z, v3.z };
+}
+
+template <typename T>
+__host__ __device__
+inline glm::mat3 buildMat3UsingVecsAsCols(const T& v1, const T& v2, const T& v3) {
+	return glm::mat3{
+		v1.x, v1.y, v1.z,
+		v2.x, v2.y, v2.z,
+		v3.x, v3.y, v3.z, };
+}
 
 inline float3 sampleSphere(const float2& randomSource){
     float u = randomSource.x * 2 * M_PI;

@@ -60,7 +60,9 @@ namespace PathTracing {
 
         Ray nextRay;
         float nextRayProbability;
-        Spectrum nextMultiplier = intersection.bsdf.sample(sampler.rand2(), nextRay.direction, thisRay.direction * -1.f, &nextRayProbability);
+        float3 nextDirectionLocal;
+        Spectrum nextMultiplier = intersection.bsdf.sample(sampler.rand2(), nextDirectionLocal, intersection.worldToLocal(thisRay.direction * -1.f), &nextRayProbability);
+        nextRay.direction = intersection.localToWorld(nextDirectionLocal);
         nextRay.origin = intersection.position + nextRay.direction * 0.0001f;
         multiplier = multiplier * nextMultiplier * abs(dot(nextRay.direction,intersection.normal)) / nextRayProbability;
 

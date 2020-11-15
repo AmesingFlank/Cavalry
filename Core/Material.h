@@ -17,7 +17,7 @@ public:
     virtual Spectrum eval(const Ray& incidentRay, const Spectrum& incidentSpectrum, const Ray& exitantRay, const IntersectionResult& intersection) const {
 
         float cosine = dot(incidentRay.direction, intersection.normal);
-        Spectrum result = incidentSpectrum * intersection.bsdf.eval(incidentRay.direction, exitantRay.direction) * cosine;
+        Spectrum result = incidentSpectrum * intersection.bsdf.eval(intersection.worldToLocal(incidentRay.direction), intersection.worldToLocal(exitantRay.direction)) * cosine;
         return result;
     }
 
