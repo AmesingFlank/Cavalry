@@ -8,18 +8,45 @@
 #include "IntersectionResult.h"
 #include "../Core/Material.h"
 #include "../Core/Texture.h"
+#include "../Core/Parameters.h"
 
 class MatteMaterial:public Material{
 public:
-    LambertianBSDF lambertian;
+    Spectrum color;
 
-    MatteMaterial():lambertian(make_float3(100,0,0)){}
+    bool hasTexture = false;
+    Texture2D texture;
 
-    MatteMaterial(float3 color):lambertian(color){}
+    MatteMaterial():color(make_float3(100,0,0)), texture(0, 0, true){}
+
+    MatteMaterial(float3 color_):color(color_), texture(0, 0, true){}
+
+    MatteMaterial(float3 color_,const Texture2D& texture_):color(color_), texture(texture_),hasTexture(true) {}
 
 
     __device__
     virtual BSDFObject getBSDF(const IntersectionResult& intersection) const override {
-        return lambertian;
+        Spectrum thisColor = color;
+        if (hasTexture) {
+            float4 texel = texture.readTexture(intersection.textureCoordinates);
+            Spectrum sampledColor = to_float3(texel);
+            thisColor *= sampledColor;
+            //thisColor = make_float3(intersection.textureCoordinates.x, intersection.textureCoordinates.y, 0);
+        }
+        return LambertianBSDF(thisColor);
+    }
+
+
+    static MatteMaterial createFromParams(const Parameters& params, const std::unordered_map<std::string, Texture2D>& textures) {
+        Spectrum color = make_float3(1, 1, 1);
+        if (params.hasNumList("Kd")) {
+            auto colorVec = params.getNumList("Kd");
+            color = make_float3(colorVec[0], colorVec[1], colorVec[2]);
+        }
+        if (params.hasString("Kd")) {
+            std::string textureName = params.getString("Kd");
+            return MatteMaterial(color, textures.at(textureName));
+        }
+        return MatteMaterial(color);
     }
 };

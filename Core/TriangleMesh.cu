@@ -29,7 +29,7 @@ indices(trianglesCount,isCopyForKernel_)
 
 }
 
-
+/*
 TriangleMesh TriangleMesh::getCopyForKernel(){
     TriangleMesh copy(trianglesCount,verticesCount,hasVertexNormals,true);
     copy.positions.gpu = positions.gpu.getCopyForKernel();
@@ -38,6 +38,7 @@ TriangleMesh TriangleMesh::getCopyForKernel(){
     copy.indices.gpu = indices.gpu.getCopyForKernel();
     return copy;
 }
+*/
 
 void TriangleMesh::copyToDevice() {
     positions.copyToDevice();
@@ -50,16 +51,20 @@ void TriangleMesh::copyToDevice() {
 TriangleMesh TriangleMesh::createFromPLY(const std::string& filename,const glm::mat4& transform){
     happly::PLYData plyIn(filename);
 
-    std::vector<float> positionsX = plyIn.getElement("vertex").getProperty<float>("x");
-    std::vector<float> positionsY= plyIn.getElement("vertex").getProperty<float>("y");
-    std::vector<float> positionsZ= plyIn.getElement("vertex").getProperty<float>("z");
+    auto& vertices = plyIn.getElement("vertex");
+
+    std::vector<float> positionsX = vertices.getProperty<float>("x");
+    std::vector<float> positionsY= vertices.getProperty<float>("y");
+    std::vector<float> positionsZ= vertices.getProperty<float>("z");
 
     std::vector<std::vector<int>> indices = 
         plyIn.getElement("face").getListProperty<int>("vertex_indices");
 
+    bool hasVertexNormal = vertices.hasProperty("nx") && vertices.hasProperty("ny") && vertices.hasProperty("nz");
+
     int trianglesCount = indices.size();
     int verticesCount = positionsX.size();
-    TriangleMesh mesh(trianglesCount,verticesCount,false,false);
+    TriangleMesh mesh(trianglesCount,verticesCount,hasVertexNormal,false);
 
     for(int i = 0;i<verticesCount;++i){
         float3 pos = make_float3(positionsX[i],positionsY[i],positionsZ[i]);
@@ -71,6 +76,31 @@ TriangleMesh TriangleMesh::createFromPLY(const std::string& filename,const glm::
         int3 thisIndices = make_int3(indices[i][0],indices[i][1],indices[i][2]);
         mesh.indices.cpu.data[i] = thisIndices;
     }
+
+    if (hasVertexNormal) {
+        std::vector<float> normalX = vertices.getProperty<float>("nx");
+        std::vector<float> normalY = vertices.getProperty<float>("ny");
+        std::vector<float> normalZ = vertices.getProperty<float>("nz");
+        glm::mat3 normalMat = glm::transpose(glm::inverse(glm::mat3(transform)));
+        for (int i = 0; i < verticesCount; ++i) {
+            float3 normal = make_float3(normalX[i], normalY[i], normalZ[i]);
+            normal = normalize(to_float3(normalMat * to_vec3(normal)));
+            mesh.normals.cpu.data[i] = normal;
+        }
+    }
+
+    bool hasUV = vertices.hasProperty("u") && vertices.hasProperty("v");
+    if (hasUV) {
+        std::vector<float> u = vertices.getProperty<float>("u");
+        std::vector<float> v = vertices.getProperty<float>("v");
+
+        for (int i = 0; i < verticesCount; ++i) {
+            float2 uv = make_float2(u[i], v[i]);
+            mesh.texCoords.cpu.data[i] = uv;
+        }
+    }
+
+
 
     return mesh;
 
@@ -125,6 +155,15 @@ TriangleMesh TriangleMesh::createFromParams(const Parameters& params,const glm::
                 normals[i] = make_float3(normalsFloats[i * 3], normalsFloats[i * 3 + 1], normalsFloats[i * 3 + 2]);
             }
             mesh.normals.cpu = normals;
+        }
+
+        if (params.hasNumList("uv")) {
+            std::vector<float> uvFloats = params.getNumList("uv");
+            std::vector<float2> texCoords(verticesCount);
+            for (int i = 0; i < verticesCount; ++i) {
+                texCoords[i] = make_float2(uvFloats[i * 2], uvFloats[i * 2 + 1]);
+            }
+            mesh.texCoords.cpu = texCoords;
         }
 
         return mesh;

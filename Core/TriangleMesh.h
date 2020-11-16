@@ -48,7 +48,7 @@ public:
     __host__
     void copyToDevice();
 
-    TriangleMesh getCopyForKernel();
+    //TriangleMesh getCopyForKernel();
 
     void copyTrianglesToScene(Scene& scene,int meshID);
 

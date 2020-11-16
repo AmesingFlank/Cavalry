@@ -10,31 +10,19 @@
 #include <unordered_map>
 #include <string>
 #include "Lexing.h"
+#include "../Core/Texture.h"
 #include "../Core/Impl.h"
 
 #define SIGNAL_PARSING_ERROR(err,pos,tokenString) SIGNAL_ERROR((std::string("Parsing Error: ")+err+std::string("\n at token ")+std::to_string(pos)+": "+tokenString).c_str())
 
 template<typename T>
 struct NamedStorage {
-	NamedStorage(const std::string& keyword_) :keyword(keyword_) {
-
-	}
-	std::string keyword;
 	std::unordered_map<std::string, T> items;
 	bool has(const std::string& name) {
 		return items.find(name) != items.end();
 	}
 	void add(const std::string& name, const T& item) {
-		items[name] = item;
-	}
-	void add(const ObjectDefinition& namedDef) {
-		ObjectDefinition def;
-		def.keyWord = keyword;
-		def.objectName = namedDef.params.getString("type");
-		def.params = namedDef.params;
-		def.isDefined = true;
-		T item = T::createFromObjectDefinition(def);
-		add(namedDef.objectName, item);
+		items.insert({ name, item });
 	}
 	T get(const std::string& name) {
 		if (!has(name)) {
@@ -44,6 +32,7 @@ struct NamedStorage {
 	}
 };
 using MaterialStorage = NamedStorage<MaterialObject>;
+using TextureStorage = NamedStorage<Texture2D>;
 
 
 std::vector<float> readNumList(TokenBuf& buf){
@@ -252,7 +241,7 @@ void parseSceneWideOptions(TokenBuf& buf,RenderSetup& result){
 
 
 
-void parseSubsection(TokenBuf& buf, RenderSetup& result, glm::mat4 transform,const std::filesystem::path& basePath, MaterialStorage& materialsStore) {
+void parseSubsection(TokenBuf& buf, RenderSetup& result, glm::mat4 transform,const std::filesystem::path& basePath, MaterialStorage& materialsStore,TextureStorage& textureStore) {
 	auto begin = buf.checkAndPop<KeyWordToken>();
 	if ( !endsWith(begin->word,"Begin") ) {
 		SIGNAL_PARSING_ERROR("XXXBegin expected.", buf.currentIndex, begin->print());
@@ -276,7 +265,7 @@ void parseSubsection(TokenBuf& buf, RenderSetup& result, glm::mat4 transform,con
 				break;
 			}
 			else if (endsWith(keyWord->word,"Begin")) {
-				parseSubsection(buf, result, transform, basePath,materialsStore);
+				parseSubsection(buf, result, transform, basePath,materialsStore,textureStore);
 			}
 			else if (keyWord->word == "Shape") {
 				auto shapeDef = readObjectDefinition(buf);
@@ -327,8 +316,12 @@ void parseSubsection(TokenBuf& buf, RenderSetup& result, glm::mat4 transform,con
 
 			}
 			else if (keyWord->word == "MakeNamedMaterial") {
-				auto namedMaterialDef = readObjectDefinition(buf);
-				materialsStore.add(namedMaterialDef);
+				auto def = readObjectDefinition(buf);
+				materialsStore.add(def.objectName,MaterialObject::createFromObjectDefinition(def,textureStore.items));
+			}
+			else if (keyWord->word == "Texture") {
+				auto def = readObjectDefinition(buf);
+				textureStore.add(def.objectName,Texture2D::createFromObjectDefinition(def,transform,basePath));
 			}
 			else if (keyWord->word == "NamedMaterial") {
 				buf.moveForward();
@@ -360,11 +353,13 @@ void parseSubsection(TokenBuf& buf, RenderSetup& result, glm::mat4 transform,con
 RenderSetup runParsing(TokenBuf tokens, const std::filesystem::path& basePath) {
 
 	RenderSetup result;
-	MaterialStorage materials("Material");
+	MaterialStorage materials;
+	TextureStorage textures;
+
 
 	parseSceneWideOptions(tokens, result);
 
-	parseSubsection(tokens,result,glm::mat4(1.0),basePath,materials);
+	parseSubsection(tokens,result,glm::mat4(1.0),basePath,materials,textures);
 
 	return result;
 }

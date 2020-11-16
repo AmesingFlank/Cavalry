@@ -76,10 +76,12 @@ public:
 #ifdef __CUDA_ARCH__
         float3* positionsData = mesh->positions.gpu.data;
         float3* normalsData = mesh->normals.gpu.data;
+        float2* texCoordsData = mesh->texCoords.gpu.data;
         int3* indicesData = mesh->indices.gpu.data;
 #else
         float3* positionsData = mesh->positions.cpu.data;
         float3* normalsData = mesh->normals.cpu.data;
+        float2* texCoordsData = mesh->texCoords.cpu.data;
         int3* indicesData = mesh->indices.cpu.data;
 #endif
 
@@ -102,6 +104,13 @@ public:
             if (dot(result.normal, ray.direction) > 0) {
                 result.normal *= -1;
             }
+
+
+            float2 tex0 = texCoordsData[thisIndices.x];
+            float2 tex1 = texCoordsData[thisIndices.y];
+            float2 tex2 = texCoordsData[thisIndices.z];
+            result.textureCoordinates =  tex0 * (1.f - u - v) + u * tex1 + v * tex2;
+
             result.primitive = prim;
             return true;
         }

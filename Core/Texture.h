@@ -1,7 +1,8 @@
 #pragma once
 #include "../Utils/GpuCommons.h"
-#include "../Dependencies/include/stb_image.h"
-
+#include "../Utils/MathsCommons.h"
+#include <filesystem>
+#include "Parameters.h"
 
 struct Texture2D{
     
@@ -70,8 +71,8 @@ struct Texture2D{
 
 
 	__device__
-	float4 readTexture(float x, float y) {
-		return tex2D<float4>(texture, x , y);
+	float4 readTexture(float2 coords) const{
+		return tex2D<float4>(texture, coords.x , coords.y);
 	}
 
 	void allocate() {
@@ -86,7 +87,7 @@ struct Texture2D{
 		cudaTextureDesc texDesc;
 		memset(&texDesc, 0, sizeof(texDesc));
 
-		texDesc.addressMode[0] = cudaAddressModeClamp;
+		texDesc.addressMode[0] = cudaAddressModeWrap;
 		texDesc.filterMode = cudaFilterModeLinear;
 		texDesc.readMode = cudaReadModeNormalizedFloat;
 		texDesc.normalizedCoords = 1;
@@ -111,14 +112,11 @@ struct Texture2D{
 		HANDLE_ERROR(cudaFreeArray(array));
 		HANDLE_ERROR(cudaDestroyTextureObject(texture));
 	}
+	
+	static Texture2D createFromObjectDefinition(const ObjectDefinition& def, const glm::mat4& transform, const std::filesystem::path& basePath) ;
 
+	static Texture2D createTextureFromFile(const std::string& filename);
 
 };
 
 
-inline Texture2D createTextureFromFile(const std::string& filename) {
-	int width;
-	int height;
-	uchar4* data = (uchar4*)stbi_load(filename.c_str(), &width, &height, 0, STBI_rgb_alpha);
-	return Texture2D(width,height,data);
-}

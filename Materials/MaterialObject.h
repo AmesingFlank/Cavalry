@@ -59,16 +59,12 @@ public:
 		return visit(visitor);
 	}
 
-	static MaterialObject createFromObjectDefinition(const ObjectDefinition& def) {
-		if (def.objectName == "matte") {
-			std::vector<float> color = def.params.getNumList("Kd");
-			return MaterialObject(MatteMaterial(make_float3(color[0], color[1], color[2])));
+	static MaterialObject createFromObjectDefinition(const ObjectDefinition& def,const std::unordered_map<std::string,Texture2D>& textures) {
+		std::string materialType = def.params.getString("type");
+		if (materialType == "matte") {
+			return MaterialObject(MatteMaterial::createFromParams(def.params,textures));
 		}
-		if (def.params.hasNumList("Kd")) {
-			std::vector<float> color = def.params.getNumList("Kd");
-			return MaterialObject(MatteMaterial(make_float3(color[0], color[1], color[2])));
-		}
-		return MaterialObject(MatteMaterial(make_float3(1,1,1)));
+		return MaterialObject(MatteMaterial::createFromParams(def.params,textures));
 	}
 
 	void prepareForRender() {
