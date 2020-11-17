@@ -78,3 +78,19 @@ inline float3 sampleSphere(const float2& randomSource){
 inline float lengthQuared(const float3& v) {
 	return v.x * v.x + v.y * v.y + v.z * v.z;
 }
+
+__host__ __device__
+inline float3 apply(const glm::mat4& transform, const float3& v){
+	glm::vec4 transformed = transform * glm::vec4(to_vec3(v),1.f);
+	return make_float3(transformed.x / transformed.w, transformed.y / transformed.w, transformed.z / transformed.w );
+}
+
+__host__ __device__
+inline glm::mat3 getTransformForNormal(const glm::mat4& transform){
+	return glm::transpose(glm::inverse(glm::mat3(transform)));
+}
+
+__host__ __device__
+inline float3 operator* (const glm::mat3& mat, const float3& v){
+	return to_float3(mat*to_vec3(v));
+}

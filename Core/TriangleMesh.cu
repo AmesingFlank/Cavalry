@@ -68,8 +68,7 @@ TriangleMesh TriangleMesh::createFromPLY(const std::string& filename,const glm::
 
     for(int i = 0;i<verticesCount;++i){
         float3 pos = make_float3(positionsX[i],positionsY[i],positionsZ[i]);
-        pos = to_float3(transform * glm::vec4(to_vec3(pos), 1.f));
-        mesh.positions.cpu.data[i] = pos;
+        mesh.positions.cpu.data[i] = apply(transform,pos);
     }
 
     for(int i = 0;i<trianglesCount;++i){
@@ -81,10 +80,10 @@ TriangleMesh TriangleMesh::createFromPLY(const std::string& filename,const glm::
         std::vector<float> normalX = vertices.getProperty<float>("nx");
         std::vector<float> normalY = vertices.getProperty<float>("ny");
         std::vector<float> normalZ = vertices.getProperty<float>("nz");
-        glm::mat3 normalMat = glm::transpose(glm::inverse(glm::mat3(transform)));
+        glm::mat3 normalMat = getTransformForNormal(transform);
         for (int i = 0; i < verticesCount; ++i) {
             float3 normal = make_float3(normalX[i], normalY[i], normalZ[i]);
-            normal = normalize(to_float3(normalMat * to_vec3(normal)));
+            normal = normalize( normalMat *  normal);
             mesh.normals.cpu.data[i] = normal;
         }
     }
@@ -139,7 +138,8 @@ TriangleMesh TriangleMesh::createFromParams(const Parameters& params,const glm::
 
         std::vector<float3> positions(verticesCount);
         for (int i = 0; i < verticesCount; ++i) {
-            positions[i] = make_float3(positionsFloats[i * 3], positionsFloats[i * 3 + 1], positionsFloats[i * 3 + 2]);
+            float3 pos = make_float3(positionsFloats[i * 3], positionsFloats[i * 3 + 1], positionsFloats[i * 3 + 2]);
+            positions[i] = apply(transform, pos);
         }
 
         bool hasNormal = params.hasNumList("N");
@@ -149,10 +149,14 @@ TriangleMesh TriangleMesh::createFromParams(const Parameters& params,const glm::
         mesh.indices.cpu = indices;
 
         if (hasNormal) {
+            glm::mat3 normalMat = getTransformForNormal(transform);
+
             std::vector<float> normalsFloats = params.getNumList("N");
             std::vector<float3> normals(verticesCount);
             for (int i = 0; i < verticesCount; ++i) {
-                normals[i] = make_float3(normalsFloats[i * 3], normalsFloats[i * 3 + 1], normalsFloats[i * 3 + 2]);
+                float3 normal = make_float3(normalsFloats[i * 3], normalsFloats[i * 3 + 1], normalsFloats[i * 3 + 2]);
+                normal = normalize(normalMat * normal);
+                normals[i] = normal;
             }
             mesh.normals.cpu = normals;
         }
