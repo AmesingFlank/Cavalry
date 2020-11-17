@@ -146,6 +146,7 @@ namespace PathTracing {
 
 
     void PathTracingIntegrator::render(const Scene& scene, const CameraObject& camera, FilmObject& film) {
+        int round = 0;
 
         while(!isFinished( scene, camera,  film)){
             GpuArray<CameraSample> allSamples = sampler->genAllCameraSamples(camera, film);
@@ -182,7 +183,7 @@ namespace PathTracing {
 
 
                 thisRoundRayQueue->setNumBlocksThreads(numBlocks, numThreads);
-                std::string renderRayEvent = std::string("renderRay") + std::to_string(depth);
+                std::string renderRayEvent = std::string("renderRay ") + std::to_string(round)+" " + std::to_string(depth);
                 CHECK_IF_CUDA_ERROR("before render ray");
                 Timer::getInstance().start(renderRayEvent);
                 renderRay << <numBlocks, numThreads >> >
@@ -194,7 +195,7 @@ namespace PathTracing {
                 thisRoundRayQueue->clear();
                 
                 lightingQueue.setNumBlocksThreads(numBlocks, numThreads);
-                std::string lightingEvent = std::string("lighting") + std::to_string(depth);
+                std::string lightingEvent = std::string("lighting ") + std::to_string(round) + " " + std::to_string(depth);
                 CHECK_IF_CUDA_ERROR("before lighting");
                 Timer::getInstance().start(lightingEvent);
                 computeLighting << <numBlocks, numThreads >> > (sceneHandle, samplerObject.getCopyForKernel(), lightingQueue.getCopyForKernel(),depth);
@@ -214,7 +215,7 @@ namespace PathTracing {
             PathTracing::addSamplesToFilm << <numBlocks, numThreads >> > (film.getCopyForKernel(), result.data, allSamples.data, samplesCount);
             CHECK_CUDA_ERROR("add sample to film");
 
-            
+            ++round;
 
 
         }

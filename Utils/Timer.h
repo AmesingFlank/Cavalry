@@ -3,6 +3,7 @@
 #include <ctime>
 #include <cmath>
 #include <unordered_map>
+#include <vector>
 #include "GpuCommons.h"
 
 using TimeType = std::chrono::time_point<std::chrono::system_clock>;
@@ -40,6 +41,7 @@ public:
         if(events.find(name)!=events.end()){
             SIGNAL_ERROR("event already exists");
         }
+        names.push_back(name);
         TimerEvent event;
         event.start = now();
         events[name] = event;
@@ -59,9 +61,14 @@ public:
     }
 
     void printStatistics() const {
-        for(auto event:events){
-            double milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(event.second.end - event.second.start).count();
-            std::cout<<event.first<<"  took   "<<milliseconds<<"ms"<<std::endl;
+        std::cout << "-------------------Timer Stats--------------------" << std::endl;
+        for(const std::string& name:names){
+            if (events.find(name) == events.end()) {
+                SIGNAL_ERROR("Timer event not found : %s\n", name.c_str());
+            }
+            auto event = events.at(name);
+            double milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(event.end - event.start).count();
+            std::cout<<name<<"  took   "<<milliseconds<<"ms"<<std::endl;
         }
     }
 
@@ -74,10 +81,11 @@ public:
             SIGNAL_ERROR("event not yet finished. cannot print stats.");
         }
         double milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(event.end - event.start).count();
-        std::cout << name << "  took   " << milliseconds << "ms" << std::endl;
+        std::cout << name << "\t  took   " << milliseconds << "ms" << std::endl;
     }
     
 
 private:
     std::unordered_map<std::string,TimerEvent> events;
+    std::vector<std::string> names;
 };
