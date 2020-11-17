@@ -2,6 +2,8 @@
 #include <iostream>
 #include <happly.h>
 #include "Scene.h"
+#include "../ShapeMesh/ShapeMesh.h"
+
 
 __host__ 
 TriangleMesh::TriangleMesh():
@@ -108,7 +110,7 @@ TriangleMesh TriangleMesh::createFromPLY(const std::string& filename,const glm::
 
 TriangleMesh TriangleMesh::createFromObjectDefinition(const ObjectDefinition& def, const glm::mat4& transform, const std::filesystem::path& basePath) {
     if (def.objectName != "plymesh" && def.objectName != "trianglemesh") {
-        SIGNAL_ERROR((std::string("unsupported shape type :")+def.objectName).c_str());
+        return ShapeMesh::createShapeMesh(def, transform);
     }
     return TriangleMesh::createFromParams(def.params, transform, basePath);
 }

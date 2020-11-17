@@ -45,6 +45,9 @@ file(GLOB ALL_CODE
     "BVH/*.h"
     "BVH/*.cpp"
     "BVH/*.cu"
+    "ShapeMesh/*.h"
+    "ShapeMesh/*.cpp"
+    "ShapeMesh/*.cu"
 )
 
 add_executable(Cavalry ${ALL_CODE})
