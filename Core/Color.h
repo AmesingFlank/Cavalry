@@ -52,8 +52,16 @@ inline Spectrum colorTemperatureToRGB(float kelvin){
 
 __host__ __device__
 inline float gammaCorrect(float value) {
-    if (value <= 0.0031308f) return 12.92f * value;
+    if (value <= 0.0031308f) 
+        return 12.92f * value;
     return 1.055f * pow(value, (float)(1.f / 2.4f)) - 0.055f;
+}
+
+__host__ __device__
+inline float inverseGammaCorrect(float value) {
+    if (value <= 0.04045f) 
+        return value * 1.f / 12.92f;
+    return pow((value + 0.055f) * 1.f / 1.055f, (float)2.4f);
 }
 
 

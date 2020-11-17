@@ -36,6 +36,14 @@ inline std::vector<std::string> splitString(const std::string& s, const std::str
     return res;
 }
 
+inline std::string getFileNamePostfix(const std::string& filename) {
+    auto parts = splitString(filename, ".");
+    if (parts.size() == 0) {
+        return "";
+    }
+    return parts[parts.size() - 1];
+}
+
 inline bool isLetter(char c){
     return ('a'<=c && c<='z') ||  ('A'<=c && c<='Z');
 }

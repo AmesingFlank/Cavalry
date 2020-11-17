@@ -72,7 +72,7 @@ struct Texture2D{
 
 	__device__
 	float4 readTexture(float2 coords) const{
-		return tex2D<float4>(texture, coords.x , coords.y);
+		return tex2D<float4>(texture, coords.x , -coords.y);
 	}
 
 	void allocate() {
@@ -115,7 +115,7 @@ struct Texture2D{
 	
 	static Texture2D createFromObjectDefinition(const ObjectDefinition& def, const glm::mat4& transform, const std::filesystem::path& basePath) ;
 
-	static Texture2D createTextureFromFile(const std::string& filename);
+	static Texture2D createTextureFromFile(const std::string& filename, bool shouldInvertGamma);
 
 };
 
