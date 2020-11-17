@@ -65,15 +65,6 @@ inline glm::mat3 buildMat3UsingVecsAsCols(const T& v1, const T& v2, const T& v3)
 		v3.x, v3.y, v3.z, };
 }
 
-inline float3 sampleSphere(const float2& randomSource){
-    float u = randomSource.x * 2 * M_PI;
-    float v = (randomSource.y - 0.5) * M_PI;
-    return make_float3(
-		cos(v)*cos(u),
-		sin(v),
-		cos(v)*sin(u)
-	);
-}
 
 inline float lengthQuared(const float3& v) {
 	return v.x * v.x + v.y * v.y + v.z * v.z;

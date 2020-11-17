@@ -45,6 +45,21 @@ inline float uniformSampleHemispherePdf(const float3& result) {
 }
 
 
+__host__ __device__
+inline float3 uniformSampleSphere(const float2& randomSource){
+    float u = randomSource.x * 2 * M_PI;
+    float v = (randomSource.y - 0.5) * M_PI;
+    return make_float3(
+		cos(v)*cos(u),
+		sin(v),
+		cos(v)*sin(u)
+	);
+}
+
+__host__ __device__
+inline float uniformSampleSpherePdf(const float3& result){
+    return 1.f / (4.f* M_PI);
+}
 
 
 inline long long getSeed(){

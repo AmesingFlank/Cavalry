@@ -33,10 +33,10 @@ class EnvironmentMap : public AreaLight{
 public:
     __host__ __device__
     virtual Spectrum sampleRayToPoint(const float3& position,const float4& randomSource, float& outputProbability, Ray& outputRay,VisibilityTest& outputVisibilityTest) const override {
-        float3 sampleOnSphere = sampleSphere(to_float2(randomSource));
+        float3 sampleOnSphere = uniformSampleSphere(to_float2(randomSource));
         outputRay.origin = position;
         outputRay.direction = sampleOnSphere;
-        outputProbability = 1.0 / (4.0*M_PI);
+        outputProbability = uniformSampleSpherePdf(sampleOnSphere);
 
         outputVisibilityTest.ray = outputRay;
         return EnvironmentMap::evaluateRay(outputRay);
