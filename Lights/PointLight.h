@@ -19,8 +19,8 @@ public:
     float3 position;
     Spectrum color;
 
-    __host__ __device__
-    virtual Spectrum sampleRayToPoint(const float3& position,const float4& randomSource, float& outputProbability, Ray& outputRay, VisibilityTest& outputVisibilityTest) const override{
+    __device__
+    virtual Spectrum sampleRayToPoint(const float3& position, SamplerObject& sampler, float& outputProbability, Ray& outputRay, VisibilityTest& outputVisibilityTest) const override{
         outputProbability = 1;
 
         outputRay.origin = position;

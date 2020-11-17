@@ -22,15 +22,15 @@ public:
     virtual void buildGpuReferences(const SceneHandle& scene) override;
 
 
-    __host__ __device__
-    virtual Spectrum sampleRayToPoint(const float3& position,const float4& randomSource, float& outputProbability, Ray& outputRay,VisibilityTest& outputVisibilityTest) const override{
+    __device__
+    virtual Spectrum sampleRayToPoint(const float3& position, SamplerObject& sampler, float& outputProbability, Ray& outputRay,VisibilityTest& outputVisibilityTest) const override{
 
 
         float shapeSampleProbability = 0;
 
         
 
-        IntersectionResult shapeSample = shape->sample(position,randomSource,&shapeSampleProbability);
+        IntersectionResult shapeSample = shape->sample(position,sampler,&shapeSampleProbability);
 
         
         outputProbability = shapeSampleProbability;
@@ -50,7 +50,7 @@ public:
 
     }
 
-    __host__ __device__
+     __device__
     virtual Spectrum evaluateRay(const Ray& ray) const override{
         return color;
     }

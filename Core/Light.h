@@ -6,13 +6,14 @@
 #include "Ray.h"
 #include "VisibilityTest.h"
 #include "../Utils/MathsCommons.h"
+#include "../Samplers/SamplerObject.h"
 
 struct SceneHandle;
 class Light{
 public:
     
-    __host__ __device__
-    virtual Spectrum sampleRayToPoint(const float3& position,const float4& randomSource, float& outputProbability, Ray& outputRay,VisibilityTest& outputVisibilityTest) const = 0;
+     __device__
+    virtual Spectrum sampleRayToPoint(const float3& position,SamplerObject& sampler, float& outputProbability, Ray& outputRay,VisibilityTest& outputVisibilityTest) const = 0;
 
     virtual void buildCpuReferences(const SceneHandle& scene) = 0;
 
@@ -25,15 +26,15 @@ public:
 
 class AreaLight: public Light{
 public:
-    __host__ __device__
+    __device__
     virtual Spectrum evaluateRay(const Ray& ray) const = 0;
 };
 
 class EnvironmentMap : public AreaLight{
 public:
-    __host__ __device__
-    virtual Spectrum sampleRayToPoint(const float3& position,const float4& randomSource, float& outputProbability, Ray& outputRay,VisibilityTest& outputVisibilityTest) const override {
-        float3 sampleOnSphere = uniformSampleSphere(to_float2(randomSource));
+     __device__
+    virtual Spectrum sampleRayToPoint(const float3& position, SamplerObject& sampler, float& outputProbability, Ray& outputRay,VisibilityTest& outputVisibilityTest) const override {
+        float3 sampleOnSphere = uniformSampleSphere(sampler.rand2());
         outputRay.origin = position;
         outputRay.direction = sampleOnSphere;
         outputProbability = uniformSampleSpherePdf(sampleOnSphere);
@@ -42,7 +43,7 @@ public:
         return EnvironmentMap::evaluateRay(outputRay);
     }
 
-    __host__ __device__
+    __device__
     virtual Spectrum evaluateRay(const Ray& ray) const override{
         // to be changed
         return make_float3(0.5*ray.direction.y + 0.5) / (4.0 * M_PI);

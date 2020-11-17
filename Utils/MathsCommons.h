@@ -65,8 +65,8 @@ inline glm::mat3 buildMat3UsingVecsAsCols(const T& v1, const T& v2, const T& v3)
 		v3.x, v3.y, v3.z, };
 }
 
-
-inline float lengthQuared(const float3& v) {
+__host__ __device__
+inline float lengthSquared(const float3& v) {
 	return v.x * v.x + v.y * v.y + v.z * v.z;
 }
 

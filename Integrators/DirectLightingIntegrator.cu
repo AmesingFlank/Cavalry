@@ -60,7 +60,7 @@ namespace DirectLighting {
         visibilityTest.sourceGeometry = prim->shape.getID();
     
     
-        Spectrum incident = light.sampleRayToPoint(intersection.position, randomSource, probability, rayToLight, visibilityTest);
+        Spectrum incident = light.sampleRayToPoint(intersection.position, sampler, probability, rayToLight, visibilityTest);
     
         if (scene.testVisibility(visibilityTest) && dot(rayToLight.direction, intersection.normal) > 0) {
             if (probability == 0) {

@@ -107,7 +107,7 @@ namespace PathTracing {
         visibilityTest.sourceGeometry = prim->shape.getID();
 
 
-        Spectrum incident = light.sampleRayToPoint(intersection.position, randomSource, probability, rayToLight, visibilityTest);
+        Spectrum incident = light.sampleRayToPoint(intersection.position, sampler, probability, rayToLight, visibilityTest);
 
         if (scene.testVisibility(visibilityTest) && dot(rayToLight.direction, intersection.normal) > 0) {
 
@@ -178,16 +178,18 @@ namespace PathTracing {
 
             while (thisRoundRayQueue->count() > 0 && depth < maxDepth) {
                 std::cout << "doing depth " << depth << std::endl;
+
                 CHECK_IF_CUDA_ERROR("before render ray");
                 renderRay << <numBlocks, numThreads >> >
                     (sceneHandle,samplerObject.getCopyForKernel(), lightingQueue.getCopyForKernel(), thisRoundRayQueue->getCopyForKernel(),nextRoundRayQueue->getCopyForKernel());
-                CHECK_IF_CUDA_ERROR("render ray");
+                CHECK_IF_CUDA_ERROR("after render ray");
 
                 thisRoundRayQueue->clear();
                 
-
+                CHECK_IF_CUDA_ERROR("before lighting");
                 computeLighting << <numBlocks, numThreads >> > (sceneHandle, samplerObject.getCopyForKernel(), lightingQueue.getCopyForKernel(),depth);
-                CHECK_CUDA_ERROR("do lighting");
+                CHECK_IF_CUDA_ERROR("after lighting");
+
                 lightingQueue.clear();
 
                 ++depth;
