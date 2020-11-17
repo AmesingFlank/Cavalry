@@ -57,3 +57,8 @@ inline bool endsWith(const std::string& word,const std::string& end) {
     if (word.size() < end.size()) return false;
     return word.substr(word.size() - end.size(), end.size()) == end;
 }
+
+inline void setNumBlocksThreads(int N,int& numBlocks, int& numThreads) {
+    numThreads = min(N, MAX_THREADS_PER_BLOCK);
+    numBlocks = divUp(N, numThreads);
+}

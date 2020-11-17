@@ -241,7 +241,7 @@ void parseSceneWideOptions(TokenBuf& buf,RenderSetup& result){
 
 
 
-void parseSubsection(TokenBuf& buf, RenderSetup& result, glm::mat4 transform,const std::filesystem::path& basePath, MaterialStorage& materialsStore,TextureStorage& textureStore) {
+void parseSubsection(TokenBuf& buf, RenderSetup& result, glm::mat4 transform,const std::filesystem::path& basePath, MaterialStorage& materialsStore,TextureStorage& textureStore, bool& nextShapeHasAreaLight,std::shared_ptr<MaterialObject> currentMaterial) {
 	auto begin = buf.checkAndPop<KeyWordToken>();
 	if ( !endsWith(begin->word,"Begin") ) {
 		SIGNAL_PARSING_ERROR("XXXBegin expected.", buf.currentIndex, begin->print());
@@ -249,9 +249,8 @@ void parseSubsection(TokenBuf& buf, RenderSetup& result, glm::mat4 transform,con
 
 	std::string subsectionName = begin->word.substr(0, begin->word.size() - std::string("Begin").size());
 
-	std::unique_ptr<MaterialObject> currentMaterial = nullptr;
+	
 
-	bool addedAreaLight = false;
 
 	while (true) {
 		auto nextToken = buf.peek();
@@ -265,7 +264,7 @@ void parseSubsection(TokenBuf& buf, RenderSetup& result, glm::mat4 transform,con
 				break;
 			}
 			else if (endsWith(keyWord->word,"Begin")) {
-				parseSubsection(buf, result, transform, basePath,materialsStore,textureStore);
+				parseSubsection(buf, result, transform, basePath,materialsStore,textureStore,nextShapeHasAreaLight,currentMaterial);
 			}
 			else if (keyWord->word == "Shape") {
 				auto shapeDef = readObjectDefinition(buf);
@@ -283,9 +282,9 @@ void parseSubsection(TokenBuf& buf, RenderSetup& result, glm::mat4 transform,con
 					prim.material = matteGray;
 				}
 
-				if (addedAreaLight) {
+				if (nextShapeHasAreaLight) {
 					prim.setAreaLightIndex(result.scene.lightsHost.size() - 1);
-					addedAreaLight = false;
+					nextShapeHasAreaLight = false;
 				}
 
 				result.scene.primitivesHost.push_back(prim);
@@ -298,7 +297,7 @@ void parseSubsection(TokenBuf& buf, RenderSetup& result, glm::mat4 transform,con
 					// shapeIndex will be the index of the next shape to be added.
 					diffuseLight->shapeIndex = result.scene.primitivesHost.size();
 					std::cout << "added shape for diffuse area light "<< diffuseLight->shapeIndex << std::endl;
-					addedAreaLight = true;
+					nextShapeHasAreaLight = true;
 				}
 
 				result.scene.lightsHost.push_back(light);
@@ -326,7 +325,7 @@ void parseSubsection(TokenBuf& buf, RenderSetup& result, glm::mat4 transform,con
 			else if (keyWord->word == "NamedMaterial") {
 				buf.moveForward();
 				std::string name = buf.checkAndPop<StringToken>()->all;
-				currentMaterial = std::make_unique<MaterialObject>(materialsStore.get(name));
+				currentMaterial = std::make_shared<MaterialObject>(materialsStore.get(name));
 			}
 			else if (keyWord->word == "Include") {
 				buf.moveForward();
@@ -359,7 +358,11 @@ RenderSetup runParsing(TokenBuf tokens, const std::filesystem::path& basePath) {
 
 	parseSceneWideOptions(tokens, result);
 
-	parseSubsection(tokens,result,glm::mat4(1.0),basePath,materials,textures);
+	bool nextShapeHasAreaLight = false;
+	std::shared_ptr<MaterialObject> currentMaterial = nullptr;
+	glm::mat4 currentTransform(1.0);
+
+	parseSubsection(tokens,result,currentTransform,basePath,materials,textures,nextShapeHasAreaLight,currentMaterial);
 
 	return result;
 }

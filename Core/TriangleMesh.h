@@ -26,7 +26,9 @@ public:
 
     ArrayPair<int3> indices;
 
-    float surfaceArea;
+    float surfaceArea = -1;
+
+    bool definitelyWaterTight = false;
 
     __host__ 
     TriangleMesh();
@@ -101,31 +103,44 @@ public:
 #endif
         IntersectionResult result;
 
-
-        int triangleID = sampler.randInt(trianglesCount);
-        float temp = sqrt(sampler.rand1());
-        float u = 1 - temp;
-        float v = temp * sampler.rand1();
-
-
-        int3 thisIndices = indicesData[triangleID];
-        float3 p0 = positionsData[thisIndices.x];
-        float3 p1 = positionsData[thisIndices.y];
-        float3 p2 = positionsData[thisIndices.z];
+        int attempts = 0;
+        while (true) {
+            int triangleID = sampler.randInt(trianglesCount);
+            float temp = sqrt(sampler.rand1());
+            float u = 1 - temp;
+            float v = temp * sampler.rand1();
 
 
-        result.position = p0 * u + p1 * v + p2 * (1.f - u - v);
-        getNormal(result, triangleID, u, v);
+            int3 thisIndices = indicesData[triangleID];
+            float3 p0 = positionsData[thisIndices.x];
+            float3 p1 = positionsData[thisIndices.y];
+            float3 p2 = positionsData[thisIndices.z];
 
+
+            result.position = p0 * u + p1 * v + p2 * (1.f - u - v);
+            getNormal(result, triangleID, u, v);
+            if (!definitelyWaterTight) {
+                break;
+            }
+            if (dot(result.normal, seenFrom - result.position) > 0) {
+                break;
+            }
+            ++attempts;
+            if (attempts >= 10) {
+                break;
+            }
+        }
 
         result.intersected = true;
 
 
 
 
-        float3 lightToRay = seenFrom - result.position;
-        float cosine = abs(dot(result.normal, normalize(lightToRay)));
-        *outputProbability = lengthSquared(lightToRay) / (cosine * area());
+        float3 lightToSeenFrom = seenFrom - result.position;
+        float cosine = abs(dot(result.normal, normalize(lightToSeenFrom)));
+        *outputProbability = lengthSquared(lightToSeenFrom) / (cosine * area());
+
+
         return result;
     }
 

@@ -69,4 +69,10 @@ struct TaskQueue{
 
     }
 
+    void setNumBlocksThreads(int& numBlocks, int& numThreads) {
+        int N = count();
+        numThreads = min(N, MAX_THREADS_PER_BLOCK);
+        numBlocks = divUp(N, numThreads);
+    }
+
 };

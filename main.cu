@@ -32,13 +32,13 @@ void test(const std::string& scenePath) {
     Timer::getInstance().stop("preparation");
     setup.renderer.render(setup.scene).saveToPNG("test.png");
     Timer::getInstance().stop("all");
-    Timer::getInstance().printResults();
+    Timer::getInstance().printStatistics();
 }
 
 
 int main(){
-    //test("../TestScenes/cornellBox/scene.pbrt");
-    test("../TestScenes/bathroom/bathroom.pbrt");
-    //test("../TestScenes/living-room-3/scene.pbrt");
+    //test("../TestScenes/cornellBox/test.pbrt");
+    //test("../TestScenes/bathroom/bathroom.pbrt");
+    test("../TestScenes/living-room-3/scene.pbrt");
 
 }

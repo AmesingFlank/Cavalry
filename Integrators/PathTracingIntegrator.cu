@@ -2,8 +2,8 @@
 #include "../Samplers/SimpleSampler.h"
 #include "../Utils/TaskQueue.h"
 #include "../Core/Impl.h"
-
-
+#include "../Utils/Timer.h"
+#include "../Utils/Utils.h"
 
 namespace PathTracing {
 
@@ -79,19 +79,18 @@ namespace PathTracing {
             return;
         }
 
+
         IntersectionResult intersection = tasks.tasks.data[index].intersection;
         Spectrum* result = tasks.tasks.data[index].result;
         Ray thisRay = tasks.tasks.data[index].thisRay;
         Spectrum multiplier = tasks.tasks.data[index].multiplier;
 
-
-        
-
-
         const Primitive* prim = intersection.primitive;
 
-        if (prim->areaLight && depth == 0) {
-            *result += prim->areaLight->get<DiffuseAreaLight>()->DiffuseAreaLight::evaluateRay(thisRay) * multiplier;
+        if (prim->areaLight) {
+            if (depth == 0) {
+                *result += prim->areaLight->get<DiffuseAreaLight>()->DiffuseAreaLight::evaluateRay(thisRay) * multiplier;
+            }
         }
 
         Ray exitantRay = { intersection.position,thisRay.direction * -1 };
@@ -157,8 +156,9 @@ namespace PathTracing {
     
     
             int samplesCount = (int)allSamples.N;
-            int numThreads = min(samplesCount, MAX_THREADS_PER_BLOCK);
-            int numBlocks = divUp(samplesCount, numThreads);
+            int numBlocks, numThreads;
+            setNumBlocksThreads(samplesCount, numBlocks, numThreads);
+
     
             sampler->prepare(samplesCount);
     
@@ -171,24 +171,36 @@ namespace PathTracing {
             TaskQueue<PrimaryRayTask>* thisRoundRayQueue = &primaryRayQueue0;
             TaskQueue<PrimaryRayTask>* nextRoundRayQueue = &primaryRayQueue1;
 
+            std::cout << numBlocks << "   " << numThreads << std::endl;
             genInitialRays << <numBlocks, numThreads >> > (allSamples.data,samplesCount,camera,result.data,thisRoundRayQueue->getCopyForKernel(), samplerObject.getCopyForKernel());
             CHECK_CUDA_ERROR("gen initial rays");
 
             int depth = 0;
 
             while (thisRoundRayQueue->count() > 0 && depth < maxDepth) {
-                std::cout << "doing depth " << depth << std::endl;
+                std::cout << "\ndoing depth " << depth << std::endl;
 
+
+                thisRoundRayQueue->setNumBlocksThreads(numBlocks, numThreads);
+                std::string renderRayEvent = std::string("renderRay") + std::to_string(depth);
                 CHECK_IF_CUDA_ERROR("before render ray");
+                Timer::getInstance().start(renderRayEvent);
                 renderRay << <numBlocks, numThreads >> >
                     (sceneHandle,samplerObject.getCopyForKernel(), lightingQueue.getCopyForKernel(), thisRoundRayQueue->getCopyForKernel(),nextRoundRayQueue->getCopyForKernel());
-                CHECK_IF_CUDA_ERROR("after render ray");
+                CHECK_CUDA_ERROR("after render ray");
+                Timer::getInstance().stop(renderRayEvent);
+                Timer::getInstance().printStatistics(renderRayEvent);
 
                 thisRoundRayQueue->clear();
                 
+                lightingQueue.setNumBlocksThreads(numBlocks, numThreads);
+                std::string lightingEvent = std::string("lighting") + std::to_string(depth);
                 CHECK_IF_CUDA_ERROR("before lighting");
+                Timer::getInstance().start(lightingEvent);
                 computeLighting << <numBlocks, numThreads >> > (sceneHandle, samplerObject.getCopyForKernel(), lightingQueue.getCopyForKernel(),depth);
-                CHECK_IF_CUDA_ERROR("after lighting");
+                CHECK_CUDA_ERROR("after lighting");
+                Timer::getInstance().stop(lightingEvent);
+                Timer::getInstance().printStatistics(lightingEvent);
 
                 lightingQueue.clear();
 
@@ -196,6 +208,8 @@ namespace PathTracing {
                 std::swap(thisRoundRayQueue, nextRoundRayQueue);
 
             }
+
+            setNumBlocksThreads(samplesCount, numBlocks, numThreads);
 
             PathTracing::addSamplesToFilm << <numBlocks, numThreads >> > (film.getCopyForKernel(), result.data, allSamples.data, samplesCount);
             CHECK_CUDA_ERROR("add sample to film");

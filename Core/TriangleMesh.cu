@@ -187,7 +187,8 @@ void TriangleMesh::computeArea(){
         float3 p0 = positions.cpu.data[vertices.x];
         float3 p1 = positions.cpu.data[vertices.y];
         float3 p2 = positions.cpu.data[vertices.z];
-        surfaceArea += length(cross(p1-p0,p2-p0)) * 0.5f;
+        float thisTriangle = length(cross(p1 - p0, p2 - p0)) * 0.5f;
+        surfaceArea += thisTriangle;
     }
 }
 

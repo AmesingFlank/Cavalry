@@ -58,11 +58,23 @@ public:
         event.end = now();
     }
 
-    void printResults(){
+    void printStatistics() const {
         for(auto event:events){
             double milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(event.second.end - event.second.start).count();
             std::cout<<event.first<<"  took   "<<milliseconds<<"ms"<<std::endl;
         }
+    }
+
+    void printStatistics(const std::string& name) const {
+        if (events.find(name) == events.end()) {
+            SIGNAL_ERROR("Timer event not found : %s\n",name.c_str());
+        }
+        const TimerEvent& event = events.at(name);
+        if (!event.finished) {
+            SIGNAL_ERROR("event not yet finished. cannot print stats.");
+        }
+        double milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(event.end - event.start).count();
+        std::cout << name << "  took   " << milliseconds << "ms" << std::endl;
     }
     
 
