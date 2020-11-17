@@ -30,7 +30,7 @@ void test(const std::string& scenePath) {
     Timer::getInstance().start("all");
     setup.scene.prepareForRender();
     Timer::getInstance().stop("preparation");
-    setup.renderer.render(setup.scene).saveToPNG("test.png");
+    setup.renderer.render(setup.scene).saveToPNG(setup.outputFileName);
     Timer::getInstance().stop("all");
     Timer::getInstance().printStatistics();
 }

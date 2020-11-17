@@ -237,6 +237,13 @@ void parseSceneWideOptions(TokenBuf& buf,RenderSetup& result){
 	int height = result.renderer.film->getHeight();
 	result.renderer.camera = std::make_unique<CameraObject>(CameraObject::createFromObjectDefinition(cameraDef,glm::inverse(transform),width,height));
 
+	if (filmDef.params.hasString("filename")) {
+		result.outputFileName = filmDef.params.getString("filename");
+	}
+	else {
+		result.outputFileName = "output.png";
+	}
+
 }
 
 
