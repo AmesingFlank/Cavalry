@@ -145,12 +145,13 @@ void buildRadixTree(int leavesCount,unsigned int* leafMortonCodes, BVHLeafNode* 
     }
 
     int j = i + length *  d; // other end;
-    int prefixLength = commonPrefixLength(leafMortonCodes,i,j);
+    
 
     if (i == 0) {
         j = leavesCount - 1;
-        prefixLength = 0;
     }
+
+    int prefixLength = commonPrefixLength(leafMortonCodes, i, j);
 
 
     unsigned int distanceToSplit = 0;

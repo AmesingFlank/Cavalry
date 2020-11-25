@@ -7,7 +7,7 @@
 // we might not have enough memory to render all samples at once.
 // so we split the image into regions, and render each region sequentially
 
-#define MAX_SAMPLES_PER_RUN 1024*1024*16
+#define MAX_SAMPLES_PER_RUN 1024*1024*8
 
 
 inline int decideSamplesPerPixel(FilmObject& film, int totalSPP){

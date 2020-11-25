@@ -85,3 +85,5 @@ __host__ __device__
 inline float3 operator* (const glm::mat3& mat, const float3& v){
 	return to_float3(mat*to_vec3(v));
 }
+
+#define XYZ(v) v.x , v.y , v.z
