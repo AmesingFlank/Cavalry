@@ -39,7 +39,8 @@ void test(const std::string& scenePath) {
 int main(){
     //test("../TestScenes/cornellBox/test.pbrt");
     //test("../TestScenes/bathroom2/scene.pbrt");
-    test("../TestScenes/living-room-3/scene.pbrt");
+    test("../TestScenes/bathroom/bathroom.pbrt");
+    //test("../TestScenes/living-room-3/scene.pbrt");
     //test("../TestScenes/staircase/scene.pbrt");
 
 }

@@ -27,7 +27,7 @@ public:
         *probabilityOutput = cosineSampleHemispherePdf(incidentOutput);
 
 
-        return eval(incidentOutput, exitant);
+        return LambertianBSDF::eval(incidentOutput, exitant);
 
     }
 
