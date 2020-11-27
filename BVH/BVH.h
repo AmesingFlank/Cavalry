@@ -24,6 +24,8 @@ struct BVH{
 
     static BVH build(Triangle* trianglesDevice, int trianglesCount, const AABB& sceneBounds);
 
+    // BVH Traversal Optimisation: go to nearest child first, and don't expand a node if minDist < result.distance
+
     __host__ __device__
     bool intersect(IntersectionResult& result, const Ray& ray, Triangle* primitives) const {
 #ifdef __CUDA_ARCH__
@@ -31,13 +33,22 @@ struct BVH{
 #else
         BVHNode* nodesData = nodes.cpu.data;
 #endif
+        result.intersected = false;
+        result.distance = FLT_MAX;
+
+        BVHNode& root = nodesData[0];
+        float minDistanceToRoot;
+        if (!root.box.intersect(ray,minDistanceToRoot)) {
+            return false;
+        }
+
 
         int stack[64];
         stack[0] = 0;
         int top = 0;
 
-        result.intersected = false;
-         
+#define PUSH(x) ++top; stack[top]=x;
+
 
         while(top >= 0){
             int curr = stack[top];
@@ -45,28 +56,47 @@ struct BVH{
 
             BVHNode& node = nodesData[curr];
 
-            if(node.box.intersect(ray)){
-                
-                if(node.isLeaf){
-                    IntersectionResult thisResult;
+            if(node.isLeaf){
+                IntersectionResult thisResult;
 
-                    if(primitives[node.primitiveIndex].intersect(thisResult,ray)){
-                        if(result.intersected == false || thisResult.distance < result.distance){
-                            result = thisResult;
-                        }
+                if(primitives[node.primitiveIndex].intersect(thisResult,ray)){
+                    if(result.intersected == false || thisResult.distance < result.distance){
+                        result = thisResult;
                     }
                 }
-                else{
-                    ++top;
-                    stack[top] = node.leftChild;
-
-                    ++top;
-                    stack[top] = node.rightChild;
-                }
             }
+            else{
+                float minDistLeft;
+                float minDistRight;
+
+                nodesData[node.leftChild].box.intersect(ray,minDistLeft);
+                nodesData[node.rightChild].box.intersect(ray, minDistRight);
+
+                if (minDistLeft >= 0 &&  minDistLeft < result.distance && minDistRight >= 0 && minDistRight < result.distance) {
+                    if (minDistLeft > minDistRight) {
+                        PUSH(node.leftChild);
+                        PUSH(node.rightChild);
+                    }
+                    else {
+                        PUSH(node.rightChild);
+                        PUSH(node.leftChild);
+                    }
+                }
+
+                else if (minDistLeft >= 0 && minDistLeft < result.distance){
+                    PUSH(node.leftChild);
+                }
+                else if (minDistRight >= 0 && minDistRight < result.distance) {
+                    PUSH(node.rightChild);
+                }
+
+            }
+            
         }
 
         return result.intersected;
+
+#undef PUSH
     }
 
     __host__ __device__
@@ -77,47 +107,73 @@ struct BVH{
         BVHNode* nodesData = nodes.cpu.data;
 #endif
 
+        Ray ray = test.ray;
+
+        BVHNode& root = nodesData[0];
+        float minDistanceToRoot;
+        if (!root.box.intersect(ray, minDistanceToRoot)) {
+            SIGNAL_ERROR("shadow ray doesn't intersect root node");
+        }
+
         int stack[64];
         stack[0] = 0;
         int top = 0;
 
-        Ray ray = test.ray;
+#define PUSH(x) ++top; stack[top]=x;
+
 
         while (top >= 0) {
             int curr = stack[top];
             --top;
 
             BVHNode& node = nodesData[curr];
+            
 
-            if (node.box.intersect(ray)) {
-                if (node.isLeaf) {
-                    
-                    Triangle* prim = &primitives[node.primitiveIndex];
-                    if (prim->mesh->getID() == test.sourceGeometry || prim->mesh->getID() == test.targetGeometry) {
-                        continue;
-                    }
-                    IntersectionResult thisResult;
-                    if (prim->intersect(thisResult, ray)) {
-                        if (test.useDistanceLimit) {
-                            if (thisResult.distance < test.distanceLimit) {
-                                return false;
-                            }
-                        }
-                        else {
+            if (node.isLeaf) {
+                Triangle* prim = &primitives[node.primitiveIndex];
+                if (prim->mesh->getID() == test.sourceGeometry || prim->mesh->getID() == test.targetGeometry) {
+                    continue;
+                }
+                IntersectionResult thisResult;
+                if (prim->intersect(thisResult, ray)) {
+                    if (test.useDistanceLimit) {
+                        if (thisResult.distance < test.distanceLimit) {
                             return false;
                         }
                     }
+                    else {
+                        return false;
+                    }
                 }
-                else {
-                    ++top;
-                    stack[top] = node.leftChild;
+            }
+            else {
+                
+                float minDistLeft;
+                float minDistRight;
 
-                    ++top;
-                    stack[top] = node.rightChild;
+                nodesData[node.leftChild].box.intersect(ray, minDistLeft);
+                nodesData[node.rightChild].box.intersect(ray, minDistRight);
+
+                if (minDistLeft >= 0 && minDistRight >= 0 ) {
+                    if (minDistLeft > minDistRight) {
+                        PUSH(node.leftChild);
+                        PUSH(node.rightChild);
+                    }
+                    else {
+                        PUSH(node.rightChild);
+                        PUSH(node.leftChild);
+                    }
+                }
+
+                else if (minDistLeft >= 0 ) {
+                    PUSH(node.leftChild);
+                }
+                else if (minDistRight >= 0 ) {
+                    PUSH(node.rightChild);
                 }
             }
         }
-
+#undef PUSH
 
         return true;
     }

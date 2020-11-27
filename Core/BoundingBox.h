@@ -25,12 +25,8 @@ struct AABB{
     }
 
     __host__ __device__
-    bool intersect(const Ray& r){
-        if(contains(r.origin)){
-            return true;
-        }
-        //printf("%f %f %f,     %f %f %f,     %f %f %f\n", minimum, maximum, r.origin);
-
+    bool intersect(const Ray& r,float& minDist){
+        
 		float3 tmin = (minimum - r.origin) / r.direction;
 		float3 tmax = (maximum - r.origin) / r.direction;
 
@@ -40,13 +36,21 @@ struct AABB{
 		float minmax = min(min(realMax.x, realMax.y), realMax.z);
 		float maxmin = max(max(realMin.x, realMin.y), realMin.z);
 
+        if (contains(r.origin)) {
+            minDist = 0;
+            return true;
+        }
+
         
 		if (minmax >= maxmin) { 
             //float epsilon = 0.001f; // required to prevent self intersection
-            //return maxmin > epsilon;
-            return maxmin > 0;
+            if (maxmin > 0) {
+                minDist = maxmin;
+                return true;
+            }
         }
-		else return false;
+        minDist = -1; // indicates no-intersection
+		return false;
     }
 };
 
