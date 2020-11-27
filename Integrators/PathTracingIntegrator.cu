@@ -30,7 +30,7 @@ namespace PathTracing {
 
 
     __global__
-    void renderRay( SceneHandle scene, SamplerObject sampler, TaskQueue<LightingTask> lightingQueue,TaskQueue<PrimaryRayTask> thisRoundRayQueue, TaskQueue<PrimaryRayTask> nextRoundRayQueue) {
+    void renderRay( SceneHandle scene, SamplerObject sampler, TaskQueue<LightingTask> lightingQueue,TaskQueue<PrimaryRayTask> thisRoundRayQueue, TaskQueue<PrimaryRayTask> nextRoundRayQueue,int depth) {
         int raysCount = thisRoundRayQueue.count();
         int index = blockIdx.x * blockDim.x + threadIdx.x;
         if (index >= raysCount) {
@@ -56,6 +56,21 @@ namespace PathTracing {
         
         LightingTask lightingTask = { intersection,thisRay,multiplier,result, myTask.shouldIncludeEmission };
         lightingQueue.push(lightingTask);
+
+        //russian roulette
+        if (depth > 3) {
+            float terminationProbability = 1;
+            terminationProbability = min(terminationProbability, 1 - multiplier.x);
+            terminationProbability = min(terminationProbability, 1 - multiplier.y);
+            terminationProbability = min(terminationProbability, 1 - multiplier.z);
+
+            terminationProbability = max(terminationProbability, 0.05f);
+
+            if (sampler.rand1() < terminationProbability) {
+                return;
+            }
+            multiplier = multiplier / (1.f - terminationProbability);
+        }
         
 
         const Primitive* prim = intersection.primitive;
@@ -191,7 +206,7 @@ namespace PathTracing {
                 CHECK_IF_CUDA_ERROR("before render ray");
                 Timer::getInstance().start(renderRayEvent);
                 renderRay << <numBlocks, numThreads >> >
-                    (sceneHandle,samplerObject.getCopyForKernel(), lightingQueue.getCopyForKernel(), thisRoundRayQueue->getCopyForKernel(),nextRoundRayQueue->getCopyForKernel());
+                    (sceneHandle,samplerObject.getCopyForKernel(), lightingQueue.getCopyForKernel(), thisRoundRayQueue->getCopyForKernel(),nextRoundRayQueue->getCopyForKernel(),depth);
                 CHECK_CUDA_ERROR("after render ray");
                 Timer::getInstance().stop(renderRayEvent);
                 Timer::getInstance().printStatistics(renderRayEvent);
