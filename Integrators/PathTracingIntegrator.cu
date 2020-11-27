@@ -17,6 +17,7 @@ namespace PathTracing {
         Ray ray;
         Spectrum multiplier;
         Spectrum* result;
+        bool shouldIncludeEmission;
     };
 
     struct LightingTask {
@@ -24,6 +25,7 @@ namespace PathTracing {
         Ray thisRay;
         Spectrum multiplier;
         Spectrum* result;
+        bool shouldIncludeEmission;
     };
 
 
@@ -36,9 +38,10 @@ namespace PathTracing {
         }
 
 
-        Spectrum* result = thisRoundRayQueue.tasks.data[index].result;
-        Spectrum multiplier = thisRoundRayQueue.tasks.data[index].multiplier;
-        Ray thisRay = thisRoundRayQueue.tasks.data[index].ray;
+        PrimaryRayTask& myTask = thisRoundRayQueue.tasks.data[index];
+        Spectrum* result = myTask.result;
+        Spectrum multiplier = myTask.multiplier;
+        Ray thisRay = myTask.ray;
         
 
         IntersectionResult intersection;
@@ -51,7 +54,7 @@ namespace PathTracing {
             return;
         }
         
-        LightingTask lightingTask = { intersection,thisRay,multiplier,result };
+        LightingTask lightingTask = { intersection,thisRay,multiplier,result, myTask.shouldIncludeEmission };
         lightingQueue.push(lightingTask);
         
 
@@ -65,8 +68,9 @@ namespace PathTracing {
         nextRay.direction = intersection.localToWorld(nextDirectionLocal);
         nextRay.origin = intersection.position + nextRay.direction * 0.0001f;
         multiplier = multiplier * nextMultiplier * abs(dot(nextRay.direction,intersection.normal)) / nextRayProbability;
+        bool nextShouldIncludeEmission = myTask.shouldIncludeEmission && intersection.bsdf.isDelta();
 
-        PrimaryRayTask nextTask = {nextRay,multiplier,result};
+        PrimaryRayTask nextTask = {nextRay,multiplier,result,nextShouldIncludeEmission};
         nextRoundRayQueue.push(nextTask);
     }
 
@@ -79,16 +83,16 @@ namespace PathTracing {
             return;
         }
 
-
-        IntersectionResult intersection = tasks.tasks.data[index].intersection;
-        Spectrum* result = tasks.tasks.data[index].result;
-        Ray thisRay = tasks.tasks.data[index].thisRay;
-        Spectrum multiplier = tasks.tasks.data[index].multiplier;
+        LightingTask& myTask = tasks.tasks.data[index];
+        IntersectionResult intersection = myTask.intersection;
+        Spectrum* result = myTask.result;
+        Ray thisRay = myTask.thisRay;
+        Spectrum multiplier = myTask.multiplier;
 
         const Primitive* prim = intersection.primitive;
 
         if (prim->areaLight) {
-            if (depth == 0) {
+            if (myTask.shouldIncludeEmission) {
                 *result += prim->areaLight->get<DiffuseAreaLight>()->DiffuseAreaLight::evaluateRay(thisRay) * multiplier;
             }
         }
@@ -126,7 +130,7 @@ namespace PathTracing {
         Spectrum* result = &results[index];
         *result = make_float3(0, 0, 0);
         Spectrum multiplier = make_float3(1, 1, 1);
-        PrimaryRayTask task = { ray,multiplier,result };
+        PrimaryRayTask task = { ray,multiplier,result,true };
         primaryRayQueue.push(task);
         sampler.startPixel();
     }

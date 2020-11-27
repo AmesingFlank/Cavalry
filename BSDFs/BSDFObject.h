@@ -1,13 +1,15 @@
 #pragma once
 
 #include "Lambertian.h"
+#include "Fresnel.h"
+#include "MirrorBSDF.h"
 
 #include "Color.h"
 #include "../Utils/GpuCommons.h"
 #include "../Utils/Variant.h"
 
 
-using BSDFVariant = Variant<LambertianBSDF>;
+using BSDFVariant = Variant<LambertianBSDF,FresnelBSDF,MirrorBSDF>;
 
 
 class BSDFObject : public BSDFVariant {
@@ -36,6 +38,20 @@ public:
 			using T = typename std::remove_reference<decltype(arg)>::type;
 			if constexpr (std::is_base_of<BSDF,typename T>::value) {
 				return arg.T::eval(incident, exitant);
+			}
+			else {
+				SIGNAL_VARIANT_ERROR;
+			}
+		};
+		return visit(visitor);
+	}
+
+	__device__
+	bool isDelta() const {
+		auto visitor = [&](auto& arg) -> bool {
+			using T = typename std::remove_reference<decltype(arg)>::type;
+			if constexpr (std::is_base_of<BSDF, typename T>::value) {
+				return arg.T::isDelta();
 			}
 			else {
 				SIGNAL_VARIANT_ERROR;
