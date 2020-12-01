@@ -20,7 +20,7 @@ public:
     }
 
     __device__
-    virtual Spectrum sample(const float2& randomSource, float3& incidentOutput, const float3& exitant, float* probabilityOutput) const {
+    virtual Spectrum sample(float2 randomSource, float3& incidentOutput, const float3& exitant, float* probabilityOutput) const {
         
 
         incidentOutput = cosineSampleHemisphere(randomSource);

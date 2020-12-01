@@ -22,7 +22,7 @@ inline Spectrum schlick(float cosTheta, const Spectrum& f0){
 
     float temp = pow5(1- abs(cosTheta));
 
-    return f0 + (1 - f0) * temp;
+    return f0 + (make_float3(1,1,1) - f0) * temp;
 }
 
 struct Fresnel{
@@ -71,18 +71,28 @@ public:
         if (halfVec.x == 0 && halfVec.y == 0 && halfVec.z == 0) return make_float3(0);
         halfVec = normalize(halfVec);
         Spectrum specular =
-            distribution.D(halfVec) /
-            (4 * abs(dot(incident, halfVec)) * max(abs(cosZenith(incident)), abs(cosZenith(exitant)))) *
-            schlick(dot(incident, halfVec),specularColor);
+            distribution.D(halfVec) * schlick(dot(incident, halfVec), specularColor) /
+            (4 * abs(dot(incident, halfVec)) * max(abs(cosZenith(incident)), abs(cosZenith(exitant))));
         return diffuse + specular;
     }
 
     __device__
-    virtual Spectrum sample(const float2& randomSource, float3& incidentOutput, const float3& exitant, float* probabilityOutput) const {
+    virtual Spectrum sample(float2 randomSource, float3& incidentOutput, const float3& exitant, float* probabilityOutput) const override{
         
-
-        incidentOutput = cosineSampleHemisphere(randomSource);
-        *probabilityOutput = cosineSampleHemispherePdf(incidentOutput);
+        float sampleMicrofacetProb = 0.5;
+        bool shouldSampleMicrofacet = randomSource.x < sampleMicrofacetProb;
+        if(shouldSampleMicrofacet){
+            randomSource.x = randomSource.x * (1.f / sampleMicrofacetProb);
+            float microfacetProb;
+            float3 halfVec = distribution.sample(randomSource,exitant, &microfacetProb);
+            incidentOutput = reflect(exitant, halfVec);
+            *probabilityOutput = microfacetProb * sampleMicrofacetProb;
+        }
+        else{
+            randomSource.x =  (randomSource.x-sampleMicrofacetProb) * (1.f / (1.f- sampleMicrofacetProb));
+            incidentOutput = cosineSampleHemisphere(randomSource);
+            *probabilityOutput = (1.f-sampleMicrofacetProb) * cosineSampleHemispherePdf(incidentOutput);
+        }
 
 
         return FresnelBlendBSDF::eval(incidentOutput, exitant);
