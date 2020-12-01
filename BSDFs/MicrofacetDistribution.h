@@ -55,9 +55,14 @@ struct GGX {
             0.000640711f * x * x * x * x;
     }
 
+    __device__
+    float pdf(const float3& normal)const {
+        return D(normal) * abs(cosZenith(normal));
+    }
+
     // sample a microfacet normal.
     __device__
-    float3 sample(float2 randomSource, const float3& exitant, float* probabilityOutput)const {
+    float3 sample(float2 randomSource, const float3& exitant)const {
         float3 exitantStretched =
         normalize(make_float3(alpha_x * exitant.x, alpha_y * exitant.y, exitant.z));
 
@@ -74,7 +79,6 @@ struct GGX {
         slope_y = alpha_y * slope_y;
 
         float3 result = normalize(make_float3(-slope_x, -slope_y, 1.));
-        *probabilityOutput = D(result) * abs(cosZenith(result));
         return result;
     }
 

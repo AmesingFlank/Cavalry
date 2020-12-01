@@ -83,17 +83,17 @@ public:
         bool shouldSampleMicrofacet = randomSource.x < sampleMicrofacetProb;
         if(shouldSampleMicrofacet){
             randomSource.x = randomSource.x * (1.f / sampleMicrofacetProb);
-            float microfacetProb;
-            float3 halfVec = distribution.sample(randomSource,exitant, &microfacetProb);
+            float3 halfVec = distribution.sample(randomSource,exitant);
             incidentOutput = reflect(exitant, halfVec);
-            *probabilityOutput = microfacetProb * sampleMicrofacetProb;
         }
         else{
             randomSource.x =  (randomSource.x-sampleMicrofacetProb) * (1.f / (1.f- sampleMicrofacetProb));
             incidentOutput = cosineSampleHemisphere(randomSource);
             *probabilityOutput = (1.f-sampleMicrofacetProb) * cosineSampleHemispherePdf(incidentOutput);
         }
-
+        *probabilityOutput = 
+            (1.f - sampleMicrofacetProb) * cosineSampleHemispherePdf(incidentOutput) + 
+            sampleMicrofacetProb * distribution.pdf(incidentOutput);
 
         return FresnelBlendBSDF::eval(incidentOutput, exitant);
 
