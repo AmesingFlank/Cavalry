@@ -87,3 +87,47 @@ inline float3 operator* (const glm::mat3& mat, const float3& v){
 }
 
 #define XYZ(v) v.x , v.y , v.z
+
+
+//theta is the zenithAngle
+//phi is the aziumth angle
+
+__device__
+inline float clampF(float x, float minimum,float maximum){
+	return max(minimum,min(x,maximum));
+}
+
+__device__ inline float cosZenith(const float3 &w) { return w.z; }
+__device__ inline float cosSquaredZenith(const float3 &w) { return w.z * w.z; }
+
+__device__ inline float sinSquaredZenith(const float3 &w) {
+    return max((float)0, (float)1 - cosSquaredZenith(w));
+}
+
+__device__ inline float sinZenith(const float3 &w) { return sqrt(sinSquaredZenith(w)); }
+
+__device__ inline float tanZenith(const float3 &w) { return sinZenith(w) / cosZenith(w); }
+
+__device__ inline float tanSquaredZenith(const float3 &w) {
+    return sinSquaredZenith(w) / cosSquaredZenith(w);
+}
+
+__device__ inline float cosAzimuth(const float3 &w) {
+    float sinTheta = sinZenith(w);
+    return (sinZenith == 0) ? 1 : clampF(w.x / sinTheta, -1, 1);
+}
+
+__device__ inline float sinAzimuth(const float3 &w) {
+    float sinTheta = sinZenith(w);
+    return (sinZenith == 0) ? 0 : clampF(w.y / sinTheta, -1, 1);
+}
+
+__device__ inline float cosSquaredAzimuth(const float3 &w) { return cosAzimuth(w) * cosAzimuth(w); }
+
+__device__ inline float sinSquaredAzimuth(const float3 &w) { return sinAzimuth(w) * sinAzimuth(w); }
+
+
+__device__
+inline float pow5(float f){
+	return (f*f)*(f*f)*f;
+}
