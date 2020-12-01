@@ -325,6 +325,11 @@ void parseSubsection(TokenBuf& buf, RenderSetup& result, glm::mat4 transform,con
 				auto def = readObjectDefinition(buf);
 				materialsStore.add(def.objectName,MaterialObject::createFromObjectDefinition(def,textureStore.items));
 			}
+			else if (keyWord->word == "Material") {
+				auto def = readObjectDefinition(buf);
+				def.params.strings["type"] = def.objectName;
+				currentMaterial = std::make_shared<MaterialObject>(MaterialObject::createFromObjectDefinition(def, textureStore.items));
+			}
 			else if (keyWord->word == "Texture") {
 				auto def = readObjectDefinition(buf);
 				textureStore.add(def.objectName,Texture2D::createFromObjectDefinition(def,transform,basePath));
@@ -342,7 +347,7 @@ void parseSubsection(TokenBuf& buf, RenderSetup& result, glm::mat4 transform,con
 				buf.insertHere(includedTokens);
 			}
 			else {
-				std::cout << "reading unrecognized object from " << buf.currentIndex ;
+				std::cout << "reading unrecognized object:" << keyWord->word<< " from " << buf.currentIndex ;
 				readUntilNextKeyWorkd(buf);
 				std::cout << "done" << std::endl;
 			}
