@@ -39,13 +39,9 @@ public:
 		float3 origin = {0,0,0};
 		Ray ray;
 
-		glm::vec4 rayOriginCameraSpace = glm::vec4(to_vec3(origin),1);
-		glm::vec4 rayOrigin = cameraToWorld * rayOriginCameraSpace;
-		ray.origin = to_float3(rayOrigin) / rayOrigin.w;
+		ray.origin = apply(cameraToWorld, origin);
+		ray.direction = normalize(apply(cameraToWorld,pixelLocation) - ray.origin);
 
-		glm::vec4 rayDirectionCameraSpace = glm::vec4(to_vec3(pixelLocation - origin),1);
-		glm::vec4 rayDirection = cameraToWorld * rayDirectionCameraSpace;
-		ray.direction = normalize(to_float3(rayDirection) / rayDirection.w);
 
 		return ray;
 
