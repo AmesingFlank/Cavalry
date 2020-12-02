@@ -131,3 +131,10 @@ __device__
 inline float pow5(float f){
 	return (f*f)*(f*f)*f;
 }
+
+
+__host__ __device__
+inline float3 reflectF(const float3& incident, const float3& normal)
+{
+	return 2.0f * normal * dot(normal, incident) - incident;
+}

@@ -12,10 +12,11 @@ struct GGX {
     // normal distribution (normal is half vector)
     __device__
     float D(const float3& normal) const{
-        if(dot(normal,make_float3(0,0,1)) == 0){
+        
+        float tanSquaredTheta = tanSquaredZenith(normal);
+        if (isinf(tanSquaredTheta)) {
             return 0;
         }
-        float tanSquaredTheta = tanSquaredZenith(normal);
 
         const float cos4Theta = cosSquaredZenith(normal) * cosSquaredZenith(normal);
 
@@ -41,6 +42,11 @@ struct GGX {
     }
 
     __device__
+    float G1(const float3& w) const {
+        return 1 / (1 + Lambda(w));
+    }
+
+    __device__
     float G(const float3& incident, const float3& exitant) const {
         return 1.f/(1.f+ Lambda(incident) + Lambda(exitant));
     }
@@ -56,8 +62,8 @@ struct GGX {
     }
 
     __device__
-    float pdf(const float3& normal)const {
-        return D(normal) * abs(cosZenith(normal));
+    float pdf(const float3& normal,const float3& exitant)const {
+        return D(normal) * G1(exitant) * abs(dot(exitant, normal)) / abs(cosZenith(exitant));
     }
 
     // sample a microfacet normal.

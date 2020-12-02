@@ -81,21 +81,22 @@ public:
         
         float sampleMicrofacetProb = 0.5;
         bool shouldSampleMicrofacet = randomSource.x < sampleMicrofacetProb;
+        float3 halfVec;
         if(shouldSampleMicrofacet){
             randomSource.x = randomSource.x * (1.f / sampleMicrofacetProb);
-            float3 halfVec = distribution.sample(randomSource,exitant);
-            incidentOutput = reflect(exitant, halfVec);
+            halfVec = distribution.sample(randomSource,exitant);
+            incidentOutput = reflectF(exitant, halfVec);
         }
         else{
             randomSource.x =  (randomSource.x-sampleMicrofacetProb) * (1.f / (1.f- sampleMicrofacetProb));
             incidentOutput = cosineSampleHemisphere(randomSource);
-            *probabilityOutput = (1.f-sampleMicrofacetProb) * cosineSampleHemispherePdf(incidentOutput);
+            halfVec = normalize(incidentOutput + exitant);
         }
         *probabilityOutput = 
             (1.f - sampleMicrofacetProb) * cosineSampleHemispherePdf(incidentOutput) + 
-            sampleMicrofacetProb * distribution.pdf(incidentOutput);
+            sampleMicrofacetProb * distribution.pdf(halfVec,exitant) / (4.f*dot(exitant,halfVec));
 
-        return FresnelBlendBSDF::eval(incidentOutput, exitant);
+        return FresnelBlendBSDF::eval(normalize(incidentOutput), normalize(exitant));
 
     }
 
