@@ -20,7 +20,7 @@ public:
         if(!(incident.x == -exitant.x && incident.y== -exitant.y && incident.z==exitant.z)){
             return make_float3(0,0,0);
         }
-        return make_float3(1,1,1) * reflectivityFactor;
+        return make_float3(1,1,1) * reflectivityFactor / abs(cosZenith(incident));
     }
 
     __device__

@@ -83,7 +83,7 @@ namespace PathTracing {
         nextRay.direction = intersection.localToWorld(nextDirectionLocal);
         nextRay.origin = intersection.position + nextRay.direction * 0.0001f;
         multiplier = multiplier * nextMultiplier * abs(dot(nextRay.direction,intersection.normal)) / nextRayProbability;
-        bool nextShouldIncludeEmission = myTask.shouldIncludeEmission && intersection.bsdf.isDelta();
+        bool nextShouldIncludeEmission = intersection.bsdf.isDelta();
 
         PrimaryRayTask nextTask = {nextRay,multiplier,result,nextShouldIncludeEmission};
         nextRoundRayQueue.push(nextTask);
