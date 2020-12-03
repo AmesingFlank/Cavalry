@@ -14,7 +14,7 @@ public:
     Fresnel fresnel;
 
 	__host__ __device__
-	MicrofacetBSDF():fresnel(1){}
+	MicrofacetBSDF(){}
 
     __host__ __device__
     MicrofacetBSDF(const Spectrum& color_,const GGX& distribution_,const Fresnel& fresnel_):
@@ -33,7 +33,7 @@ public:
         if (halfVec.x == 0 && halfVec.y == 0 && halfVec.z == 0) return make_float3(0,0,0); 
         
         halfVec = normalize(halfVec); 
-        float F = fresnel.eval(dot(exitant, halfVec)); 
+        auto F = fresnel.eval(dot(exitant, halfVec)); 
 
         return color * distribution.D(halfVec) * distribution.G(exitant, incident)*F/ (4 * cosThetaI * cosThetaO);
     }
@@ -42,9 +42,10 @@ public:
     virtual Spectrum sample(float2 randomSource, float3& incidentOutput, const float3& exitant, float* probabilityOutput) const {
         
 
-        incidentOutput = cosineSampleHemisphere(randomSource);
-        *probabilityOutput = cosineSampleHemispherePdf(incidentOutput);
-
+        float3 halfVec = distribution.sample(randomSource,exitant);
+        incidentOutput = reflectF(exitant, halfVec);
+    
+        *probabilityOutput = distribution.pdf(halfVec,exitant) / (4.f*dot(exitant,halfVec));
 
         return MicrofacetBSDF::eval(incidentOutput, exitant);
 

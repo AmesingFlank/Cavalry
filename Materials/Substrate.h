@@ -21,27 +21,20 @@ public:
 
     SubstrateMaterial():diffuseColor(make_float3(100,0,0)),specularColor(make_float3(100,0,0)), diffuseTexture(0, 0, true){}
 
-    SubstrateMaterial(float3 diffuseColor_,float3 specularColor_,float uRoughness_,float vRoughness_,bool remapRoughness_):
-    diffuseColor(diffuseColor_),specularColor(specularColor_), diffuseTexture(0, 0, true)
+    SubstrateMaterial(Spectrum diffuseColor_,Spectrum specularColor_,float uRoughness_,float vRoughness_,bool remapRoughness_):
+    diffuseColor(diffuseColor_),specularColor(specularColor_), diffuseTexture(0, 0, true),
+    distribution(GGX::createFromRoughness(uRoughness_,vRoughness_,remapRoughness_))
     {
-        createGGX(uRoughness_,vRoughness_,remapRoughness_);
+
     }
 
-    SubstrateMaterial(float3 diffuseColor_,const Texture2D& diffuseTexture_,float3 specularColor_,float uRoughness_,float vRoughness_,bool remapRoughness_):
-    diffuseColor(diffuseColor_),specularColor(specularColor_), diffuseTexture(diffuseTexture_),hasDiffuseTexture(true)
+    SubstrateMaterial(Spectrum diffuseColor_,const Texture2D& diffuseTexture_,Spectrum specularColor_,float uRoughness_,float vRoughness_,bool remapRoughness_):
+    diffuseColor(diffuseColor_),specularColor(specularColor_), diffuseTexture(diffuseTexture_),hasDiffuseTexture(true),
+    distribution(GGX::createFromRoughness(uRoughness_,vRoughness_,remapRoughness_))
     {
-        createGGX(uRoughness_,vRoughness_,remapRoughness_);
+
     }
 
-
-    void createGGX(float uRoughness,float vRoughness,bool remap){
-        if(remap){
-            distribution = {GGX::roughnessToAlpha(uRoughness),GGX::roughnessToAlpha(vRoughness)};
-        }
-        else{
-            distribution = {uRoughness,vRoughness};
-        }
-    }
 
     __device__
     virtual BSDFObject getBSDF(const IntersectionResult& intersection) const override {

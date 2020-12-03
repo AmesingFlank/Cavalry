@@ -6,16 +6,8 @@
 #include "../Utils/RandomUtils.h"
 #include "Fresnel.h"
 #include "MicrofacetDistribution.h"
+#include <complex>
 
-__device__ 
-inline float schlick(float cosTheta, float refractiveIndex){
-    float f0 = (refractiveIndex-1) / (refractiveIndex + 1);
-    f0 = f0*f0;
-
-    float temp = pow5(1- abs(cosTheta));
-
-    return f0 + (1 - f0) * temp;
-}
 
 __device__ 
 inline Spectrum schlick(float cosTheta, const Spectrum& f0){
@@ -26,18 +18,33 @@ inline Spectrum schlick(float cosTheta, const Spectrum& f0){
 }
 
 struct Fresnel{
-    float refractiveIndex;
+    Spectrum f0;
     
-    float reflectivityFactor;
-
-    __host__ __device__
-    Fresnel(float refractiveIndex_,float reflectivityFactor_ = 1.f):
-    refractiveIndex(refractiveIndex_),reflectivityFactor(reflectivityFactor_){}
-
     __device__
-    float eval(float cosTheta) const {
-        float f = schlick(cosTheta,refractiveIndex);
-        return f * reflectivityFactor;
+    Spectrum eval(float cosTheta) const {
+        return schlick(cosTheta,f0);
+    }
+
+    static Fresnel createFromIOR(const Spectrum& eta){
+        Spectrum temp = (eta-make_float3(1,1,1)) / (eta + make_float3(1,1,1));
+        Spectrum f0 = temp * temp;
+        return {f0};
+    }
+
+    // complex IOR
+    static Fresnel createFromIOR(const Spectrum& eta, const Spectrum& k) {
+
+        std::complex<float> etaR(eta.x, k.x);
+        std::complex<float> etaG(eta.y, k.y);
+        std::complex<float> etaB(eta.z, k.z);
+
+        std::complex<float> one(1, 0);
+
+        float f0R = std::abs(std::pow((etaR - one) / (etaR + one), 2));
+        float f0G = std::abs(std::pow((etaG - one) / (etaG + one), 2));
+        float f0B = std::abs(std::pow((etaB - one) / (etaB + one), 2));
+
+        return { make_float3(f0R,f0G,f0B) };
     }
 
 };
@@ -96,7 +103,7 @@ public:
             (1.f - sampleMicrofacetProb) * cosineSampleHemispherePdf(incidentOutput) + 
             sampleMicrofacetProb * distribution.pdf(halfVec,exitant) / (4.f*dot(exitant,halfVec));
 
-        return FresnelBlendBSDF::eval(normalize(incidentOutput), normalize(exitant));
+        return FresnelBlendBSDF::eval(incidentOutput, exitant);
 
     }
 

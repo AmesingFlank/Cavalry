@@ -3,6 +3,7 @@
 #include "MatteMaterial.h"
 #include "Mirror.h"
 #include "Substrate.h"
+#include "Metal.h"
 
 #include "Color.h"
 #include "../Utils/GpuCommons.h"
@@ -10,7 +11,7 @@
 #include "../Core/Parameters.h"
 
 
-using MaterialVariant = Variant<MatteMaterial,MirrorMaterial,SubstrateMaterial>;
+using MaterialVariant = Variant<MatteMaterial,MirrorMaterial,SubstrateMaterial,MetalMaterial>;
 
 
 class MaterialObject : public MaterialVariant {
@@ -71,6 +72,9 @@ public:
 		}
 		if (materialType == "mirror") {
 			return MaterialObject(MirrorMaterial::createFromParams(def.params,textures));
+		}
+		if (materialType == "metal") {
+			return MaterialObject(MetalMaterial::createFromParams(def.params,textures));
 		}
 		return MaterialObject(MatteMaterial::createFromParams(def.params,textures));
 	}

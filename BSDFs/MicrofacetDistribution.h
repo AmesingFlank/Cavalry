@@ -133,4 +133,13 @@ struct GGX {
 
     }
 
+    static GGX createFromRoughness(float uRoughness,float vRoughness,bool remap){
+        if(remap){
+            return {GGX::roughnessToAlpha(uRoughness),GGX::roughnessToAlpha(vRoughness)};
+        }
+        else{
+            return {uRoughness,vRoughness};
+        }
+    }
+
 };
