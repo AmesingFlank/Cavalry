@@ -28,7 +28,14 @@ namespace PathTracing {
         bool shouldIncludeEmission;
     };
 
-    
+    struct MaterialEvalTask {
+        IntersectionResult intersection;
+        Ray rayToLight;
+        Spectrum incident;
+        Ray exitantRay;
+        Spectrum multiplier;
+        Spectrum* result;
+    };
 
 
     __global__
@@ -157,7 +164,7 @@ namespace PathTracing {
 
 
     __global__
-    void computeLighting(SceneHandle scene, SamplerObject sampler, TaskQueue<LightingTask> tasks,int depth) {
+    void computeLighting(SceneHandle scene, SamplerObject sampler, TaskQueue<LightingTask> tasks,TaskQueue<MaterialEvalTask> materialEvalQueue,int depth) {
         int tasksCount = tasks.count();
         int index = blockIdx.x * blockDim.x + threadIdx.x;
         if (index >= tasksCount) {
@@ -194,9 +201,29 @@ namespace PathTracing {
         Spectrum incident = light.sampleRayToPoint(intersection.position, sampler, probability, rayToLight, visibilityTest);
 
         if (scene.testVisibility(visibilityTest) && dot(rayToLight.direction, intersection.normal) > 0) {
-
-            *result += prim->material.eval(rayToLight, incident, exitantRay, intersection) * scene.lightsCount * multiplier / probability;
+            Spectrum materialEvalMultiplier = scene.lightsCount * multiplier / probability;
+            materialEvalQueue.push({intersection,rayToLight,incident,exitantRay,materialEvalMultiplier,result});
         }
+    }
+
+    __global__
+    void evalMaterial(TaskQueue<MaterialEvalTask> tasks) {
+        int tasksCount = tasks.count();
+        int index = blockIdx.x * blockDim.x + threadIdx.x;
+        if (index >= tasksCount) {
+            return;
+        }
+
+        MaterialEvalTask& myTask = tasks.tasks.data[index];
+        IntersectionResult& intersection = myTask.intersection;
+        Spectrum* result = myTask.result;
+        Spectrum& multiplier = myTask.multiplier;
+        Spectrum& incident = myTask.incident;
+
+        Ray& rayToLight = myTask.rayToLight;
+        Ray& exitantRay = myTask.exitantRay;
+     
+        *result += intersection.primitive->material.eval(rayToLight, incident, exitantRay, intersection) * multiplier;
     }
 
 
@@ -259,6 +286,8 @@ namespace PathTracing {
             TaskQueue<LightingTask> lightingQueue(samplesCount);
             TaskQueue<LightingTask> sortedLightingQueue(samplesCount);
 
+            TaskQueue<MaterialEvalTask> materialEvalQueue(samplesCount);
+
 
             std::cout << numBlocks << "   " << numThreads << std::endl;
             genInitialRays << <numBlocks, numThreads >> > (allSamples.data,samplesCount,camera,result.data,thisRoundRayQueue->getCopyForKernel(), samplerObject.getCopyForKernel());
@@ -296,10 +325,17 @@ namespace PathTracing {
                 sortedLightingQueue.setNumBlocksThreads(numBlocks, numThreads);
                 std::string lightingEvent = std::string("lighting ") + std::to_string(round) + " " + std::to_string(depth);
                 Timer::getInstance().timedRun(lightingEvent, [&]() {
-                    computeLighting << <numBlocks, numThreads >> > (sceneHandle, samplerObject.getCopyForKernel(), sortedLightingQueue.getCopyForKernel(), depth);
+                    computeLighting << <numBlocks, numThreads >> > (sceneHandle, samplerObject.getCopyForKernel(), sortedLightingQueue.getCopyForKernel(),materialEvalQueue.getCopyForKernel(), depth);
+                });
+
+                materialEvalQueue.setNumBlocksThreads(numBlocks, numThreads);
+                std::string materialEvent = std::string("material ") + std::to_string(round) + " " + std::to_string(depth);
+                Timer::getInstance().timedRun(materialEvent, [&]() {
+                    evalMaterial << <numBlocks, numThreads >> > (materialEvalQueue.getCopyForKernel());
                 });
 
                 lightingQueue.clear();
+                materialEvalQueue.clear();
 
                 ++depth;
                 std::swap(thisRoundRayQueue, nextRoundRayQueue);
