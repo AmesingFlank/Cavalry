@@ -4,6 +4,7 @@
 #include <cmath>
 #include <unordered_map>
 #include <vector>
+#include <functional>
 #include "GpuCommons.h"
 
 using TimeType = std::chrono::time_point<std::chrono::system_clock>;
@@ -58,6 +59,23 @@ public:
         }
         event.finished = true;
         event.end = now();
+    }
+
+    void timedRun(const std::string& eventName,std::function<void()> f,bool checkCudaError = true) {
+        if (checkCudaError) {
+            CHECK_IF_CUDA_ERROR((std::string("before ") + eventName).c_str());
+        }
+        
+        start(eventName);
+
+        f();
+
+        if (checkCudaError) {
+            CHECK_CUDA_ERROR((std::string("after ") + eventName).c_str());
+        }
+        
+        Timer::getInstance().stop(eventName);
+        Timer::getInstance().printStatistics(eventName);
     }
 
     void printStatistics() const {

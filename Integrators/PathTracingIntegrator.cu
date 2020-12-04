@@ -28,6 +28,9 @@ namespace PathTracing {
         bool shouldIncludeEmission;
     };
 
+    
+
+
     __global__
     void writeIndicesAndKeys(int N, LightingTask* tasks, int* indices, unsigned char* keys) {
         int index = blockIdx.x * blockDim.x + threadIdx.x;
@@ -269,41 +272,32 @@ namespace PathTracing {
 
                 thisRoundRayQueue->setNumBlocksThreads(numBlocks, numThreads);
                 std::string intersectSceneEvent = std::string("intersectScene ") + std::to_string(round)+" " + std::to_string(depth);
-                CHECK_IF_CUDA_ERROR("before intersect scene");
-                Timer::getInstance().start(intersectSceneEvent);
-                intersectScene << <numBlocks, numThreads >> >
-                    (sceneHandle,samplerObject.getCopyForKernel(), lightingQueue.getCopyForKernel(), thisRoundRayQueue->getCopyForKernel(),nextRoundRayQueue->getCopyForKernel(),depth);
-                CHECK_CUDA_ERROR("after intersectScene");
-                Timer::getInstance().stop(intersectSceneEvent);
-                Timer::getInstance().printStatistics(intersectSceneEvent);
+                Timer::getInstance().timedRun(intersectSceneEvent, [&](){
+                    intersectScene << <numBlocks, numThreads >> >
+                        (sceneHandle, samplerObject.getCopyForKernel(), lightingQueue.getCopyForKernel(), thisRoundRayQueue->getCopyForKernel(), nextRoundRayQueue->getCopyForKernel(), depth);
+                });
+                
 
                 thisRoundRayQueue->clear();
 
 
                 std::string sortEvent = std::string("sort queue ") + std::to_string(round) + " " + std::to_string(depth);
-                Timer::getInstance().start(sortEvent);
-                sortLightingQueue(lightingQueue, sortedLightingQueue, samplerObject);
-                Timer::getInstance().stop(sortEvent);
-                Timer::getInstance().printStatistics(sortEvent);
+                Timer::getInstance().timedRun(sortEvent, [&](){
+                    sortLightingQueue(lightingQueue, sortedLightingQueue, samplerObject);
+                });
 
 
                 sortedLightingQueue.setNumBlocksThreads(numBlocks, numThreads);
                 std::string genNextRayEvent = std::string("genNext ") + std::to_string(round) + " " + std::to_string(depth);
-                CHECK_IF_CUDA_ERROR("before genNext");
-                Timer::getInstance().start(genNextRayEvent);
-                genNextRay<< <numBlocks, numThreads >> > (sceneHandle, samplerObject.getCopyForKernel(), sortedLightingQueue.getCopyForKernel(), nextRoundRayQueue->getCopyForKernel(), depth);
-                CHECK_CUDA_ERROR("after gen next round lighting");
-                Timer::getInstance().stop(genNextRayEvent);
-                Timer::getInstance().printStatistics(genNextRayEvent);
+                Timer::getInstance().timedRun(genNextRayEvent, [&]() {
+                    genNextRay << <numBlocks, numThreads >> > (sceneHandle, samplerObject.getCopyForKernel(), sortedLightingQueue.getCopyForKernel(), nextRoundRayQueue->getCopyForKernel(), depth);
+                });
 
                 sortedLightingQueue.setNumBlocksThreads(numBlocks, numThreads);
                 std::string lightingEvent = std::string("lighting ") + std::to_string(round) + " " + std::to_string(depth);
-                CHECK_IF_CUDA_ERROR("before lighting");
-                Timer::getInstance().start(lightingEvent);
-                computeLighting << <numBlocks, numThreads >> > (sceneHandle, samplerObject.getCopyForKernel(), sortedLightingQueue.getCopyForKernel(), depth);
-                CHECK_CUDA_ERROR("after lighting");
-                Timer::getInstance().stop(lightingEvent);
-                Timer::getInstance().printStatistics(lightingEvent);
+                Timer::getInstance().timedRun(lightingEvent, [&]() {
+                    computeLighting << <numBlocks, numThreads >> > (sceneHandle, samplerObject.getCopyForKernel(), sortedLightingQueue.getCopyForKernel(), depth);
+                });
 
                 lightingQueue.clear();
 
