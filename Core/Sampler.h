@@ -32,5 +32,7 @@ public:
 	virtual float4 rand4() = 0;
 
 	virtual GpuArray<CameraSample> genAllCameraSamples(const CameraObject& camera, FilmObject& film) = 0;
+
+	virtual void reorderStates(GpuArray<int>& taskIndices){};
 };
 

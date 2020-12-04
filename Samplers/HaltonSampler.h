@@ -33,6 +33,7 @@ public:
     int samplesPerPixel;
     int threadsCount;
     GpuArray<HaltonState> states;
+    GpuArray<HaltonState> statesCopy; // used for reordering
     GpuArray<int> primes;
 
     __host__
@@ -97,5 +98,7 @@ public:
 
 
     virtual GpuArray<CameraSample> genAllCameraSamples(const CameraObject& camera, FilmObject& film)  override;
+
+    virtual void reorderStates(GpuArray<int>& taskIndices) override;
 
 };

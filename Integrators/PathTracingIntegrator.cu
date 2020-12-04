@@ -51,7 +51,7 @@ namespace PathTracing {
     }
 
 
-    void sortLightingQueue(TaskQueue<LightingTask>& queue, TaskQueue<LightingTask>& sortedQueue) {
+    void sortLightingQueue(TaskQueue<LightingTask>& queue, TaskQueue<LightingTask>& sortedQueue, SamplerObject& sampler) {
         int N = queue.count();
         if (N == 0) return;
 
@@ -70,6 +70,8 @@ namespace PathTracing {
 
         applySortedIndices << <numBlocks, numThreads >> > (N, queue.tasks.data, sortedQueue.tasks.data,indices.data);
         CHECK_CUDA_ERROR("apply sort");
+
+        sampler.reorderStates(indices);
 
     }
 
@@ -280,19 +282,10 @@ namespace PathTracing {
 
                 std::string sortEvent = std::string("sort queue ") + std::to_string(round) + " " + std::to_string(depth);
                 Timer::getInstance().start(sortEvent);
-                sortLightingQueue(lightingQueue, sortedLightingQueue);
+                sortLightingQueue(lightingQueue, sortedLightingQueue, samplerObject);
                 Timer::getInstance().stop(sortEvent);
                 Timer::getInstance().printStatistics(sortEvent);
 
-                
-                sortedLightingQueue.setNumBlocksThreads(numBlocks, numThreads);
-                std::string lightingEvent = std::string("lighting ") + std::to_string(round) + " " + std::to_string(depth);
-                CHECK_IF_CUDA_ERROR("before lighting");
-                Timer::getInstance().start(lightingEvent);
-                computeLighting << <numBlocks, numThreads >> > (sceneHandle, samplerObject.getCopyForKernel(), sortedLightingQueue.getCopyForKernel(),depth);
-                CHECK_CUDA_ERROR("after lighting");
-                Timer::getInstance().stop(lightingEvent);
-                Timer::getInstance().printStatistics(lightingEvent);
 
                 sortedLightingQueue.setNumBlocksThreads(numBlocks, numThreads);
                 std::string genNextRayEvent = std::string("genNext ") + std::to_string(round) + " " + std::to_string(depth);
@@ -302,6 +295,15 @@ namespace PathTracing {
                 CHECK_CUDA_ERROR("after gen next round lighting");
                 Timer::getInstance().stop(genNextRayEvent);
                 Timer::getInstance().printStatistics(genNextRayEvent);
+
+                sortedLightingQueue.setNumBlocksThreads(numBlocks, numThreads);
+                std::string lightingEvent = std::string("lighting ") + std::to_string(round) + " " + std::to_string(depth);
+                CHECK_IF_CUDA_ERROR("before lighting");
+                Timer::getInstance().start(lightingEvent);
+                computeLighting << <numBlocks, numThreads >> > (sceneHandle, samplerObject.getCopyForKernel(), sortedLightingQueue.getCopyForKernel(), depth);
+                CHECK_CUDA_ERROR("after lighting");
+                Timer::getInstance().stop(lightingEvent);
+                Timer::getInstance().printStatistics(lightingEvent);
 
                 lightingQueue.clear();
 
