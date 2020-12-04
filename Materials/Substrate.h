@@ -46,6 +46,11 @@ public:
         return FresnelBlendBSDF(diffuse,specularColor,distribution);
     }
 
+    __device__
+    virtual MaterialType getType() const  override {
+        return MaterialType::Substrate;
+    };
+
 
     static SubstrateMaterial createFromParams(const Parameters& params, const std::unordered_map<std::string, Texture2D>& textures) {
         Spectrum diffuse = make_float3(0.5,0.5,0.5);

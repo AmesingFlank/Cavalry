@@ -7,6 +7,10 @@
 #include "Color.h"
 #include "IntersectionResult.h"
 
+enum class MaterialType: unsigned char {
+    Matte = 0, Mirror = 1, Substrate = 2, Metal = 3
+};
+
 class Material{
 public:
 
@@ -22,4 +26,7 @@ public:
     }
 
     virtual void prepareForRender() {};
+
+    __device__
+    virtual MaterialType getType() const  = 0;
 };

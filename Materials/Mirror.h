@@ -26,6 +26,11 @@ public:
         return MirrorBSDF(reflectivity);
     }
 
+    __device__
+    virtual MaterialType getType() const  override {
+        return MaterialType::Mirror;
+    };
+
 
     static MirrorMaterial createFromParams(const Parameters& params, const std::unordered_map<std::string, Texture2D>& textures) {
         

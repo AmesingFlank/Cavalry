@@ -62,6 +62,20 @@ public:
 		return visit(visitor);
 	}
 
+	__device__
+	MaterialType getType() const  {
+		auto visitor = [&](auto& arg) -> MaterialType {
+			using T = typename std::remove_reference<decltype(arg)>::type;
+			if constexpr (std::is_base_of<Material, typename T>::value) {
+				return arg.T::getType();
+			}
+			else {
+				SIGNAL_VARIANT_ERROR;
+			}
+		};
+		return visit(visitor);
+	};
+
 	static MaterialObject createFromObjectDefinition(const ObjectDefinition& def,const std::unordered_map<std::string,Texture2D>& textures) {
 		std::string materialType = def.params.getString("type");
 		if (materialType == "matte") {

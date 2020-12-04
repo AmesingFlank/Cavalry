@@ -36,6 +36,10 @@ public:
         return LambertianBSDF(thisColor);
     }
 
+    __device__
+    virtual MaterialType getType() const  override {
+        return MaterialType::Matte;
+    };
 
     static MatteMaterial createFromParams(const Parameters& params, const std::unordered_map<std::string, Texture2D>& textures) {
         Spectrum color = make_float3(1, 1, 1);

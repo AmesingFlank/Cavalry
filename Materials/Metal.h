@@ -30,6 +30,11 @@ public:
         return MicrofacetBSDF(make_float3(1,1,1),distribution,fresnel);
     }
 
+    __device__
+    virtual MaterialType getType() const  override {
+        return MaterialType::Metal;
+    };
+
 
     static MetalMaterial createFromParams(const Parameters& params, const std::unordered_map<std::string, Texture2D>& textures) {
         Spectrum copperF0 = make_float3(0.955,0.638,0.538);
