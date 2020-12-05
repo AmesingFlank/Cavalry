@@ -51,21 +51,23 @@ namespace PathTracing {
     }
 
     __global__
-    void applySortedIndices(int N, LightingTask* tasks, LightingTask* sortedTasks, int* sortedIndices) {
+    void applySortedIndices(int N,int* sortedIndices, LightingTask* lightTasks, LightingTask* lightTasksCopy, RayTask* rayTasks, RayTask* rayTasksCopy) {
         int index = blockIdx.x * blockDim.x + threadIdx.x;
         if (index >= N) {
             return;
         }
-        sortedTasks[index] = tasks[sortedIndices[index]];
+        lightTasksCopy[index] = lightTasks[sortedIndices[index]];
+        rayTasksCopy[index] = rayTasks[sortedIndices[index]];
         
     }
 
-
-    void sortLightingQueue(TaskQueue<LightingTask>& queue, TaskQueue<LightingTask>& sortedQueue, SamplerObject& sampler) {
-        int N = queue.count();
+    // sort the lighting queue using material as key.
+    // in addition to lighting tasks, we also sort the sampler states and nextRay tasks, so that the low-descrepancy properties of the sampler isn't ruined.
+    void sortLightingQueue(TaskQueue<LightingTask>& lightQueue, TaskQueue<LightingTask>& lightQueueCopy, TaskQueue<RayTask>& rayQueue, TaskQueue<RayTask>& rayQueueCopy, SamplerObject& sampler) {
+        int N = lightQueue.count();
         if (N == 0) return;
 
-        sortedQueue.setCount(N);
+        lightQueueCopy.setCount(N);
 
         GpuArray<int> indices(N);
         GpuArray<unsigned char> keys(N);
@@ -73,15 +75,18 @@ namespace PathTracing {
         int numBlocks, numThreads;
         setNumBlocksThreads(N, numBlocks, numThreads);
 
-        writeIndicesAndKeys << <numBlocks, numThreads >> > (N, queue.tasks.data, indices.data, keys.data);
+        writeIndicesAndKeys << <numBlocks, numThreads >> > (N, lightQueue.tasks.data, indices.data, keys.data);
         CHECK_CUDA_ERROR("write indices and keys");
 
         thrust::sort_by_key(thrust::device, keys.data, keys.data+N, indices.data);
 
-        applySortedIndices << <numBlocks, numThreads >> > (N, queue.tasks.data, sortedQueue.tasks.data,indices.data);
+        applySortedIndices << <numBlocks, numThreads >> > (N,indices.data, lightQueue.tasks.data, lightQueueCopy.tasks.data, rayQueue.tasks.data, rayQueueCopy.tasks.data);
         CHECK_CUDA_ERROR("apply sort");
+        std::swap(lightQueue.tasks.data, lightQueueCopy.tasks.data);
+        std::swap(rayQueue.tasks.data, rayQueueCopy.tasks.data);
 
         sampler.reorderStates(indices);
+
 
     }
 
@@ -284,7 +289,7 @@ namespace PathTracing {
             TaskQueue<RayTask>* nextRoundRayQueue = &rayQueue1;
 
             TaskQueue<LightingTask> lightingQueue(samplesCount);
-            TaskQueue<LightingTask> sortedLightingQueue(samplesCount);
+            TaskQueue<LightingTask> lightingQueueCopy(samplesCount);
 
             TaskQueue<MaterialEvalTask> materialEvalQueue(samplesCount);
 
@@ -312,20 +317,20 @@ namespace PathTracing {
 
                 std::string sortEvent = std::string("sort queue ") + std::to_string(round) + " " + std::to_string(depth);
                 Timer::getInstance().timedRun(sortEvent, [&](){
-                    sortLightingQueue(lightingQueue, sortedLightingQueue, samplerObject);
+                    sortLightingQueue(lightingQueue, lightingQueueCopy, *nextRoundRayQueue,*thisRoundRayQueue,samplerObject);
                 });
 
 
-                sortedLightingQueue.setNumBlocksThreads(numBlocks, numThreads);
+                lightingQueue.setNumBlocksThreads(numBlocks, numThreads);
                 std::string genNextRayEvent = std::string("genNext ") + std::to_string(round) + " " + std::to_string(depth);
                 Timer::getInstance().timedRun(genNextRayEvent, [&]() {
-                    genNextRay << <numBlocks, numThreads >> > (sceneHandle, samplerObject.getCopyForKernel(), sortedLightingQueue.getCopyForKernel(), nextRoundRayQueue->getCopyForKernel(), depth);
+                    genNextRay << <numBlocks, numThreads >> > (sceneHandle, samplerObject.getCopyForKernel(), lightingQueue.getCopyForKernel(), nextRoundRayQueue->getCopyForKernel(), depth);
                 });
 
-                sortedLightingQueue.setNumBlocksThreads(numBlocks, numThreads);
+                lightingQueue.setNumBlocksThreads(numBlocks, numThreads);
                 std::string lightingEvent = std::string("lighting ") + std::to_string(round) + " " + std::to_string(depth);
                 Timer::getInstance().timedRun(lightingEvent, [&]() {
-                    computeLighting << <numBlocks, numThreads >> > (sceneHandle, samplerObject.getCopyForKernel(), sortedLightingQueue.getCopyForKernel(),materialEvalQueue.getCopyForKernel(), depth);
+                    computeLighting << <numBlocks, numThreads >> > (sceneHandle, samplerObject.getCopyForKernel(), lightingQueue.getCopyForKernel(),materialEvalQueue.getCopyForKernel(), depth);
                 });
 
                 materialEvalQueue.setNumBlocksThreads(numBlocks, numThreads);
