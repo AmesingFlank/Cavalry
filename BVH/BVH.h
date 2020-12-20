@@ -26,13 +26,11 @@ struct BVH{
 
     // BVH Traversal Optimisation: go to nearest child first, and don't expand a node if minDist < result.distance
 
-    __host__ __device__
+    __device__
     bool intersect(IntersectionResult& result, const Ray& ray, Triangle* primitives) const {
-#ifdef __CUDA_ARCH__
+
         BVHNode* nodesData = nodes.gpu.data;
-#else
-        BVHNode* nodesData = nodes.cpu.data;
-#endif
+
         result.intersected = false;
         result.distance = FLT_MAX;
 
@@ -99,13 +97,9 @@ struct BVH{
 #undef PUSH
     }
 
-    __host__ __device__
+    __device__
     bool testVisibility(const VisibilityTest& test, Triangle* primitives) const {
-#ifdef __CUDA_ARCH__
         BVHNode* nodesData = nodes.gpu.data;
-#else
-        BVHNode* nodesData = nodes.cpu.data;
-#endif
 
         Ray ray = test.ray;
 

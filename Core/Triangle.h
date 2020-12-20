@@ -145,13 +145,13 @@ public:
         float3 v1 = positionsData[thisIndices.y];
         float3 v2 = positionsData[thisIndices.z];
 
-        float minX = min(v0.x,min(v1.x,v2.x));
-        float minY = min(v0.y,min(v1.y,v2.y));
-        float minZ = min(v0.z,min(v1.z,v2.z));
+        float minX = fminf(v0.x,fminf(v1.x,v2.x));
+        float minY = fminf(v0.y,fminf(v1.y,v2.y));
+        float minZ = fminf(v0.z,fminf(v1.z,v2.z));
 
-        float maxX = max(v0.x,max(v1.x,v2.x));
-        float maxY = max(v0.y,max(v1.y,v2.y));
-        float maxZ = max(v0.z,max(v1.z,v2.z));
+        float maxX = fmaxf(v0.x,fmaxf(v1.x,v2.x));
+        float maxY = fmaxf(v0.y,fmaxf(v1.y,v2.y));
+        float maxZ = fmaxf(v0.z,fmaxf(v1.z,v2.z));
 
         return {make_float3(minX,minY,minZ),make_float3(maxX,maxY,maxZ)};
 

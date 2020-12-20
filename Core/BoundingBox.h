@@ -1,7 +1,10 @@
 #pragma once
 
 #include "../Utils/MathsCommons.h"
+#include "../Utils/GpuCommons.h"
 #include "Ray.h"
+
+
 
 struct AABB{
     float3 minimum;
@@ -24,8 +27,8 @@ struct AABB{
             minimum.z <= point.z && point.z <= maximum.z;
     }
 
-    __host__ __device__
-    bool intersect(const Ray& r,float& minDist){
+    __device__
+    bool intersect_naive(const Ray& r,float& minDist){
         
 		float3 tmin = (minimum - r.origin) / r.direction;
 		float3 tmax = (maximum - r.origin) / r.direction;
@@ -33,21 +36,38 @@ struct AABB{
 		float3 realMin = fminf(tmin, tmax);
 		float3 realMax = fmaxf(tmin, tmax);
 
-		float minmax = min(min(realMax.x, realMax.y), realMax.z);
-		float maxmin = max(max(realMin.x, realMin.y), realMin.z);
+		float minmax = fminf(fminf(realMax.x, realMax.y), realMax.z);
+		float maxmin = fmaxf(fmaxf(realMin.x, realMin.y), realMin.z);
 
-        if (contains(r.origin)) {
-            minDist = 0;
-            return true;
-        }
-
-        
-		if (minmax >= maxmin) { 
+        if (maxmin <= minmax) {
             //float epsilon = 0.001f; // required to prevent self intersection
-            if (maxmin > 0) {
-                minDist = maxmin;
+            if(minmax > 0){
+                minDist = fmaxf(0.f,maxmin);
                 return true;
             }
+            // otherwise maxmin<0 and minmax<0, so no intersection
+        }
+        minDist = -1; // indicates no-intersection
+		return false;
+    }
+
+    // optimization technqiue : Understanding the Efficiency of Ray Traversal on GPUs – Kepler and Fermi Addendum
+    __device__
+    bool intersect(const Ray& r,float& minDist){
+        
+		float3 tmin = (minimum - r.origin) / r.direction;
+		float3 tmax = (maximum - r.origin) / r.direction;
+
+		float maxmin = fmin_fmax(tmin.x,tmax.x,fmin_fmax(tmin.y,tmax.y, fminf(tmin.z,tmax.z)));
+        float minmax = fmax_fmin(tmin.x,tmax.x,fmax_fmin(tmin.y,tmax.y, fmaxf(tmin.z,tmax.z)));
+
+		if (maxmin <= minmax) {
+            //float epsilon = 0.001f; // required to prevent self intersection
+            if(minmax > 0){
+                minDist = fmaxf(0.f,maxmin);
+                return true;
+            }
+            // otherwise maxmin<0 and minmax<0, so no intersection
         }
         minDist = -1; // indicates no-intersection
 		return false;
@@ -58,14 +78,14 @@ __host__ __device__
 inline AABB unionBoxes(const AABB& a,const AABB& b){
     return {
         make_float3(
-            min(a.minimum.x,b.minimum.x),
-            min(a.minimum.y,b.minimum.y),
-            min(a.minimum.z,b.minimum.z)
+            fminf(a.minimum.x,b.minimum.x),
+            fminf(a.minimum.y,b.minimum.y),
+            fminf(a.minimum.z,b.minimum.z)
         ),
         make_float3(
-            max(a.maximum.x,b.maximum.x),
-            max(a.maximum.y,b.maximum.y),
-            max(a.maximum.z,b.maximum.z)
+            fmaxf(a.maximum.x,b.maximum.x),
+            fmaxf(a.maximum.y,b.maximum.y),
+            fmaxf(a.maximum.z,b.maximum.z)
         )
     };
 };

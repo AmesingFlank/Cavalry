@@ -69,7 +69,7 @@ struct SceneHandle{
 #endif
     }
 
-    __host__ __device__
+    __device__
     bool testVisibility(const VisibilityTest& test) const{
 #if USE_BVH
         return bvh.testVisibility(test, triangles);
