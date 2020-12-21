@@ -8,9 +8,21 @@
 #include <thrust/sort.h>
 #include <thrust/execution_policy.h>
 
-// do not change
-#define MORTEN_BITS_PER_DIMENSION 10
 
+#define USE_LONG_MORTON 0
+
+
+#if USE_LONG_MORTON
+
+#define MORTEN_BITS_PER_DIMENSION 21
+using MortonType = unsigned long;
+
+#else
+
+#define MORTEN_BITS_PER_DIMENSION 10
+using MortonType = unsigned int;
+
+#endif
 
 
 BVH::BVH():primitivesCount(0),nodes(0,true){
@@ -42,29 +54,37 @@ void fillLeafBoundingBoxes(Triangle* primitivesDevice, int primitivesCount,BVHLe
 
 
 __host__ __device__
-unsigned int shiftMorton(unsigned int x){
-    if (x >= (1 << MORTEN_BITS_PER_DIMENSION)) 
-        x= 1 << MORTEN_BITS_PER_DIMENSION-1;
+MortonType shiftMorton(MortonType x){
+    if (x >= (1 << MORTEN_BITS_PER_DIMENSION))
+        x = 1 << MORTEN_BITS_PER_DIMENSION - 1;
+#if USE_LONG_MORTON
+    x = (x | x << 32) & 0x1f00000000ffff;
+    x = (x | x << 16) & 0x1f0000ff0000ff;
+    x = (x | x << 8) & 0x100f00f00f00f00f;
+    x = (x | x << 4) & 0x10c30c30c30c30c3;
+    x = (x | x << 2) & 0x1249249249249249;
+#else
     x = (x | (x << 16)) & 0b00000011000000000000000011111111;
     x = (x | (x << 8)) & 0b00000011000000001111000000001111;
     x = (x | (x << 4)) & 0b00000011000011000011000011000011;
     x = (x | (x << 2)) & 0b00001001001001001001001001001001;
+#endif
     return x;
 };
 
 
 __global__
-void fillLeafMortonCodes(Triangle* primitivesDevice, int primitivesCount,BVHLeafNode* leaves,unsigned int* leafMortonCodes,AABB sceneBounds ){
+void fillLeafMortonCodes(Triangle* primitivesDevice, int primitivesCount,BVHLeafNode* leaves,MortonType* leafMortonCodes,AABB sceneBounds ){
     int index = blockIdx.x * blockDim.x + threadIdx.x;
     if(index >= primitivesCount) return;
 
     float3 centroid = (leaves[index].box.centroid() - sceneBounds.centroid()) / sceneBounds.extent();
-    int factor = 1<<MORTEN_BITS_PER_DIMENSION;
-    unsigned int x = centroid.x * factor;
-    unsigned int y = centroid.y * factor;
-    unsigned int z = centroid.z * factor;
+    MortonType factor = (MortonType)(1L << MORTEN_BITS_PER_DIMENSION);
+    MortonType x = centroid.x * factor;
+    MortonType y = centroid.y * factor;
+    MortonType z = centroid.z * factor;
 
-    unsigned int code = (shiftMorton(x) << 2) | (shiftMorton(y) << 1) | shiftMorton(z);
+    MortonType code = (shiftMorton(x) << 2) | (shiftMorton(y) << 1) | shiftMorton(z);
     leafMortonCodes[index] = code;
 }
 
@@ -76,9 +96,9 @@ int sign(int val) {
 }
 
 __host__ __device__
-int commonPrefixLength(unsigned int* mortonCodes, unsigned int i,unsigned int j){
-    unsigned int mortonI = mortonCodes[i];
-    unsigned int mortonJ = mortonCodes[j];
+int commonPrefixLength(MortonType* mortonCodes, unsigned int i,unsigned int j){
+    MortonType mortonI = mortonCodes[i];
+    MortonType mortonJ = mortonCodes[j];
     if(mortonI != mortonJ){
         for(int bit = 3*MORTEN_BITS_PER_DIMENSION-1; bit>=0;--bit){
             if(((mortonI >> bit) & 1) != ((mortonJ >> bit) & 1)){
@@ -97,7 +117,7 @@ int commonPrefixLength(unsigned int* mortonCodes, unsigned int i,unsigned int j)
 }
 
 __global__ 
-void buildRadixTree(int leavesCount,unsigned int* leafMortonCodes, BVHLeafNode* leaves, BVHInternalNode* internals){
+void buildRadixTree(int leavesCount, MortonType* leafMortonCodes, BVHLeafNode* leaves, BVHInternalNode* internals){
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if(i >= leavesCount - 1) return;
 
@@ -279,11 +299,11 @@ BVH BVH::build(Triangle* primitivesDevice, int primitivesCount,const AABB& scene
     fillLeafBoundingBoxes <<< numBlocksPrimitives, numThreadsPrimitives >>> (primitivesDevice,primitivesCount, leaves.data);
     CHECK_IF_CUDA_ERROR("fill leaf bounding boxes");
 
-    GpuArray<unsigned int> leafMortonCodes(primitivesCount);
+    GpuArray<MortonType> leafMortonCodes(primitivesCount);
     fillLeafMortonCodes<<< numBlocksPrimitives, numThreadsPrimitives >>> (primitivesDevice,primitivesCount,leaves.data, leafMortonCodes.data,sceneBounds);
     CHECK_IF_CUDA_ERROR("fill leaf morton");
 
-    thrust::stable_sort_by_key(thrust::device, leafMortonCodes.data,leafMortonCodes.data+primitivesCount,leaves.data,thrust::less<unsigned int>());
+    thrust::stable_sort_by_key(thrust::device, leafMortonCodes.data,leafMortonCodes.data+primitivesCount,leaves.data,thrust::less<MortonType>());
 
     GpuArray<BVHInternalNode> internals(primitivesCount-1);
 
