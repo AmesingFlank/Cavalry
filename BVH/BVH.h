@@ -3,15 +3,7 @@
 #include "../Utils/Array.h"
 #include "../Core/Triangle.h"
 #include "../Core/VisibilityTest.h"
-
-struct BVHNode
-{
-    AABB box;
-    int primitiveIndex;
-    int leftChild;
-    int rightChild;
-    bool isLeaf;
-};
+#include "BVHNode.h"
 
 struct BVH{
     int primitivesCount;
@@ -31,12 +23,14 @@ struct BVH{
 
         BVHNode* nodesData = nodes.gpu.data;
 
+        float3 invDir = make_float3(1, 1, 1) / ray.direction;
+
         result.intersected = false;
         result.distance = FLT_MAX;
 
         BVHNode& root = nodesData[0];
         float minDistanceToRoot;
-        if (!root.box.intersect(ray,minDistanceToRoot)) {
+        if (!root.box.intersect(ray,minDistanceToRoot,invDir)) {
             return false;
         }
 
@@ -44,6 +38,7 @@ struct BVH{
         int stack[64];
         stack[0] = 0;
         int top = 0;
+
 
 #define PUSH(x) ++top; stack[top]=x;
 
@@ -57,9 +52,11 @@ struct BVH{
             if(node.isLeaf){
                 IntersectionResult thisResult;
 
-                if(primitives[node.primitiveIndex].intersect(thisResult,ray)){
-                    if(result.intersected == false || thisResult.distance < result.distance){
-                        result = thisResult;
+                for(int index = node.primitiveIndexBegin; index <= node.primitiveIndexEnd;++index){
+                    if(primitives[index].intersect(thisResult,ray)){
+                        if(result.intersected == false || thisResult.distance < result.distance){
+                            result = thisResult;
+                        }
                     }
                 }
             }
@@ -67,8 +64,8 @@ struct BVH{
                 float minDistLeft;
                 float minDistRight;
 
-                nodesData[node.leftChild].box.intersect(ray,minDistLeft);
-                nodesData[node.rightChild].box.intersect(ray, minDistRight);
+                nodesData[node.leftChild].box.intersect(ray,minDistLeft,invDir);
+                nodesData[node.rightChild].box.intersect(ray, minDistRight,invDir);
 
                 if (minDistLeft >= 0 &&  minDistLeft < result.distance && minDistRight >= 0 && minDistRight < result.distance) {
                     if (minDistLeft > minDistRight) {
@@ -102,10 +99,11 @@ struct BVH{
         BVHNode* nodesData = nodes.gpu.data;
 
         Ray ray = test.ray;
+        float3 invDir = make_float3(1,1,1) / ray.direction;
 
         BVHNode& root = nodesData[0];
         float minDistanceToRoot;
-        if (!root.box.intersect(ray, minDistanceToRoot)) {
+        if (!root.box.intersect(ray, minDistanceToRoot,invDir)) {
             SIGNAL_ERROR("shadow ray doesn't intersect root node");
         }
 
@@ -124,29 +122,32 @@ struct BVH{
             
 
             if (node.isLeaf) {
-                Triangle* prim = &primitives[node.primitiveIndex];
-                if (prim->mesh->getID() == test.sourceGeometry || prim->mesh->getID() == test.targetGeometry) {
-                    continue;
-                }
-                IntersectionResult thisResult;
-                if (prim->intersect(thisResult, ray)) {
-                    if (test.useDistanceLimit) {
-                        if (thisResult.distance < test.distanceLimit) {
+                for (int index = node.primitiveIndexBegin; index <= node.primitiveIndexEnd; ++index) {
+                    Triangle* prim = &primitives[index];
+                    if (prim->mesh->getID() == test.sourceGeometry || prim->mesh->getID() == test.targetGeometry) {
+                        continue;
+                    }
+                    IntersectionResult thisResult;
+                    if (prim->intersect(thisResult, ray)) {
+                        if (test.useDistanceLimit) {
+                            if (thisResult.distance < test.distanceLimit) {
+                                return false;
+                            }
+                        }
+                        else {
                             return false;
                         }
                     }
-                    else {
-                        return false;
-                    }
                 }
+                
             }
             else {
                 
                 float minDistLeft;
                 float minDistRight;
 
-                nodesData[node.leftChild].box.intersect(ray, minDistLeft);
-                nodesData[node.rightChild].box.intersect(ray, minDistRight);
+                nodesData[node.leftChild].box.intersect(ray, minDistLeft,invDir);
+                nodesData[node.rightChild].box.intersect(ray, minDistRight,invDir);
 
                 if (minDistLeft >= 0 && minDistRight >= 0 ) {
                     if (minDistLeft > minDistRight) {

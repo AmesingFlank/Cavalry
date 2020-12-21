@@ -1,6 +1,6 @@
 #include "../Utils/GpuCommons.h"
 #include "../Utils/MathsCommons.h"
-
+#include "Optimization.h"
 
 #include "BVH.h"
 #include <thrust/functional.h>
@@ -27,21 +27,6 @@ BVH BVH::getCopyForKernel(){
     return copy;
 }
 
-struct BVHLeafNode{
-    AABB box;
-    int primitiveIndex;
-    int parent;
-};
-
-struct BVHInternalNode{
-    AABB box;
-    int leftChild;
-    int rightChild;
-    int parent;
-    unsigned int visited;
-    bool leftChildIsLeaf;
-    bool rightChildIsLeaf;
-};
 
 
 __global__
@@ -50,7 +35,9 @@ void fillLeafBoundingBoxes(Triangle* primitivesDevice, int primitivesCount,BVHLe
     if(index >= primitivesCount) return;
 
     nodes[index].box = primitivesDevice[index].getBoundingBox();
-    nodes[index].primitiveIndex = index;
+    nodes[index].primitiveIndexBegin = index;
+    nodes[index].primitiveIndexEnd = index;
+    nodes[index].surfaceArea = nodes[index].box.computeSurfaceArea();
 }
 
 
@@ -231,6 +218,7 @@ void computeBounds(int leavesCount, BVHLeafNode* leaves, BVHInternalNode* intern
         }
 
         node.box = unionBoxes(boundsLeft,boundsRight);
+        node.surfaceArea = node.box.computeSurfaceArea();
         if (curr == 0) {
             break;
         } 
@@ -242,8 +230,11 @@ void computeBounds(int leavesCount, BVHLeafNode* leaves, BVHInternalNode* intern
 __device__
 void copyLeafNode(BVHLeafNode& leaf, BVHNode& node){
     node.box = leaf.box;
+    node.parent = leaf.parent;
     node.isLeaf = true;
-    node.primitiveIndex = leaf.primitiveIndex;
+    node.primitiveIndexBegin = leaf.primitiveIndexBegin;
+    node.primitiveIndexEnd = leaf.primitiveIndexEnd;
+    node.surfaceArea = leaf.surfaceArea;
 }
 
 __global__ 
@@ -254,6 +245,8 @@ void mergeNodesArray(int leavesCount, BVHLeafNode* leaves, BVHInternalNode* inte
     nodes[i].isLeaf = false;
 
     nodes[i].box = internals[i].box;
+    nodes[i].surfaceArea = internals[i].surfaceArea;
+    nodes[i].parent = internals[i].parent;
 
     if(internals[i].leftChildIsLeaf){
         int leftChildLeaf = leavesCount - 1 + internals[i].leftChild;
@@ -304,7 +297,9 @@ BVH BVH::build(Triangle* primitivesDevice, int primitivesCount,const AABB& scene
 
 
     mergeNodesArray <<< numBlocksInternals, numThreadsInternals >>> (primitivesCount,leaves.data,internals.data, bvh.nodes.gpu.data);
-    CHECK_IF_CUDA_ERROR("merge nodes array");    
+    CHECK_IF_CUDA_ERROR("merge nodes array");  
+    
+    //collapseNodes(primitivesCount,bvh.nodes.gpu);
 
     return bvh;
 }

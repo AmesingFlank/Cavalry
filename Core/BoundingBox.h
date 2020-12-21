@@ -28,7 +28,7 @@ struct AABB{
     }
 
     __device__
-    bool intersect_naive(const Ray& r,float& minDist){
+    bool intersect_naive(const Ray& r,float& minDist,const float3& invDir){
         
 		float3 tmin = (minimum - r.origin) / r.direction;
 		float3 tmax = (maximum - r.origin) / r.direction;
@@ -53,10 +53,10 @@ struct AABB{
 
     // optimization technqiue : Understanding the Efficiency of Ray Traversal on GPUs – Kepler and Fermi Addendum
     __device__
-    bool intersect(const Ray& r,float& minDist){
+    bool intersect(const Ray& r,float& minDist,const float3& invDir){
         
-		float3 tmin = (minimum - r.origin) / r.direction;
-		float3 tmax = (maximum - r.origin) / r.direction;
+		float3 tmin = (minimum - r.origin) * invDir;
+		float3 tmax = (maximum - r.origin) * invDir;
 
 		float maxmin = fmin_fmax(tmin.x,tmax.x,fmin_fmax(tmin.y,tmax.y, fminf(tmin.z,tmax.z)));
         float minmax = fmax_fmin(tmin.x,tmax.x,fmax_fmin(tmin.y,tmax.y, fmaxf(tmin.z,tmax.z)));
@@ -71,6 +71,12 @@ struct AABB{
         }
         minDist = -1; // indicates no-intersection
 		return false;
+    }
+
+    __device__
+    float computeSurfaceArea(){
+        float3 extent = maximum - minimum;
+        return 2.f*(extent.x * extent.y + extent.y*extent.z + extent.x*extent.z);
     }
 };
 
