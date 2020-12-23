@@ -4,13 +4,19 @@
 #include "../Utils/Utils.h"
 #include <vector>
 #include <cooperative_groups.h>
+
+
+// this file implements the paper: Fast Parallel Construction of High-Quality Bounding Volume Hierarchies, by karras and aila
+
+
 using namespace cooperative_groups;
 
 namespace cg = cooperative_groups;
 
-using byte = unsigned char;
+// we consider treelets of 7 leaves; Each subset of leaves is represented using a byte;
+using byte = char;
 
-std::vector<unsigned int> scheduleCPU = {
+__device__ byte optimizationSchedule[160] = {
 
 /*round 1*/
 0b00011,0b00110,0b00101,0b01001,0b01010,0b01100,0b10001,0b10010,0b10100,0b11000, /*2bits; greatest at 5 or less*/ 
@@ -46,7 +52,7 @@ void optimizeTreelet(BVHRestructureNode* nodes, int root, thread_block_tile<32> 
     int myNode = -1;
     if (laneIndex == 0) myNode = root;
 
-    // Treelet formation
+    // Treelet formation. Repeated expand the node with the greatest area, and assign it to two vacant threads.
     int currentTreeletSize = 1;
     bool expandedMe = false;
     while (currentTreeletSize < 2 * 7 - 1) {
@@ -101,7 +107,7 @@ void optimizeTreelet(BVHRestructureNode* nodes, int root, thread_block_tile<32> 
     }
     // treelet formation is now done;
 
-    // compute AABB area of all subsets
+    // compute AABB area of all subsets. There're 128 subsets, each thread handles 4 of them.
     AABB mySubsetBox;
     bool hasInitialBox = false;
     for (int bitPos = 0; bitPos < 5; ++bitPos) {
@@ -138,6 +144,7 @@ void optimizeTreelet(BVHRestructureNode* nodes, int root, thread_block_tile<32> 
         else {
             area[subset] = 0;
         }
+        optimalCost[subset] = -1; // initialize cost as -1 for all;
     }
 
     float areaError = area[127] - nodes[root].surfaceArea;
@@ -145,13 +152,235 @@ void optimizeTreelet(BVHRestructureNode* nodes, int root, thread_block_tile<32> 
         SIGNAL_ERROR("wrong! big area error\n");
     }
     // done computing areas for eachsubset
-
+    
 
     // Initialize costs of individual leaves
     for (int i = 0; i < 7; ++i) {
         byte singleton = 1 << i;
         optimalCost[singleton] = nodes[leaves[i]].cost;
     }
+
+    // Optimize every subset of leaves of size 2 to 5 (inclusive), using a pre-defined hard-coded schedule.
+    // The schedule ensures that the values needed in each round are fully available in previosu rounds; 
+    // The schedule assigns a different subset for each thread in the warp, and the thread enumerates all partitions
+    for (int round = 0; round < 5; ++round) {
+        byte subset = optimizationSchedule[round * 32 + laneIndex];
+        if (subset != 0) {
+
+            float bestCost = -1;
+            byte bestPartition = 0;
+
+            // the following lines iterates through all possible partitions of the subset
+            // bit operation insanity; check paper for details
+            byte subsetClearedFirstBit = (subset - 1) & subset;
+
+            byte partition = (0 - subsetClearedFirstBit) & subset;
+            do {
+                float partitionCost = optimalCost[partition];
+
+                byte remaining = subset ^ partition;
+                float remainingCost = optimalCost[remaining];
+
+                float thisTotalCost = partitionCost + remainingCost;
+                if (partitionCost < 0) {
+                    SIGNAL_ERROR("wrong ! cost = %f < 0,  %d", partitionCost,(int)partition);
+                }
+                if (remainingCost < 0) {
+                    SIGNAL_ERROR("wrong ! cost = %f < 0,  %d", remainingCost, (int)remaining);
+                }
+                if (bestCost == -1 || thisTotalCost < bestCost) {
+                    bestPartition = partition;
+                    bestCost = thisTotalCost;
+                }
+                partition = (partition - subsetClearedFirstBit) & subset;
+
+            } while (partition != 0);
+
+            optimalCost[subset] = bestCost;
+            optimalPartition[subset] = bestPartition;
+        }
+    }
+
+// a small helper function
+#define consequtiveBits(n) ((1<<n)-1)
+
+    // there're 7 subsets with 6 bits, and each one of these has 31 partitions
+    // each thread works on a single partition, and the results are collected via parallel reduction;
+    for (int emptyBit = 0; emptyBit < 7; ++emptyBit) {
+        byte subset = 0b1111111 ^ (1 << emptyBit);
+
+        // partition always has the highest bit unset
+        // to understand how this works, use an example: consider when emptyBit = 3, and thus subset = 1110111, 
+        byte partition =
+            (laneIndex & consequtiveBits(emptyBit))
+            |
+            ((laneIndex << 1) & ( consequtiveBits(5-emptyBit) << (emptyBit + 1)))
+            ;
+        
+        
+        float totalCost = -1;
+        if (partition != 0) {
+            byte remaining = subset ^ partition;
+            float partitionCost = optimalCost[partition];
+            float remainingCost = optimalCost[remaining];
+
+            if (partitionCost < 0) {
+                SIGNAL_ERROR("in 6bits, wrong! cost = %f < 0,  %d\n", partitionCost, (int)partition);
+            }
+            if (remainingCost < 0) {
+                SIGNAL_ERROR("in 6bits, wrong! cost = %f < 0,  %d\n", remainingCost, (int)remaining);
+            }
+            totalCost = partitionCost + remainingCost;
+        }
+
+        //parallel min reduction
+        for (int d = 16; d >= 1; d = d>>1) {
+            int otherLane = min(laneIndex+d, 31);
+            float otherCost = thisWarp.shfl(totalCost, otherLane);
+            byte otherPartition = (byte)(thisWarp.shfl(partition, otherLane));
+            
+            if (totalCost == -1 || otherCost < totalCost) {
+                totalCost = otherCost;
+                partition = otherPartition;
+            }
+        }
+        if (laneIndex == 0) {
+            optimalCost[subset] = totalCost;
+            optimalPartition[subset] = partition;
+        }
+    }
+
+
+    // there're 1 subset with 7 bits, and it has 63 partitions
+    // each thread works on 2 partitions, and the results are collected via parallel reduction;
+    {
+        byte subset = 0b1111111;
+        byte partition = laneIndex;
+        float totalCost = -1;
+
+        if (partition != 0) {
+            byte remaining = subset ^ partition;
+            float partitionCost = optimalCost[partition];
+            float remainingCost = optimalCost[remaining];
+
+            if (partitionCost < 0) {
+                SIGNAL_ERROR("in 7bits, wrong! cost = %f < 0,  %d\n", partitionCost, (int)partition);
+            }
+            if (remainingCost < 0) {
+                SIGNAL_ERROR("in 7bits, wrong! cost = %f < 0,  %d\n", remainingCost, (int)remaining);
+            }
+            totalCost = partitionCost + remainingCost;
+        }
+        
+
+        {
+            byte otherPartition = laneIndex | (1 << 5);
+            byte otherRemaining = subset ^ otherPartition;
+            float otherPartitionCost = optimalCost[otherPartition];
+            float otherRemainingCost = optimalCost[otherRemaining];
+
+            if (otherPartitionCost < 0) {
+                SIGNAL_ERROR("in 7bits, wrong! cost = %f < 0,  %d\n", otherPartitionCost, (int)otherPartition);
+            }
+            if (otherRemainingCost < 0) {
+                SIGNAL_ERROR("in 7bits, wrong! cost = %f < 0,  %d\n", otherRemainingCost, (int)otherRemaining);
+            }
+            float otherTotalCost = otherPartitionCost + otherRemainingCost;
+            if (totalCost == -1 || otherTotalCost < totalCost) {
+                totalCost = otherTotalCost;
+                partition = otherPartition;
+            }
+        }
+
+        //parallel min reduction
+        for (int d = 16; d >= 1; d = d >> 1) {
+            int otherLane = min(laneIndex+d, 31);
+            float otherCost = thisWarp.shfl(totalCost, otherLane);
+            byte otherPartition = (byte)(thisWarp.shfl(partition, otherLane));
+            if (totalCost == -1 || otherCost < totalCost) {
+                totalCost = otherCost;
+                partition = otherPartition;
+            }
+        }
+        if (laneIndex == 0) {
+            optimalCost[subset] = totalCost;
+            optimalPartition[subset] = partition;
+        }
+    }
+    // optimal partitions found
+    return;
+
+    // reconstruct tree. Re-use the original nodes
+    byte mySubset = -1;
+    if (laneIndex == 0) {
+        mySubset = 0b1111111;
+    }
+    int reconstructedSize = 1;
+    bool expandedInReconstruction = false;
+    int myParent = -1;
+    if (laneIndex == 0) {
+        myParent = nodes[myNode].parent;
+    }
+    while (reconstructedSize < 2 * 7 - 1) {
+        int subsetToExpand = -1;
+        int subsetToExpandLane = -1;
+        if (mySubset != -1) {
+            int proposal = -1;
+            if (!expandedInReconstruction) {
+                proposal = mySubset;
+            }
+
+            for (int i = 0; i < currentTreeletSize; ++i) {
+                float thatArea = thisWarp.shfl(proposal, i);
+                if (proposal != -1 && subsetToExpand == -1) {
+                    subsetToExpand = proposal;
+                    subsetToExpandLane = i;
+                }
+            }
+
+            if (subsetToExpand == mySubset) {
+                expandedInReconstruction = true;
+            }
+        }
+
+        int parentNode = thisWarp.shfl(myNode, subsetToExpandLane);
+
+        if (laneIndex == currentTreeletSize) {
+            myParent = parentNode;
+            mySubset = optimalPartition[subsetToExpand];
+            nodes[myParent].leftChild = myNode;
+        }
+        if (laneIndex == currentTreeletSize + 1) {
+            myParent = parentNode;
+            mySubset = subsetToExpand ^ optimalPartition[subsetToExpand];
+            nodes[myParent].rightChild = myNode;
+        }
+        reconstructedSize += 2;
+    }
+    if (myNode != -1) {
+        nodes[myNode].parent = myParent;
+        nodes[myNode].isLeaf = !expandedInReconstruction;
+        if (nodes[myNode].isLeaf) {
+            int leafID = 0;
+            byte temp = mySubset;
+            while ((temp & 1) == 0) {
+                ++leafID;
+                temp = temp >> 1;
+            }
+            int originalLeaf = leaves[leafID];
+            nodes[myNode].primitiveIndexBegin = nodes[originalLeaf].primitiveIndexBegin;
+            nodes[myNode].primitiveIndexEnd = nodes[originalLeaf].primitiveIndexEnd;
+            nodes[myNode].box = nodes[originalLeaf].box;
+        }
+    }
+    for (int i = 0; i < 7; ++i) {
+        if (myNode != -1 && !nodes[myNode].isLeaf) {
+            int left = nodes[myNode].leftChild;
+            int right = nodes[myNode].rightChild;
+            nodes[myNode].box = unionBoxes(nodes[left].box, nodes[right].box);
+        }
+    }
+
 
 }
 
