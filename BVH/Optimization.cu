@@ -8,6 +8,7 @@ using namespace cooperative_groups;
 
 namespace cg = cooperative_groups;
 
+using byte = unsigned char;
 
 std::vector<unsigned int> scheduleCPU = {
 
@@ -39,7 +40,7 @@ std::vector<unsigned int> scheduleCPU = {
 };
 
 __device__ 
-void optimizeTreelet(BVHNode* nodes, int root, thread_block_tile<32> thisWarp,int warpIndex){
+void optimizeTreelet(BVHNode* nodes, int root, thread_block_tile<32> thisWarp, int warpIndex, float* area, float* optimalCost, byte* optimalPartition) {
     int laneIndex = thisWarp.thread_rank();// ==index % 32;
 
     int myNode = -1;
@@ -48,10 +49,10 @@ void optimizeTreelet(BVHNode* nodes, int root, thread_block_tile<32> thisWarp,in
     // Treelet formation
     int currentTreeletSize = 1;
     bool expandedMe = false;
-    while (currentTreeletSize < 2*7 - 1) {
+    while (currentTreeletSize < 2 * 7 - 1) {
 
         int nodeToExpand;
-        
+
         if (myNode != -1) {
             float myArea = nodes[myNode].surfaceArea;
 
@@ -59,7 +60,7 @@ void optimizeTreelet(BVHNode* nodes, int root, thread_block_tile<32> thisWarp,in
 
             int maxLane = 0;
             float maxArea = -1;
-            for (int i = 0; i < currentTreeletSize;++i) {
+            for (int i = 0; i < currentTreeletSize; ++i) {
                 float thatArea = thisWarp.shfl(myArea, i);
                 if (thatArea > maxArea) {
                     maxArea = thatArea;
@@ -79,7 +80,7 @@ void optimizeTreelet(BVHNode* nodes, int root, thread_block_tile<32> thisWarp,in
         if (laneIndex == currentTreeletSize) {
             myNode = nodes[nodeToExpand].leftChild;
         }
-        if (laneIndex == currentTreeletSize+1) {
+        if (laneIndex == currentTreeletSize + 1) {
             myNode = nodes[nodeToExpand].rightChild;
         }
         currentTreeletSize += 2;
@@ -89,20 +90,66 @@ void optimizeTreelet(BVHNode* nodes, int root, thread_block_tile<32> thisWarp,in
 
     for (int i = 0; i < 2 * 7 - 1; ++i) {
         if (thisWarp.shfl((int)(!expandedMe), i)) {
-            leaves[currentLeafID] = i;
+            int leafNode = thisWarp.shfl(myNode, i);
+            leaves[currentLeafID] = leafNode;
             ++currentLeafID;
         }
     }
 
-    if (currentLeafID != 7 && laneIndex==0) {
+    if (currentLeafID != 7 && laneIndex == 0) {
         SIGNAL_ERROR("wrong! %d %d\n", currentLeafID, warpIndex);
+    }
+    // treelet formation is now done;
+
+    // compute AABB area of all subsets
+    AABB mySubsetBox;
+    bool hasInitialBox = false;
+    for (int bitPos = 0; bitPos < 5; ++bitPos) {
+        bool thisLeafIsSelected = 1 & (laneIndex >> bitPos);
+        if (thisLeafIsSelected) {
+            if (!hasInitialBox) {
+                mySubsetBox = nodes[leaves[bitPos]].box;
+                hasInitialBox = true;
+            }
+            else {
+                mySubsetBox = unionBoxes(mySubsetBox, nodes[leaves[bitPos]].box);
+            }
+        }
+    }
+    for (int i = 0; i < 4; ++i) {
+        byte subset = (i << 5) | laneIndex;
+        AABB thisBox = mySubsetBox;
+        bool thisBoxIsNonEmpty = hasInitialBox;
+        for (int bitPos = 5; bitPos < 7; ++bitPos) {
+            bool thisLeafIsSelected = 1 & (subset >> bitPos);
+            if (thisLeafIsSelected) {
+                if (!thisBoxIsNonEmpty) {
+                    thisBox = nodes[leaves[bitPos]].box;
+                    thisBoxIsNonEmpty = true;
+                }
+                else {
+                    thisBox = unionBoxes(thisBox, nodes[leaves[bitPos]].box);
+                }
+            }
+        }
+        if (thisBoxIsNonEmpty) {
+            area[subset] = thisBox.computeSurfaceArea();
+        }
+        else {
+            area[subset] = 0;
+        }
+    }
+
+    float areaError = area[127] - nodes[root].surfaceArea;
+    if (abs(areaError) > -1e-9 && laneIndex==0) {
+        SIGNAL_ERROR("wrong! %d %f %f %f\n", root, area[127], nodes[root].surfaceArea, areaError);
     }
 
 
-
-
-
 }
+
+//1152 = 4*128 (for area) + 4*128(for cost) + 1*128(for partition)
+#define BYTES_NEEDED_PER_WARP 1152  
 
 __global__
 void optimizeBVHImpl(int nodesCount, BVHNode* nodes, unsigned int* visited){
@@ -129,10 +176,16 @@ void optimizeBVHImpl(int nodesCount, BVHNode* nodes, unsigned int* visited){
         curr = parent;
     }
 
+    extern __shared__ byte sharedMem[];
+    int warpIndexInBlock = threadIdx.x / 32;
+    byte* thisWarpSharedMem = sharedMem + warpIndexInBlock * BYTES_NEEDED_PER_WARP;
+    float* area = (float*)thisWarpSharedMem;
+    float* optimalCost = (float*)(thisWarpSharedMem + 128 * 4);
+    byte* optimalPartition = (byte*)(thisWarpSharedMem + 128 * 4 + 128*4);
 
     while (true) {
+        optimizeTreelet(nodes, curr, thisWarp,warpIndex,area,optimalCost,optimalPartition);
         if (curr == 0) break;
-        optimizeTreelet(nodes, curr, thisWarp,warpIndex);
 
         int parent = nodes[curr].parent;
         bool getParent = false;
@@ -155,6 +208,6 @@ void optimizeBVH(int primitivesCount,GpuArray<BVHNode>& nodes){
 
     GpuArray<unsigned int> visited(nodesCount,false);
 
-    optimizeBVHImpl <<< numBlocks,numThreads>>> (nodesCount,nodes.data,visited.data);
+    optimizeBVHImpl <<< numBlocks,numThreads, BYTES_NEEDED_PER_WARP * numThreads / 32 >>> (nodesCount,nodes.data,visited.data);
     CHECK_IF_CUDA_ERROR("optimize bvh");
 }
