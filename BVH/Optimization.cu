@@ -40,7 +40,7 @@ std::vector<unsigned int> scheduleCPU = {
 };
 
 __device__ 
-void optimizeTreelet(BVHNode* nodes, int root, thread_block_tile<32> thisWarp, int warpIndex, float* area, float* optimalCost, byte* optimalPartition) {
+void optimizeTreelet(BVHRestructureNode* nodes, int root, thread_block_tile<32> thisWarp, int warpIndex, float* area, float* optimalCost, byte* optimalPartition) {
     int laneIndex = thisWarp.thread_rank();// ==index % 32;
 
     int myNode = -1;
@@ -97,7 +97,7 @@ void optimizeTreelet(BVHNode* nodes, int root, thread_block_tile<32> thisWarp, i
     }
 
     if (currentLeafID != 7 && laneIndex == 0) {
-        SIGNAL_ERROR("wrong! %d %d\n", currentLeafID, warpIndex);
+        SIGNAL_ERROR("wrong! should have 7 leaves\n");
     }
     // treelet formation is now done;
 
@@ -141,10 +141,17 @@ void optimizeTreelet(BVHNode* nodes, int root, thread_block_tile<32> thisWarp, i
     }
 
     float areaError = area[127] - nodes[root].surfaceArea;
-    if (abs(areaError) > -1e-9 && laneIndex==0) {
-        SIGNAL_ERROR("wrong! %d %f %f %f\n", root, area[127], nodes[root].surfaceArea, areaError);
+    if (abs(areaError) > 1e-3 && laneIndex==0) {
+        SIGNAL_ERROR("wrong! big area error\n");
     }
+    // done computing areas for eachsubset
 
+
+    // Initialize costs of individual leaves
+    for (int i = 0; i < 7; ++i) {
+        byte singleton = 1 << i;
+
+    }
 
 }
 
@@ -152,7 +159,7 @@ void optimizeTreelet(BVHNode* nodes, int root, thread_block_tile<32> thisWarp, i
 #define BYTES_NEEDED_PER_WARP 1152  
 
 __global__
-void optimizeBVHImpl(int nodesCount, BVHNode* nodes, unsigned int* visited){
+void optimizeBVHImpl(int nodesCount, BVHRestructureNode* nodes, unsigned int* visited){
     int index = blockIdx.x * blockDim.x + threadIdx.x;
     if(index >= nodesCount*32) return;
 
@@ -199,7 +206,7 @@ void optimizeBVHImpl(int nodesCount, BVHNode* nodes, unsigned int* visited){
     
 }
 
-void optimizeBVH(int primitivesCount,GpuArray<BVHNode>& nodes){
+void optimizeBVH(int primitivesCount,GpuArray<BVHRestructureNode>& nodes){
     int nodesCount = nodes.N;
     int threadsNeeded = nodesCount * 32;
 

@@ -12,9 +12,7 @@ struct BVHNode
     int primitiveIndexEnd;
     int leftChild;
     int rightChild;
-    int parent;
     bool isLeaf;
-    float surfaceArea;
 
     __device__
     int primitivesCount(){
@@ -24,7 +22,7 @@ struct BVHNode
 
 
 
-// Nodes for Building
+// Nodes for Building and Optmization
 struct BVHLeafNode{
     AABB box;
     int primitiveIndexBegin;
@@ -42,4 +40,20 @@ struct BVHInternalNode{
     bool leftChildIsLeaf;
     bool rightChildIsLeaf;
     float surfaceArea;
+};
+
+struct BVHRestructureNode {
+    AABB box;
+    int primitiveIndexBegin;
+    int primitiveIndexEnd;
+    int leftChild;
+    int rightChild;
+    int parent;
+    bool isLeaf;
+    float surfaceArea;
+
+    __device__
+        int primitivesCount() {
+        return primitiveIndexEnd - primitiveIndexBegin + 1;
+    }
 };

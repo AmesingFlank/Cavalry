@@ -1,5 +1,6 @@
 #include "../Utils/GpuCommons.h"
 #include "../Utils/MathsCommons.h"
+#include "../Utils/Utils.h"
 #include "Optimization.h"
 
 #include "BVH.h"
@@ -248,7 +249,7 @@ void computeBounds(int leavesCount, BVHLeafNode* leaves, BVHInternalNode* intern
 }
 
 __device__
-void copyLeafNode(BVHLeafNode& leaf, BVHNode& node){
+void copyLeafNode(BVHLeafNode& leaf, BVHRestructureNode& node){
     node.box = leaf.box;
     node.parent = leaf.parent;
     node.isLeaf = true;
@@ -258,7 +259,7 @@ void copyLeafNode(BVHLeafNode& leaf, BVHNode& node){
 }
 
 __global__ 
-void mergeNodesArray(int leavesCount, BVHLeafNode* leaves, BVHInternalNode* internals, BVHNode* nodes){
+void mergeNodesArray(int leavesCount, BVHLeafNode* leaves, BVHInternalNode* internals, BVHRestructureNode* nodes){
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if(i >= leavesCount-1) return;
 
@@ -285,6 +286,19 @@ void mergeNodesArray(int leavesCount, BVHLeafNode* leaves, BVHInternalNode* inte
     else{
         nodes[i].rightChild = internals[i].rightChild;
     }
+}
+
+__global__
+void copyToBVH(int nodesCount,BVHRestructureNode* tempNodes,BVHNode* nodes) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i >= nodesCount) return;
+
+    nodes[i].box = tempNodes[i].box;
+    nodes[i].leftChild = tempNodes[i].leftChild;
+    nodes[i].rightChild = tempNodes[i].rightChild;
+    nodes[i].isLeaf = tempNodes[i].isLeaf;
+    nodes[i].primitiveIndexBegin = tempNodes[i].primitiveIndexBegin;
+    nodes[i].primitiveIndexEnd = tempNodes[i].primitiveIndexEnd;
 }
 
 BVH BVH::build(Triangle* primitivesDevice, int primitivesCount,const AABB& sceneBounds){
@@ -316,10 +330,17 @@ BVH BVH::build(Triangle* primitivesDevice, int primitivesCount,const AABB& scene
     CHECK_IF_CUDA_ERROR("compute bounds");
 
 
-    mergeNodesArray <<< numBlocksInternals, numThreadsInternals >>> (primitivesCount,leaves.data,internals.data, bvh.nodes.gpu.data);
+    GpuArray<BVHRestructureNode> restructureNodes(bvh.nodes.gpu.N,false);
+
+    mergeNodesArray <<< numBlocksInternals, numThreadsInternals >>> (primitivesCount,leaves.data,internals.data, restructureNodes.data);
     CHECK_IF_CUDA_ERROR("merge nodes array");  
     
-    optimizeBVH(primitivesCount,bvh.nodes.gpu);
+    optimizeBVH(primitivesCount, restructureNodes);
+
+    int numBlocksAllNodes, numThreadsAllNodes;
+    setNumBlocksThreads(bvh.nodes.gpu.N, numBlocksAllNodes, numThreadsAllNodes);
+    copyToBVH <<< numBlocksAllNodes, numThreadsAllNodes >> > (bvh.nodes.gpu.N, restructureNodes.data,bvh.nodes.gpu.data);
+    CHECK_CUDA_ERROR("final copy");
 
     return bvh;
 }
