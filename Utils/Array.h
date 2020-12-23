@@ -172,6 +172,26 @@ struct GpuArray{
         copy.data = data;
         return copy;
     }
+
+    __host__ __device__
+    T get(int i) {
+#ifdef __CUDA_ARCH__
+        return data[i];
+#else
+        T result;
+        HANDLE_ERROR(cudaMemcpy(&result,data+i,sizeof(T), cudaMemcpyDeviceToHost));
+        return result;
+#endif
+    }
+
+    __host__ __device__
+    void set(int i, T value) {
+#ifdef __CUDA_ARCH__
+        data[i]=value;
+#else
+        HANDLE_ERROR(cudaMemcpy(data + i,&value, sizeof(T), cudaMemcpyHostToDevice));
+#endif
+    }
 };
 
 template <typename T>

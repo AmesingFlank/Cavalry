@@ -3,6 +3,11 @@
 #include "../Utils/Array.h"
 #include "../Utils/Utils.h"
 #include <vector>
+#include <cooperative_groups.h>
+using namespace cooperative_groups;
+
+namespace cg = cooperative_groups;
+
 
 std::vector<unsigned int> scheduleCPU = {
 
@@ -33,56 +38,123 @@ std::vector<unsigned int> scheduleCPU = {
 
 };
 
-__global__
-void tryCollapseNodes(int nodesCount, BVHNode* nodes, unsigned int* visited){
+__device__ 
+void optimizeTreelet(BVHNode* nodes, int root, thread_block_tile<32> thisWarp,int warpIndex){
+    int laneIndex = thisWarp.thread_rank();// ==index % 32;
 
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if(i >= nodesCount) return;
+    int myNode = -1;
+    if (laneIndex == 0) myNode = root;
 
-    if(!nodes[i].isLeaf){
-        return;
-    }
-    int curr = nodes[i].parent;
+    // Treelet formation
+    int currentTreeletSize = 1;
+    bool expandedMe = false;
+    while (currentTreeletSize < 2*7 - 1) {
 
-    while(atomicInc(&(visited[curr]),2) > 0){
-        BVHNode& node = nodes[curr];
-      
-        BVHNode& leftChild = nodes[node.leftChild];
-        BVHNode& rightChild = nodes[node.rightChild];
+        int nodeToExpand;
+        
+        if (myNode != -1) {
+            float myArea = nodes[myNode].surfaceArea;
 
-        if(leftChild.isLeaf && rightChild.isLeaf){
-            constexpr float primCost = 1;
-            constexpr float boxCost = 0.0006;
-            
-            float originalCost =
-                (leftChild.primitivesCount() * primCost * leftChild.surfaceArea/node.surfaceArea) + boxCost+
-                (rightChild.primitivesCount() * primCost * rightChild.surfaceArea / node.surfaceArea) + boxCost;
+            if (nodes[myNode].isLeaf || expandedMe) myArea = -1; // if myNode is a leaf, it shouldn't be considered for expansion.
 
-            float temp = leftChild.surfaceArea / node.surfaceArea + rightChild.surfaceArea / node.surfaceArea;
-            
-            float collapsedCost = (leftChild.primitivesCount() + rightChild.primitivesCount()) * primCost;
-
-            if(collapsedCost <  originalCost ){
-                node.isLeaf = true;
-                node.primitiveIndexBegin = leftChild.primitiveIndexBegin;
-                node.primitiveIndexEnd = rightChild.primitiveIndexEnd;
-                continue;
+            int maxLane = 0;
+            float maxArea = -1;
+            for (int i = 0; i < currentTreeletSize;++i) {
+                float thatArea = thisWarp.shfl(myArea, i);
+                if (thatArea > maxArea) {
+                    maxArea = thatArea;
+                    maxLane = i;
+                }
             }
+
+            if (maxLane == laneIndex) {
+                expandedMe = true;
+                nodeToExpand = myNode;
+            }
+            nodeToExpand = thisWarp.shfl(nodeToExpand, maxLane);
         }
-        return;
+
+        nodeToExpand = thisWarp.shfl(nodeToExpand, 0);
+
+        if (laneIndex == currentTreeletSize) {
+            myNode = nodes[nodeToExpand].leftChild;
+        }
+        if (laneIndex == currentTreeletSize+1) {
+            myNode = nodes[nodeToExpand].rightChild;
+        }
+        currentTreeletSize += 2;
     }
+    int currentLeafID = 0;
+    int leaves[7] = { -1,-1,-1,-1,-1,-1,-1 };
+
+    for (int i = 0; i < 2 * 7 - 1; ++i) {
+        if (thisWarp.shfl((int)(!expandedMe), i)) {
+            leaves[currentLeafID] = i;
+            ++currentLeafID;
+        }
+    }
+
+    if (currentLeafID != 7 && laneIndex==0) {
+        SIGNAL_ERROR("wrong! %d %d\n", currentLeafID, warpIndex);
+    }
+
+
+
+
+
 }
 
+__global__
+void optimizeBVHImpl(int nodesCount, BVHNode* nodes, unsigned int* visited){
+    int index = blockIdx.x * blockDim.x + threadIdx.x;
+    if(index >= nodesCount*32) return;
 
-void collapseNodes(int primitivesCount,GpuArray<BVHNode>& nodes){
-    GpuArray<unsigned int> visited(nodes.N);
-    int numBlocks,numThreads;
-    setNumBlocksThreads(nodes.N, numBlocks, numThreads);
-    tryCollapseNodes<<<numBlocks,numThreads>>> (nodes.N,nodes.data,visited.data);
-    CHECK_IF_CUDA_ERROR("collapseNodes");
+    thread_block_tile<32> thisWarp = tiled_partition<32>(this_thread_block());
+
+    int warpIndex = index / 32;
+    int laneIndex = thisWarp.thread_rank();// ==index % 32;
+
+    int curr = warpIndex;
+
+    if (!nodes[curr].isLeaf) return;
+    // skip over bottom 3 levels, so that there're at least 7 leaves
+    for (int i = 0; i < 3; ++i) {
+        int parent = nodes[curr].parent;
+        bool getParent = false;
+        if (laneIndex == 0) {
+            getParent = atomicInc(&visited[parent], 2) == 1;
+        }
+        getParent = thisWarp.shfl(getParent, 0);
+        if (!getParent) return;
+        curr = parent;
+    }
+
+
+    while (true) {
+        if (curr == 0) break;
+        optimizeTreelet(nodes, curr, thisWarp,warpIndex);
+
+        int parent = nodes[curr].parent;
+        bool getParent = false;
+        if (laneIndex == 0) {
+            getParent = atomicInc(&visited[parent], 2) == 1;
+        }
+        getParent = thisWarp.shfl(getParent, 0);
+        if (!getParent) return;
+        curr = parent;
+    }
+    
 }
-
 
 void optimizeBVH(int primitivesCount,GpuArray<BVHNode>& nodes){
+    int nodesCount = nodes.N;
+    int threadsNeeded = nodesCount * 32;
 
+    int numBlocks,numThreads;
+    setNumBlocksThreads(threadsNeeded,numBlocks,numThreads);
+
+    GpuArray<unsigned int> visited(nodesCount,false);
+
+    optimizeBVHImpl <<< numBlocks,numThreads>>> (nodesCount,nodes.data,visited.data);
+    CHECK_IF_CUDA_ERROR("optimize bvh");
 }

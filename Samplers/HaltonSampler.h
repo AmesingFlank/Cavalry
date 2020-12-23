@@ -11,11 +11,11 @@
 
 struct HaltonState{
     int dimension;
-    int index;
+    unsigned long index;
 };
 
 __device__
-inline float runHalton(int base, int i){
+inline float runHalton(int base, unsigned long i){
     float r = 0;
     float f = 1;
     while(i>0){
@@ -26,15 +26,18 @@ inline float runHalton(int base, int i){
     return r;
 }
 
+#define HALTON_INDEX_SKIP 409UL
 
 class HaltonSampler: public Sampler{
 public:
 
     int samplesPerPixel;
     int threadsCount;
+
     GpuArray<HaltonState> states;
     GpuArray<HaltonState> statesCopy; // used for reordering
     GpuArray<int> primes;
+    GpuArray<int> maxDimension;
 
     __host__
     HaltonSampler(int samplesPerPixel_);
@@ -53,7 +56,7 @@ public:
 
         HaltonState& myState = states.data[index];
         myState.dimension = 0;
-        myState.index += 409;
+        myState.index += HALTON_INDEX_SKIP * threadsCount;
     }
 
     __device__
@@ -71,13 +74,11 @@ public:
 
 
         HaltonState& myState = states.data[index];
-        int i = myState.index;
-
 
         int base = primes.data[myState.dimension];
         myState.dimension += 1;
 
-        return runHalton(base,i);
+        return runHalton(base, myState.index);
 
     };
 
@@ -101,4 +102,5 @@ public:
 
     virtual void reorderStates(GpuArray<int>& taskIndices) override;
 
+    virtual void syncDimension() override;
 };

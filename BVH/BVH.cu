@@ -319,7 +319,7 @@ BVH BVH::build(Triangle* primitivesDevice, int primitivesCount,const AABB& scene
     mergeNodesArray <<< numBlocksInternals, numThreadsInternals >>> (primitivesCount,leaves.data,internals.data, bvh.nodes.gpu.data);
     CHECK_IF_CUDA_ERROR("merge nodes array");  
     
-    //collapseNodes(primitivesCount,bvh.nodes.gpu);
+    optimizeBVH(primitivesCount,bvh.nodes.gpu);
 
     return bvh;
 }

@@ -99,7 +99,6 @@ namespace PathTracing {
             return;
         }
 
-
         RayTask& myTask = thisRoundRayQueue.tasks.data[index];
         Spectrum* result = myTask.result;
         Spectrum multiplier = myTask.multiplier;
@@ -327,17 +326,21 @@ namespace PathTracing {
                     genNextRay << <numBlocks, numThreads >> > (sceneHandle, samplerObject.getCopyForKernel(), lightingQueue.getCopyForKernel(), nextRoundRayQueue->getCopyForKernel(), depth);
                 });
 
+
                 lightingQueue.setNumBlocksThreads(numBlocks, numThreads);
                 std::string lightingEvent = std::string("lighting ") + std::to_string(round) + " " + std::to_string(depth);
                 Timer::getInstance().timedRun(lightingEvent, [&]() {
                     computeLighting << <numBlocks, numThreads >> > (sceneHandle, samplerObject.getCopyForKernel(), lightingQueue.getCopyForKernel(),materialEvalQueue.getCopyForKernel(), depth);
                 });
 
+
                 materialEvalQueue.setNumBlocksThreads(numBlocks, numThreads);
                 std::string materialEvent = std::string("material ") + std::to_string(round) + " " + std::to_string(depth);
                 Timer::getInstance().timedRun(materialEvent, [&]() {
                     evalMaterial << <numBlocks, numThreads >> > (materialEvalQueue.getCopyForKernel());
                 });
+
+                sampler->syncDimension();
 
                 lightingQueue.clear();
                 materialEvalQueue.clear();

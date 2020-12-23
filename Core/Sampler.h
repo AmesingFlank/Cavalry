@@ -34,5 +34,7 @@ public:
 	virtual GpuArray<CameraSample> genAllCameraSamples(const CameraObject& camera, FilmObject& film) = 0;
 
 	virtual void reorderStates(GpuArray<int>& taskIndices){};
+
+	virtual void syncDimension() {};
 };
 
