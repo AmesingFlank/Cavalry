@@ -8,7 +8,7 @@
 #include <thrust/reduce.h>
 #include <thrust/sort.h>
 #include <thrust/execution_policy.h>
-
+#include "SAH.h"
 
 #define USE_LONG_MORTON 1
 
@@ -51,6 +51,7 @@ void fillLeafBoundingBoxes(Triangle* primitivesDevice, int primitivesCount,BVHLe
     nodes[index].primitiveIndexBegin = index;
     nodes[index].primitiveIndexEnd = index;
     nodes[index].surfaceArea = nodes[index].box.computeSurfaceArea();
+    nodes[index].cost = leafCost(nodes[index].surfaceArea,nodes[index].primitivesCount());
 }
 
 
@@ -223,23 +224,31 @@ void computeBounds(int leavesCount, BVHLeafNode* leaves, BVHInternalNode* intern
         //printf("doing bounds for node %d\n", curr);
         AABB boundsLeft;
         AABB boundsRight;
+        float costLeft;
+        float costRight;
         BVHInternalNode& node = internals[curr];
         if(node.leftChildIsLeaf){
             boundsLeft = leaves[node.leftChild].box;
+            costLeft = leaves[node.leftChild].cost;
         }
         else{
             boundsLeft = internals[node.leftChild].box;
+            costLeft = internals[node.leftChild].cost;
         }
 
         if(node.rightChildIsLeaf){
             boundsRight = leaves[node.rightChild].box;
+            costRight = leaves[node.rightChild].cost;
         }
         else{
             boundsRight = internals[node.rightChild].box;
+            costRight = internals[node.rightChild].cost;
         }
 
         node.box = unionBoxes(boundsLeft,boundsRight);
         node.surfaceArea = node.box.computeSurfaceArea();
+        node.cost = internalCost(node.surfaceArea,costLeft,costRight);
+
         if (curr == 0) {
             break;
         } 
@@ -255,7 +264,9 @@ void copyLeafNode(BVHLeafNode& leaf, BVHRestructureNode& node){
     node.isLeaf = true;
     node.primitiveIndexBegin = leaf.primitiveIndexBegin;
     node.primitiveIndexEnd = leaf.primitiveIndexEnd;
+
     node.surfaceArea = leaf.surfaceArea;
+    node.cost = leaf.cost;
 }
 
 __global__ 
@@ -264,10 +275,11 @@ void mergeNodesArray(int leavesCount, BVHLeafNode* leaves, BVHInternalNode* inte
     if(i >= leavesCount-1) return;
 
     nodes[i].isLeaf = false;
+    nodes[i].parent = internals[i].parent;
 
     nodes[i].box = internals[i].box;
     nodes[i].surfaceArea = internals[i].surfaceArea;
-    nodes[i].parent = internals[i].parent;
+    nodes[i].cost = internals[i].cost;
 
     if(internals[i].leftChildIsLeaf){
         int leftChildLeaf = leavesCount - 1 + internals[i].leftChild;

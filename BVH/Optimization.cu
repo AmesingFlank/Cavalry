@@ -150,7 +150,7 @@ void optimizeTreelet(BVHRestructureNode* nodes, int root, thread_block_tile<32> 
     // Initialize costs of individual leaves
     for (int i = 0; i < 7; ++i) {
         byte singleton = 1 << i;
-
+        optimalCost[singleton] = nodes[leaves[i]].cost;
     }
 
 }
@@ -218,3 +218,4 @@ void optimizeBVH(int primitivesCount,GpuArray<BVHRestructureNode>& nodes){
     optimizeBVHImpl <<< numBlocks,numThreads, BYTES_NEEDED_PER_WARP * numThreads / 32 >>> (nodesCount,nodes.data,visited.data);
     CHECK_IF_CUDA_ERROR("optimize bvh");
 }
+
