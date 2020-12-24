@@ -78,13 +78,24 @@ void optimizeTreelet(BVHRestructureNode* nodes, int root, thread_block_tile<32> 
             }
 
             if (maxLane == laneIndex) {
-                expandedMe = true;
-                nodeToExpand = myNode;
+                if (expandedMe || nodes[myNode].isLeaf) {
+                    // expandedMe is already true, this means that there aren't enough nodes in this Treelet;
+                    // so we set nodeToExpand to -1, broadcast this information to all nodes in the warp, and return;
+                    nodeToExpand = -1;
+                }
+                else {
+                    expandedMe = true;
+                    nodeToExpand = myNode;
+                }
             }
             nodeToExpand = thisWarp.shfl(nodeToExpand, maxLane);
         }
 
+        // broardCast nodeToExpand to nodes who didn't participate in its selection
         nodeToExpand = thisWarp.shfl(nodeToExpand, 0);
+        if (nodeToExpand == -1) {
+            return;
+        }
 
         if (laneIndex == currentTreeletSize) {
             myNode = nodes[nodeToExpand].leftChild;
@@ -315,6 +326,7 @@ void optimizeTreelet(BVHRestructureNode* nodes, int root, thread_block_tile<32> 
     
 
     // reconstruct tree. Re-use the original nodes
+    
     byte mySubset = -1;
     if (laneIndex == 0) {
         mySubset = 0b1111111;
@@ -325,8 +337,12 @@ void optimizeTreelet(BVHRestructureNode* nodes, int root, thread_block_tile<32> 
     if (laneIndex == 0) {
         myParent = nodes[myNode].parent;
     }
-    nodes[myNode].newLeftChild = -1;
-    nodes[myNode].newRightChild = -1;
+
+    if (myNode != -1) {
+        nodes[myNode].newLeftChild = -1;
+        nodes[myNode].newRightChild = -1;
+    }
+    
     
     while (reconstructedSize < 2 * 7 - 1) {
         byte subsetToExpand = -1;
@@ -398,6 +414,12 @@ void optimizeTreelet(BVHRestructureNode* nodes, int root, thread_block_tile<32> 
 
             nodes[myNode].newLeftChild = nodes[originalLeaf].leftChild;
             nodes[myNode].newRightChild = nodes[originalLeaf].rightChild;
+
+            if (!nodes[originalLeaf].isLeaf) {
+                // if the treelet leaf is an internal node, then we need to point its children to the correct new parent
+                nodes[nodes[originalLeaf].leftChild].parent = myNode;
+                nodes[nodes[originalLeaf].rightChild].parent = myNode;
+            }
         }
         else {
             newIsLeaf = false;
@@ -412,11 +434,12 @@ void optimizeTreelet(BVHRestructureNode* nodes, int root, thread_block_tile<32> 
         nodes[myNode].box = newBox;
         nodes[myNode].surfaceArea = newBox.computeSurfaceArea();
 
+        
         if (nodes[myNode].isLeaf) {
-            //printf("for %d, is leaf, prims [%d,%d]\n",myNode, nodes[myNode].primitiveIndexBegin, nodes[myNode].primitiveIndexEnd);
+            //printf("for %d, is leaf, prims [%d,%d], parent is %d\n",myNode, nodes[myNode].primitiveIndexBegin, nodes[myNode].primitiveIndexEnd,nodes[myNode].parent);
         }
         else {
-            //printf("for %d, left child is %d, right child is %d\n", myNode, nodes[myNode].leftChild, nodes[myNode].rightChild);
+            //printf("for %d, left child is %d, right child is %d, parent is %d\n", myNode, nodes[myNode].leftChild, nodes[myNode].rightChild, nodes[myNode].parent);
         }
 
         for (int i = 0; i < 7; ++i) {
@@ -454,17 +477,6 @@ void optimizeBVHImpl(int nodesCount, BVHRestructureNode* nodes, unsigned int* vi
     int curr = warpIndex;
 
     if (!nodes[curr].isLeaf) return;
-    // skip over bottom 3 levels, so that there're at least 7 leaves
-    for (int i = 0; i < 3; ++i) {
-        int parent = nodes[curr].parent;
-        bool getParent = false;
-        if (laneIndex == 0) {
-            getParent = atomicInc(&visited[parent], 2) == 1;
-        }
-        getParent = thisWarp.shfl(getParent, 0);
-        if (!getParent) return;
-        curr = parent;
-    }
 
     extern __shared__ byte sharedMem[];
     int warpIndexInBlock = threadIdx.x / 32;
@@ -474,6 +486,7 @@ void optimizeBVHImpl(int nodesCount, BVHRestructureNode* nodes, unsigned int* vi
     byte* optimalPartition = (byte*)(thisWarpSharedMem + 128 * 4 + 128*4);
 
     while (true) {
+        //if (laneIndex == 0) printf("visiting %d\n", curr);
         if(laneIndex==0 && curr == 0) printf("original BVH cost %f\n", nodes[0].cost);
         optimizeTreelet(nodes, curr, thisWarp,warpIndex,area,optimalCost,optimalPartition);
         if (laneIndex == 0 && curr == 0) printf("optimized BVH cost %f\n", nodes[0].cost);
@@ -501,7 +514,7 @@ void optimizeBVH(int primitivesCount,GpuArray<BVHRestructureNode>& nodes){
 
     GpuArray<unsigned int> visited(nodesCount,false);
 
-    constexpr int rounds = 1;
+    constexpr int rounds = 3;
     for (int i = 0; i < rounds; ++i) {
         visited.clear();
 
