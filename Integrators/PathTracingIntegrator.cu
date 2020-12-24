@@ -319,26 +319,28 @@ namespace PathTracing {
                     sortLightingQueue(lightingQueue, lightingQueueCopy, *nextRoundRayQueue,*thisRoundRayQueue,samplerObject);
                 });
 
-
-                lightingQueue.setNumBlocksThreads(numBlocks, numThreads);
-                std::string genNextRayEvent = std::string("genNext ") + std::to_string(round) + " " + std::to_string(depth);
-                Timer::getInstance().timedRun(genNextRayEvent, [&]() {
-                    genNextRay << <numBlocks, numThreads >> > (sceneHandle, samplerObject.getCopyForKernel(), lightingQueue.getCopyForKernel(), nextRoundRayQueue->getCopyForKernel(), depth);
-                });
-
-
-                lightingQueue.setNumBlocksThreads(numBlocks, numThreads);
-                std::string lightingEvent = std::string("lighting ") + std::to_string(round) + " " + std::to_string(depth);
-                Timer::getInstance().timedRun(lightingEvent, [&]() {
-                    computeLighting << <numBlocks, numThreads >> > (sceneHandle, samplerObject.getCopyForKernel(), lightingQueue.getCopyForKernel(),materialEvalQueue.getCopyForKernel(), depth);
-                });
+                if (lightingQueue.count() > 0) {
+                    lightingQueue.setNumBlocksThreads(numBlocks, numThreads);
+                    std::string genNextRayEvent = std::string("genNext ") + std::to_string(round) + " " + std::to_string(depth);
+                    Timer::getInstance().timedRun(genNextRayEvent, [&]() {
+                        genNextRay << <numBlocks, numThreads >> > (sceneHandle, samplerObject.getCopyForKernel(), lightingQueue.getCopyForKernel(), nextRoundRayQueue->getCopyForKernel(), depth);
+                    });
 
 
-                materialEvalQueue.setNumBlocksThreads(numBlocks, numThreads);
-                std::string materialEvent = std::string("material ") + std::to_string(round) + " " + std::to_string(depth);
-                Timer::getInstance().timedRun(materialEvent, [&]() {
-                    evalMaterial << <numBlocks, numThreads >> > (materialEvalQueue.getCopyForKernel());
-                });
+                    lightingQueue.setNumBlocksThreads(numBlocks, numThreads);
+                    std::string lightingEvent = std::string("lighting ") + std::to_string(round) + " " + std::to_string(depth);
+                    Timer::getInstance().timedRun(lightingEvent, [&]() {
+                        computeLighting << <numBlocks, numThreads >> > (sceneHandle, samplerObject.getCopyForKernel(), lightingQueue.getCopyForKernel(), materialEvalQueue.getCopyForKernel(), depth);
+                    });
+
+                    if (materialEvalQueue.count() > 0) {
+                        materialEvalQueue.setNumBlocksThreads(numBlocks, numThreads);
+                        std::string materialEvent = std::string("material ") + std::to_string(round) + " " + std::to_string(depth);
+                        Timer::getInstance().timedRun(materialEvent, [&]() {
+                            evalMaterial << <numBlocks, numThreads >> > (materialEvalQueue.getCopyForKernel());
+                        });
+                    }
+                }
 
                 sampler->syncDimension();
 

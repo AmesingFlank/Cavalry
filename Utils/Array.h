@@ -192,6 +192,10 @@ struct GpuArray{
         HANDLE_ERROR(cudaMemcpy(data + i,&value, sizeof(T), cudaMemcpyHostToDevice));
 #endif
     }
+
+    void clear() {
+        HANDLE_ERROR(cudaMemset(data, 0, N * sizeof(T)));
+    }
 };
 
 template <typename T>

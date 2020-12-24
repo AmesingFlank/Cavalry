@@ -15,3 +15,8 @@ __device__
 inline float internalCost(float area, float leftChildCost, float rightChildCost){
     return area * INTERNAL_TRAVERSAL_COST + leftChildCost + rightChildCost;
 }
+
+__device__
+inline float internalCost(float area, float childrenCost){
+    return area * INTERNAL_TRAVERSAL_COST + childrenCost;
+}

@@ -63,6 +63,10 @@ struct BVHRestructureNode {
     float surfaceArea;
     float cost;
 
+    // used during re-structuring
+    int newLeftChild;
+    int newRightChild;
+
     __device__
     int primitivesCount() {
         return primitiveIndexEnd - primitiveIndexBegin + 1;

@@ -1,5 +1,6 @@
 #include "../Utils/GpuCommons.h"
 #include "Optimization.h"
+#include "SAH.h"
 #include "../Utils/Array.h"
 #include "../Utils/Utils.h"
 #include <vector>
@@ -50,7 +51,9 @@ void optimizeTreelet(BVHRestructureNode* nodes, int root, thread_block_tile<32> 
     int laneIndex = thisWarp.thread_rank();// ==index % 32;
 
     int myNode = -1;
-    if (laneIndex == 0) myNode = root;
+    if (laneIndex == 0) {
+        myNode = root;
+    }
 
     // Treelet formation. Repeated expand the node with the greatest area, and assign it to two vacant threads.
     int currentTreeletSize = 1;
@@ -103,8 +106,9 @@ void optimizeTreelet(BVHRestructureNode* nodes, int root, thread_block_tile<32> 
     }
 
     if (currentLeafID != 7 && laneIndex == 0) {
-        SIGNAL_ERROR("wrong! should have 7 leaves\n");
+        SIGNAL_ERROR("error! should have 7 leaves\n");
     }
+    
     // treelet formation is now done;
 
     // compute AABB area of all subsets. There're 128 subsets, each thread handles 4 of them.
@@ -149,11 +153,10 @@ void optimizeTreelet(BVHRestructureNode* nodes, int root, thread_block_tile<32> 
 
     float areaError = area[127] - nodes[root].surfaceArea;
     if (abs(areaError) > 1e-3 && laneIndex==0) {
-        SIGNAL_ERROR("wrong! big area error\n");
+        SIGNAL_ERROR("error! big area error %f at root %d\n",areaError,root);
     }
     // done computing areas for eachsubset
     
-
     // Initialize costs of individual leaves
     for (int i = 0; i < 7; ++i) {
         byte singleton = 1 << i;
@@ -183,10 +186,10 @@ void optimizeTreelet(BVHRestructureNode* nodes, int root, thread_block_tile<32> 
 
                 float thisTotalCost = partitionCost + remainingCost;
                 if (partitionCost < 0) {
-                    SIGNAL_ERROR("wrong ! cost = %f < 0,  %d", partitionCost,(int)partition);
+                    SIGNAL_ERROR("error! cost = %f < 0,  %d\n", partitionCost,(int)partition);
                 }
                 if (remainingCost < 0) {
-                    SIGNAL_ERROR("wrong ! cost = %f < 0,  %d", remainingCost, (int)remaining);
+                    SIGNAL_ERROR("error! cost = %f < 0,  %d\n", remainingCost, (int)remaining);
                 }
                 if (bestCost == -1 || thisTotalCost < bestCost) {
                     bestPartition = partition;
@@ -196,10 +199,11 @@ void optimizeTreelet(BVHRestructureNode* nodes, int root, thread_block_tile<32> 
 
             } while (partition != 0);
 
-            optimalCost[subset] = bestCost;
+            optimalCost[subset] = internalCost(area[subset],bestCost);
             optimalPartition[subset] = bestPartition;
         }
     }
+
 
 // a small helper function
 #define consequtiveBits(n) ((1<<n)-1)
@@ -225,10 +229,10 @@ void optimizeTreelet(BVHRestructureNode* nodes, int root, thread_block_tile<32> 
             float remainingCost = optimalCost[remaining];
 
             if (partitionCost < 0) {
-                SIGNAL_ERROR("in 6bits, wrong! cost = %f < 0,  %d\n", partitionCost, (int)partition);
+                SIGNAL_ERROR("in 6bits, error! cost = %f < 0,  %d\n", partitionCost, (int)partition);
             }
             if (remainingCost < 0) {
-                SIGNAL_ERROR("in 6bits, wrong! cost = %f < 0,  %d\n", remainingCost, (int)remaining);
+                SIGNAL_ERROR("in 6bits, error! cost = %f < 0,  %d\n", remainingCost, (int)remaining);
             }
             totalCost = partitionCost + remainingCost;
         }
@@ -237,7 +241,7 @@ void optimizeTreelet(BVHRestructureNode* nodes, int root, thread_block_tile<32> 
         for (int d = 16; d >= 1; d = d>>1) {
             int otherLane = min(laneIndex+d, 31);
             float otherCost = thisWarp.shfl(totalCost, otherLane);
-            byte otherPartition = (byte)(thisWarp.shfl(partition, otherLane));
+            byte otherPartition = (byte)(thisWarp.shfl((int)partition, otherLane));
             
             if (totalCost == -1 || otherCost < totalCost) {
                 totalCost = otherCost;
@@ -245,7 +249,7 @@ void optimizeTreelet(BVHRestructureNode* nodes, int root, thread_block_tile<32> 
             }
         }
         if (laneIndex == 0) {
-            optimalCost[subset] = totalCost;
+            optimalCost[subset] = internalCost(area[subset], totalCost);
             optimalPartition[subset] = partition;
         }
     }
@@ -264,10 +268,10 @@ void optimizeTreelet(BVHRestructureNode* nodes, int root, thread_block_tile<32> 
             float remainingCost = optimalCost[remaining];
 
             if (partitionCost < 0) {
-                SIGNAL_ERROR("in 7bits, wrong! cost = %f < 0,  %d\n", partitionCost, (int)partition);
+                SIGNAL_ERROR("in 7bits, error! cost = %f < 0,  %d\n", partitionCost, (int)partition);
             }
             if (remainingCost < 0) {
-                SIGNAL_ERROR("in 7bits, wrong! cost = %f < 0,  %d\n", remainingCost, (int)remaining);
+                SIGNAL_ERROR("in 7bits, error! cost = %f < 0,  %d\n", remainingCost, (int)remaining);
             }
             totalCost = partitionCost + remainingCost;
         }
@@ -280,10 +284,10 @@ void optimizeTreelet(BVHRestructureNode* nodes, int root, thread_block_tile<32> 
             float otherRemainingCost = optimalCost[otherRemaining];
 
             if (otherPartitionCost < 0) {
-                SIGNAL_ERROR("in 7bits, wrong! cost = %f < 0,  %d\n", otherPartitionCost, (int)otherPartition);
+                SIGNAL_ERROR("in 7bits, error! cost = %f < 0,  %d\n", otherPartitionCost, (int)otherPartition);
             }
             if (otherRemainingCost < 0) {
-                SIGNAL_ERROR("in 7bits, wrong! cost = %f < 0,  %d\n", otherRemainingCost, (int)otherRemaining);
+                SIGNAL_ERROR("in 7bits, error! cost = %f < 0,  %d\n", otherRemainingCost, (int)otherRemaining);
             }
             float otherTotalCost = otherPartitionCost + otherRemainingCost;
             if (totalCost == -1 || otherTotalCost < totalCost) {
@@ -296,19 +300,19 @@ void optimizeTreelet(BVHRestructureNode* nodes, int root, thread_block_tile<32> 
         for (int d = 16; d >= 1; d = d >> 1) {
             int otherLane = min(laneIndex+d, 31);
             float otherCost = thisWarp.shfl(totalCost, otherLane);
-            byte otherPartition = (byte)(thisWarp.shfl(partition, otherLane));
+            byte otherPartition = (byte)(thisWarp.shfl((int)partition, otherLane));
             if (totalCost == -1 || otherCost < totalCost) {
                 totalCost = otherCost;
                 partition = otherPartition;
             }
         }
         if (laneIndex == 0) {
-            optimalCost[subset] = totalCost;
+            optimalCost[subset] = internalCost(area[subset], totalCost);
             optimalPartition[subset] = partition;
         }
     }
     // optimal partitions found
-    return;
+    
 
     // reconstruct tree. Re-use the original nodes
     byte mySubset = -1;
@@ -321,21 +325,32 @@ void optimizeTreelet(BVHRestructureNode* nodes, int root, thread_block_tile<32> 
     if (laneIndex == 0) {
         myParent = nodes[myNode].parent;
     }
+    nodes[myNode].newLeftChild = -1;
+    nodes[myNode].newRightChild = -1;
+    
     while (reconstructedSize < 2 * 7 - 1) {
-        int subsetToExpand = -1;
+        byte subsetToExpand = -1;
         int subsetToExpandLane = -1;
         if (mySubset != -1) {
-            int proposal = -1;
-            if (!expandedInReconstruction) {
-                proposal = mySubset;
-            }
+            byte myProposal = -1;
 
-            for (int i = 0; i < currentTreeletSize; ++i) {
-                float thatArea = thisWarp.shfl(proposal, i);
+#define isPowerOf2(n) ((n & (n-1)) == 0)
+
+            if (!expandedInReconstruction && !isPowerOf2(mySubset)) {
+                myProposal = mySubset;
+            }
+            //printf("%d proposing %d\n", laneIndex, myProposal);
+            for (int i = 0; i < reconstructedSize; ++i) {
+                byte proposal = (byte)thisWarp.shfl((int)myProposal, i);
                 if (proposal != -1 && subsetToExpand == -1) {
                     subsetToExpand = proposal;
                     subsetToExpandLane = i;
                 }
+            }
+
+            if (subsetToExpand <= 0 || subsetToExpand > 127 || isPowerOf2(subsetToExpand)) {
+                //if (subsetToExpandLane == laneIndex)
+                SIGNAL_ERROR("error! subsetToExpand is %d,  %d %d\n",(int)subsetToExpand, (int)mySubset, (int)myProposal);
             }
 
             if (subsetToExpand == mySubset) {
@@ -343,24 +358,32 @@ void optimizeTreelet(BVHRestructureNode* nodes, int root, thread_block_tile<32> 
             }
         }
 
+        // broadcast to nodes who didn't participate in selecting subsetToExpand. src=0 because 0th thread always has the result.
+        subsetToExpand = thisWarp.shfl(subsetToExpand, 0);
+        subsetToExpandLane = thisWarp.shfl(subsetToExpandLane, 0);
+
         int parentNode = thisWarp.shfl(myNode, subsetToExpandLane);
 
-        if (laneIndex == currentTreeletSize) {
+        if (laneIndex == reconstructedSize) {
             myParent = parentNode;
             mySubset = optimalPartition[subsetToExpand];
-            nodes[myParent].leftChild = myNode;
+            nodes[myParent].newLeftChild = myNode;
         }
-        if (laneIndex == currentTreeletSize + 1) {
+        if (laneIndex == reconstructedSize + 1) {
             myParent = parentNode;
             mySubset = subsetToExpand ^ optimalPartition[subsetToExpand];
-            nodes[myParent].rightChild = myNode;
+            nodes[myParent].newRightChild = myNode;
         }
         reconstructedSize += 2;
     }
+    bool newIsLeaf;
+    int newPrimBegin;
+    int newPrimEnd;
+    AABB newBox;
+
     if (myNode != -1) {
         nodes[myNode].parent = myParent;
-        nodes[myNode].isLeaf = !expandedInReconstruction;
-        if (nodes[myNode].isLeaf) {
+        if (!expandedInReconstruction) {
             int leafID = 0;
             byte temp = mySubset;
             while ((temp & 1) == 0) {
@@ -368,20 +391,51 @@ void optimizeTreelet(BVHRestructureNode* nodes, int root, thread_block_tile<32> 
                 temp = temp >> 1;
             }
             int originalLeaf = leaves[leafID];
-            nodes[myNode].primitiveIndexBegin = nodes[originalLeaf].primitiveIndexBegin;
-            nodes[myNode].primitiveIndexEnd = nodes[originalLeaf].primitiveIndexEnd;
-            nodes[myNode].box = nodes[originalLeaf].box;
+            newIsLeaf = nodes[originalLeaf].isLeaf;
+            newPrimBegin = nodes[originalLeaf].primitiveIndexBegin;
+            newPrimEnd = nodes[originalLeaf].primitiveIndexEnd;
+            newBox = nodes[originalLeaf].box;
+
+            nodes[myNode].newLeftChild = nodes[originalLeaf].leftChild;
+            nodes[myNode].newRightChild = nodes[originalLeaf].rightChild;
+        }
+        else {
+            newIsLeaf = false;
         }
     }
-    for (int i = 0; i < 7; ++i) {
-        if (myNode != -1 && !nodes[myNode].isLeaf) {
-            int left = nodes[myNode].leftChild;
-            int right = nodes[myNode].rightChild;
-            nodes[myNode].box = unionBoxes(nodes[left].box, nodes[right].box);
+    if (myNode != -1) {
+        nodes[myNode].leftChild = nodes[myNode].newLeftChild;
+        nodes[myNode].rightChild = nodes[myNode].newRightChild;
+        nodes[myNode].isLeaf = newIsLeaf;
+        nodes[myNode].primitiveIndexBegin = newPrimBegin;
+        nodes[myNode].primitiveIndexEnd = newPrimEnd;
+        nodes[myNode].box = newBox;
+        nodes[myNode].surfaceArea = newBox.computeSurfaceArea();
+
+        if (nodes[myNode].isLeaf) {
+            //printf("for %d, is leaf, prims [%d,%d]\n",myNode, nodes[myNode].primitiveIndexBegin, nodes[myNode].primitiveIndexEnd);
         }
+        else {
+            //printf("for %d, left child is %d, right child is %d\n", myNode, nodes[myNode].leftChild, nodes[myNode].rightChild);
+        }
+
+        for (int i = 0; i < 7; ++i) {
+            if (expandedInReconstruction) {
+                auto& leftChild = nodes[nodes[myNode].leftChild];
+                auto& rightChild = nodes[nodes[myNode].rightChild];
+                nodes[myNode].box = unionBoxes(leftChild.box, rightChild.box);
+                nodes[myNode].surfaceArea = nodes[myNode].box.computeSurfaceArea();
+            }
+            if (nodes[myNode].isLeaf) {
+                nodes[myNode].cost = leafCost(nodes[myNode].surfaceArea, nodes[myNode].primitivesCount());
+            }
+            else {
+                auto& leftChild = nodes[nodes[myNode].leftChild];
+                auto& rightChild = nodes[nodes[myNode].rightChild];
+                nodes[myNode].cost = internalCost(nodes[myNode].surfaceArea, leftChild.cost, rightChild.cost);
+            }
+        }        
     }
-
-
 }
 
 //1152 = 4*128 (for area) + 4*128(for cost) + 1*128(for partition)
@@ -420,7 +474,10 @@ void optimizeBVHImpl(int nodesCount, BVHRestructureNode* nodes, unsigned int* vi
     byte* optimalPartition = (byte*)(thisWarpSharedMem + 128 * 4 + 128*4);
 
     while (true) {
+        if(laneIndex==0 && curr == 0) printf("original BVH cost %f\n", nodes[0].cost);
         optimizeTreelet(nodes, curr, thisWarp,warpIndex,area,optimalCost,optimalPartition);
+        if (laneIndex == 0 && curr == 0) printf("optimized BVH cost %f\n", nodes[0].cost);
+
         if (curr == 0) break;
 
         int parent = nodes[curr].parent;
@@ -444,7 +501,13 @@ void optimizeBVH(int primitivesCount,GpuArray<BVHRestructureNode>& nodes){
 
     GpuArray<unsigned int> visited(nodesCount,false);
 
-    optimizeBVHImpl <<< numBlocks,numThreads, BYTES_NEEDED_PER_WARP * numThreads / 32 >>> (nodesCount,nodes.data,visited.data);
-    CHECK_IF_CUDA_ERROR("optimize bvh");
+    constexpr int rounds = 1;
+    for (int i = 0; i < rounds; ++i) {
+        visited.clear();
+
+        optimizeBVHImpl << < numBlocks, numThreads, BYTES_NEEDED_PER_WARP* numThreads / 32 >> > (nodesCount, nodes.data, visited.data);
+        CHECK_IF_CUDA_ERROR("optimize bvh");
+    }
+    
 }
 
