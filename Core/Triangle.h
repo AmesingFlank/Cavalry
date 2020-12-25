@@ -50,7 +50,7 @@ inline bool rayTriangleIntersection(IntersectionResult& result, const Ray& r,
         return false;
     }
 
-    result.position = r.positionAtDistance(result.distance);
+    //result.position = r.positionAtDistance(result.distance);
     result.intersected = true;
 
     return true;
@@ -71,17 +71,13 @@ public:
     }
 
      __host__ __device__
-    bool intersect(IntersectionResult& result, const Ray& ray) const{
+    bool intersect(IntersectionResult& result, const Ray& ray, float& u, float& v) const{
 
 #ifdef __CUDA_ARCH__
         float3* positionsData = mesh->positions.gpu.data;
-        float3* normalsData = mesh->normals.gpu.data;
-        float2* texCoordsData = mesh->texCoords.gpu.data;
         int3* indicesData = mesh->indices.gpu.data;
 #else
         float3* positionsData = mesh->positions.cpu.data;
-        float3* normalsData = mesh->normals.cpu.data;
-        float2* texCoordsData = mesh->texCoords.cpu.data;
         int3* indicesData = mesh->indices.cpu.data;
 #endif
 
@@ -89,37 +85,56 @@ public:
         float3 v0 = positionsData[thisIndices.x];
         float3 edge1 = positionsData[thisIndices.y]-v0;
         float3 edge2 = positionsData[thisIndices.z]-v0;
-        float u,v;
 
-        if(rayTriangleIntersection(result,ray,v0,edge1,edge2,u,v)){
-            if(mesh->hasVertexNormals){
-                float3 n0 = normalsData[thisIndices.x];
-                float3 n1 = normalsData[thisIndices.y];
-                float3 n2 = normalsData[thisIndices.z];
-                result.normal= normalize(n0*(1.f-u-v) + u*n1+v*n2);
-            }
-            else{
-                result.normal = normalize(cross(edge1,edge2));
-            }
-            if (dot(result.normal, ray.direction) > 0) {
-                result.normal *= -1;
-            }
-
-
-            float2 tex0 = texCoordsData[thisIndices.x];
-            float2 tex1 = texCoordsData[thisIndices.y];
-            float2 tex2 = texCoordsData[thisIndices.z];
-            result.textureCoordinates =  tex0 * (1.f - u - v) + u * tex1 + v * tex2;
-
-            result.primitive = prim;
-            return true;
-        }
-        return false;
-
+        return rayTriangleIntersection(result, ray, v0, edge1, edge2, u, v);
         
 
     }
 
+     __device__
+     void fillIntersectionInformation(IntersectionResult& result, const Ray& ray,float u, float v) {
+#ifdef __CUDA_ARCH__
+         float3* positionsData = mesh->positions.gpu.data;
+         float3* normalsData = mesh->normals.gpu.data;
+         float2* texCoordsData = mesh->texCoords.gpu.data;
+         int3* indicesData = mesh->indices.gpu.data;
+#else
+
+         float3* positionsData = mesh->positions.cpu.data;
+         float3* normalsData = mesh->normals.cpu.data;
+         float2* texCoordsData = mesh->texCoords.cpu.data;
+         int3* indicesData = mesh->indices.cpu.data;
+#endif
+
+         int3 thisIndices = indicesData[triangleIndex];
+
+         float3 v0 = positionsData[thisIndices.x];
+         float3 edge1 = positionsData[thisIndices.y] - v0;
+         float3 edge2 = positionsData[thisIndices.z] - v0;
+
+         if (mesh->hasVertexNormals) {
+             float3 n0 = normalsData[thisIndices.x];
+             float3 n1 = normalsData[thisIndices.y];
+             float3 n2 = normalsData[thisIndices.z];
+             result.normal = normalize(n0 * (1.f - u - v) + u * n1 + v * n2);
+         }
+         else {
+             result.normal = normalize(cross(edge1, edge2));
+         }
+         if (dot(result.normal, ray.direction) > 0) {
+             result.normal *= -1;
+         }
+
+
+         float2 tex0 = texCoordsData[thisIndices.x];
+         float2 tex1 = texCoordsData[thisIndices.y];
+         float2 tex2 = texCoordsData[thisIndices.z];
+         result.textureCoordinates = tex0 * (1.f - u - v) + u * tex1 + v * tex2;
+         result.primitive = prim;
+
+         result.position = ray.positionAtDistance(result.distance);
+
+     }
    
 
 

@@ -39,6 +39,8 @@ struct BVH{
         stack[0] = 0;
         int top = 0;
 
+        int resultPrim;
+        float2 resultUV;
 
 #define PUSH(x) ++top; stack[top]=x;
 
@@ -53,9 +55,13 @@ struct BVH{
                 IntersectionResult thisResult;
 
                 for(int index = node.primitiveIndexBegin; index <= node.primitiveIndexEnd;++index){
-                    if(primitives[index].intersect(thisResult,ray)){
+                    float u, v;
+                    if(primitives[index].intersect(thisResult,ray,u,v)){
                         if(result.intersected == false || thisResult.distance < result.distance){
                             result = thisResult;
+                            resultPrim = index;
+                            resultUV.x = u;
+                            resultUV.y = v;
                         }
                     }
                 }
@@ -89,6 +95,10 @@ struct BVH{
             
         }
 
+        if (result.intersected) {
+            primitives[resultPrim].fillIntersectionInformation(result, ray, resultUV.x, resultUV.y);
+        }
+
         return result.intersected;
 
 #undef PUSH
@@ -110,7 +120,7 @@ struct BVH{
         int stack[64];
         stack[0] = 0;
         int top = 0;
-
+        
 #define PUSH(x) ++top; stack[top]=x;
 
 
@@ -128,7 +138,8 @@ struct BVH{
                         continue;
                     }
                     IntersectionResult thisResult;
-                    if (prim->intersect(thisResult, ray)) {
+                    float u, v;
+                    if (prim->intersect(thisResult, ray,u,v)) {
                         if (test.useDistanceLimit) {
                             if (thisResult.distance < test.distanceLimit) {
                                 return false;
