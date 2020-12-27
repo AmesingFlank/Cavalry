@@ -40,10 +40,10 @@ int main(){
 
     std::string path = "C:/Users/Dunfan/Code/VSIDE/Cavalry/";
 
-    //test(path+"TestScenes/cornellBox/test2.pbrt");
+    //test(path+"TestScenes/cornellBox/scene.pbrt");
     //test(path+"TestScenes/bathroom2/scene.pbrt");
     //test(path+"TestScenes/bathroom/bathroom.pbrt");
-    //test(path+"TestScenes/living-room-3/scene.pbrt");
-    test(path+"TestScenes/staircase/scene.pbrt");
-
+    test(path+"TestScenes/living-room-3/scene.pbrt");
+    //test(path+"TestScenes/staircase/scene.pbrt");
+    //test(path+"TestScenes/ganesha/ganesha.pbrt");
 }

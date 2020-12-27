@@ -19,6 +19,7 @@ public:
     int verticesCount;
 
     bool hasVertexNormals;
+    bool reverseOrientation = false; // flip vertex normals
     
     ArrayPair<float3> positions;
     ArrayPair<float3> normals;
@@ -64,7 +65,7 @@ public:
     void computeArea();
 
     __host__ __device__
-        void getNormal(IntersectionResult& result, int triangleIndex, float u, float v) const {
+    void getNormal(IntersectionResult& result, int triangleIndex, float u, float v) const {
 #ifdef __CUDA_ARCH__
         float3* positionsData = positions.gpu.data;
         float3* normalsData = normals.gpu.data;
@@ -86,7 +87,10 @@ public:
             float3 p0 = positionsData[thisIndices.x];
             float3 p1 = positionsData[thisIndices.y];
             float3 p2 = positionsData[thisIndices.z];
-            result.normal = normalize(cross(p2 - p0, p1 - p0));
+            result.normal = normalize(cross(p1 - p0, p2 - p0));
+        }
+        if (reverseOrientation) {
+            result.normal *= -1;
         }
     }
 
@@ -105,7 +109,7 @@ public:
 
         int attempts = 0;
         while (true) {
-            int triangleID = sampler.randInt(trianglesCount);
+            int triangleID =  sampler.randInt(trianglesCount);
             float temp = sqrt(sampler.rand1());
             float u = 1 - temp;
             float v = temp * sampler.rand1();
@@ -119,6 +123,7 @@ public:
 
             result.position = p0 * u + p1 * v + p2 * (1.f - u - v);
             getNormal(result, triangleID, u, v);
+            
             if (!definitelyWaterTight) {
                 break;
             }
@@ -144,11 +149,6 @@ public:
         return result;
     }
 
-    void prepareForRender(Scene& scene,int meshID)  {
-        computeArea();
-        copyToDevice();
-        copyTrianglesToScene(scene,meshID);
-    };
-
+    void prepareForRender(Scene& scene, int meshID);
 };
 

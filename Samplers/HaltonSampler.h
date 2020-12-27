@@ -15,7 +15,7 @@ struct HaltonState{
 };
 
 __device__
-inline float runHalton(int base, unsigned long i){
+inline float runHalton(unsigned int base, unsigned long i){
     float r = 0;
     float f = 1;
     while(i>0){
@@ -36,7 +36,7 @@ public:
 
     GpuArray<HaltonState> states;
     GpuArray<HaltonState> statesCopy; // used for reordering
-    GpuArray<int> primes;
+    GpuArray<unsigned int> primes;
     GpuArray<int> maxDimension;
 
     __host__
@@ -63,8 +63,9 @@ public:
     virtual int randInt(int N) override{
 
         float f = HaltonSampler::rand1();
-        return f*(N-1);
-
+        int result = f*N; //truncation;
+        if (result >= N) result = N - 1;
+        return result;
     }
 
     __device__
@@ -75,7 +76,7 @@ public:
 
         HaltonState& myState = states.data[index];
 
-        int base = primes.data[myState.dimension];
+        unsigned int base = primes.data[myState.dimension];
         myState.dimension += 1;
 
         return runHalton(base, myState.index);

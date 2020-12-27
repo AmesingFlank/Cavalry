@@ -180,6 +180,7 @@ TriangleMesh TriangleMesh::createFromParams(const Parameters& params,const glm::
     
 }
 
+
 void TriangleMesh::computeArea(){
     surfaceArea = 0;
     for(int i = 0;i<trianglesCount;++i){
@@ -198,3 +199,9 @@ void TriangleMesh::copyTrianglesToScene(Scene& scene,int meshID){
         scene.trianglesHost.push_back(triangle);
     }
 }
+
+void TriangleMesh::prepareForRender(Scene& scene, int meshID) {
+    computeArea();
+    copyToDevice();
+    copyTrianglesToScene(scene, meshID);
+};

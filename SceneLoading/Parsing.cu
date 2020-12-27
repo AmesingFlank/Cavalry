@@ -193,8 +193,11 @@ void parseSceneWideOptions(TokenBuf& buf,RenderSetup& result){
 			}
 			else if(keyWord->word == "LookAt"){
 				float3 eye,center,up;
-
+				
 				readLookAt(buf,eye,center,up);
+				eye = apply(transform, eye);
+				center = apply(transform, center);
+				up = glm::mat3(transform) * up;
 				transform = glm::lookAtLH(to_vec3(eye), to_vec3(center), to_vec3(up)) * transform;
 			}
 			else if(keyWord->word == "Camera"){
@@ -257,7 +260,7 @@ void parseSubsection(TokenBuf& buf, RenderSetup& result, glm::mat4 transform,con
 	std::string subsectionName = begin->word.substr(0, begin->word.size() - std::string("Begin").size());
 
 	
-
+	bool shouldReverseOrientation = false;
 
 	while (true) {
 		auto nextToken = buf.peek();
@@ -276,6 +279,9 @@ void parseSubsection(TokenBuf& buf, RenderSetup& result, glm::mat4 transform,con
 			else if (keyWord->word == "Shape") {
 				auto shapeDef = readObjectDefinition(buf);
 				TriangleMesh shape = TriangleMesh::createFromObjectDefinition(shapeDef, transform, basePath);
+				if (shouldReverseOrientation) {
+					shape.reverseOrientation = true;
+				}
 				
 				Primitive prim;
 				
@@ -345,6 +351,10 @@ void parseSubsection(TokenBuf& buf, RenderSetup& result, glm::mat4 transform,con
 				std::filesystem::path includePath = basePath / std::filesystem::path(includeFile);
 				TokenBuf includedTokens = runLexing(includePath);
 				buf.insertHere(includedTokens);
+			}
+			else if (keyWord->word == "ReverseOrientation") {
+				buf.moveForward();
+				shouldReverseOrientation = true;
 			}
 			else {
 				std::cout << "reading unrecognized object:" << keyWord->word<< " from " << buf.currentIndex ;

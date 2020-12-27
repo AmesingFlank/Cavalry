@@ -121,6 +121,9 @@ public:
          else {
              result.normal = normalize(cross(edge1, edge2));
          }
+         if (mesh->reverseOrientation) {
+             result.normal *= -1;
+         }
          if (dot(result.normal, ray.direction) > 0) {
              result.normal *= -1;
          }
