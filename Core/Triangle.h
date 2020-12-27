@@ -64,7 +64,7 @@ public:
     int triangleIndex;
 
     const TriangleMesh* mesh;
-    const Primitive* prim;
+    //const Primitive* prim;
 
     Triangle(int meshIndex_,int triangleIndex_):meshIndex(meshIndex_),triangleIndex(triangleIndex_){
 
@@ -133,7 +133,7 @@ public:
          float2 tex1 = texCoordsData[thisIndices.y];
          float2 tex2 = texCoordsData[thisIndices.z];
          result.textureCoordinates = tex0 * (1.f - u - v) + u * tex1 + v * tex2;
-         result.primitive = prim;
+         result.primitive = mesh->prim;
 
          result.position = ray.positionAtDistance(result.distance);
 

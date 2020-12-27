@@ -11,6 +11,8 @@
 
 
 class Scene;
+class SceneHandle;
+class Primitive;
 
 class TriangleMesh{
 public:
@@ -31,6 +33,8 @@ public:
 
     bool definitelyWaterTight = false;
 
+    Primitive* prim;// index of the enclosing primitive. This field is set during buildGpuReferences()/buildCpuReferences()
+
     __host__ 
     TriangleMesh();
 
@@ -48,6 +52,11 @@ public:
     static TriangleMesh createFromObjectDefinition(const ObjectDefinition& def, const glm::mat4& transform, const std::filesystem::path& basePath);
 
     static TriangleMesh createFromParams(const Parameters& params,const glm::mat4& transform, const std::filesystem::path& basePath);
+
+    void buildCpuReferences(const SceneHandle& scene, int primIndex);
+
+    __device__
+    void buildGpuReferences(const SceneHandle& scene, int primIndex);
 
     __host__
     void copyToDevice();

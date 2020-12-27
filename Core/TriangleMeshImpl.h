@@ -1,5 +1,6 @@
 #pragma once
-#include "Triangle.h"
+
+#include "TriangleMesh.h"
 
 // this file is needed so that implementations of these functions needs to be out-of-class,
 // which is because the class definitions includes incomplete defitions.
@@ -7,13 +8,11 @@
 // in order to avoid requiring relocatable GPU code (i.e., -rdc=true).
 
 
-inline void Triangle::buildCpuReferences(const SceneHandle& scene) {
-    Primitive* prim = &scene.primitives[meshIndex];
-    mesh = &(prim->shape);
+inline void TriangleMesh::buildCpuReferences(const SceneHandle& scene,int primIndex) {
+    prim = &scene.primitives[primIndex];
 }
 
 __device__
-inline void Triangle::buildGpuReferences(const SceneHandle& scene) {
-    Primitive* prim = &scene.primitives[meshIndex];
-    mesh = &(prim->shape);
+inline void TriangleMesh::buildGpuReferences(const SceneHandle& scene,int primIndex) {
+    prim = &scene.primitives[primIndex];
 }

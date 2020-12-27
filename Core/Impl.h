@@ -10,3 +10,4 @@
 #include "../Lights/DiffuseAreaLightImpl.h"
 #include "PrimitiveImpl.h"
 #include "TriangleImpl.h"
+#include "TriangleMeshImpl.h"

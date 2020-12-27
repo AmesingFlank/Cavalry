@@ -47,8 +47,10 @@ void Scene::buildCpuReferences() {
     for(LightObject& light:lightsHost){
         light.buildCpuReferences(handle);
     }
-    for (Primitive& prim:primitivesHost) {
+    for (int i = 0; i < primitivesHost.size(); ++i) {
+        Primitive& prim = primitivesHost[i];
         prim.buildCpuReferences(handle);
+        prim.shape.buildCpuReferences(handle,i);
     }
     for (Triangle& triangle:trianglesHost){
         triangle.buildCpuReferences(handle);
@@ -74,7 +76,7 @@ void buildPrimitivesGpuReferences(SceneHandle handle) {
 
     Primitive& prim = handle.primitives[index];
     prim.buildGpuReferences(handle);
-    
+    prim.shape.buildGpuReferences(handle,index);
 }
 
 __global__
