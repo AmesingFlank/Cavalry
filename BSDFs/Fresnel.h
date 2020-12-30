@@ -93,12 +93,19 @@ public:
             randomSource.x = randomSource.x * (1.f / sampleMicrofacetProb);
             halfVec = distribution.sample(randomSource,exitant);
             incidentOutput = reflectF(exitant, halfVec);
+            if (!sameHemisphere(incidentOutput, exitant)) {
+                return make_float3(0, 0, 0);
+            }
         }
         else{
             randomSource.x =  (randomSource.x-sampleMicrofacetProb) * (1.f / (1.f- sampleMicrofacetProb));
             incidentOutput = cosineSampleHemisphere(randomSource);
             halfVec = normalize(incidentOutput + exitant);
+            if (exitant.z < 0) {
+                incidentOutput.z *= -1;
+            }
         }
+        
         *probabilityOutput = 
             (1.f - sampleMicrofacetProb) * cosineSampleHemispherePdf(incidentOutput) + 
             sampleMicrofacetProb * distribution.pdf(halfVec,exitant) / (4.f*dot(exitant,halfVec));

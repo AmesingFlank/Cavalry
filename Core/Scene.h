@@ -11,7 +11,6 @@
 #include "Triangle.h"
 #include "../BVH/BVH.h"
 
-#define USE_BVH 1
 
 struct SceneHandle{
     Primitive* mutable primitives;
@@ -40,60 +39,18 @@ struct SceneHandle{
     
     __device__
     bool intersect(IntersectionResult& result, const Ray& ray) const{
-#if USE_BVH
+
         if (bvh.intersect(result, ray, triangles)) {
             result.findBSDF();
-            result.findTangents();
             return true;
         }
         return false;
-#else
-        
-        bool foundIntersection = false;
-        for(int i = 0;i<trianglesCount;++i){
-            const Triangle& triangle = triangles[i];
-            IntersectionResult thisResult;
-            if(triangle.intersect(thisResult,ray)){
-                if(!foundIntersection || thisResult.distance<result.distance){
-                    result = thisResult;
-                    foundIntersection = true;
-                }
-            }
-        }
-        if (foundIntersection) {
-            result.findBSDF();
-            result.findTangents();
-        } 
-        return foundIntersection;
-        
-#endif
+
     }
 
     __device__
     bool testVisibility(const VisibilityTest& test) const{
-#if USE_BVH
         return bvh.testVisibility(test, triangles);
-#else
-        Ray ray = test.ray;
-        for(int i = 0;i<trianglesCount;++i){
-            const Triangle& triangle = triangles[i];
-            if(triangle.mesh->getID() == test.sourceGeometry || triangle.mesh->getID() == test.targetGeometry){
-                continue;
-            }
-            IntersectionResult thisResult;
-            if(triangle.intersect(thisResult,ray)){
-                if(test.useDistanceLimit){
-                    if (thisResult.distance < test.distanceLimit) {
-                        return false;
-                    }
-                }
-                else {
-                    return false;
-                }
-            }
-        }
-        return true;
-#endif
     }
 };
 

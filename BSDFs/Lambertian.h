@@ -26,6 +26,9 @@ public:
         incidentOutput = cosineSampleHemisphere(randomSource);
         *probabilityOutput = cosineSampleHemispherePdf(incidentOutput);
 
+        if (exitant.z < 0) {
+            incidentOutput.z *= -1;
+        }
 
         return LambertianBSDF::eval(incidentOutput, exitant);
 

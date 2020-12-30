@@ -159,7 +159,12 @@ namespace PathTracing {
         Spectrum nextMultiplier = intersection.bsdf.sample(sampler.rand2(), nextDirectionLocal, intersection.worldToLocal(thisRay.direction * -1.f), &nextRayProbability);
         nextRay.direction = intersection.localToWorld(nextDirectionLocal);
         nextRay.origin = intersection.position + nextRay.direction * 0.0001f;
-        multiplier = multiplier * nextMultiplier * abs(dot(nextRay.direction, intersection.normal)) / nextRayProbability;
+        if (isAllZero(nextMultiplier)) {
+            multiplier = make_float3(0, 0, 0);
+        }
+        else {
+            multiplier = multiplier * nextMultiplier * abs(dot(nextRay.direction, intersection.normal)) / nextRayProbability;
+        }
         bool nextShouldIncludeEmission = intersection.bsdf.isDelta();
 
         RayTask nextTask = { nextRay,multiplier,result,nextShouldIncludeEmission };
@@ -199,12 +204,12 @@ namespace PathTracing {
         float4 randomSource = sampler.rand4();
 
         VisibilityTest visibilityTest;
-        visibilityTest.sourceGeometry = prim->shape.getID();
+        visibilityTest.sourceTriangleIndex = intersection.triangleIndex;
 
 
         Spectrum incident = light.sampleRayToPoint(intersection.position, sampler, probability, rayToLight, visibilityTest);
 
-        if (scene.testVisibility(visibilityTest) && dot(rayToLight.direction, intersection.normal) > 0) {
+        if (scene.testVisibility(visibilityTest)) {
             Spectrum materialEvalMultiplier = scene.lightsCount * multiplier / probability;
             materialEvalQueue.push({intersection,rayToLight,incident,exitantRay,materialEvalMultiplier,result});
         }

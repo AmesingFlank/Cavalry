@@ -70,7 +70,7 @@ struct GGX {
     __device__
     float3 sample(float2 randomSource, const float3& exitant)const {
         float3 exitantStretched =
-        normalize(make_float3(alpha_x * exitant.x, alpha_y * exitant.y, exitant.z));
+        normalize(make_float3(alpha_x * exitant.x, alpha_y * exitant.y, abs(exitant.z)));
 
         float slope_x, slope_y;
         GGX::sampleGGX11(cosZenith(exitantStretched), randomSource, &slope_x, &slope_y);
@@ -85,6 +85,9 @@ struct GGX {
         slope_y = alpha_y * slope_y;
 
         float3 result = normalize(make_float3(-slope_x, -slope_y, 1.));
+        if (exitant.z < 0) {
+            result.z *= -1;
+        }
         return result;
     }
 

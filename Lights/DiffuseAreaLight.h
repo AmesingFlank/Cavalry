@@ -39,7 +39,7 @@ public:
         outputRay.direction = normalize(shapeSample.position - position);
 
         outputVisibilityTest.ray = outputRay;
-        outputVisibilityTest.targetGeometry = shape->getID();
+        outputVisibilityTest.targetTriangleIndex = shapeSample.triangleIndex;
         outputVisibilityTest.setDistanceLimit(length(shapeSample.position - position));
 
         if (dot(outputRay.direction, shapeSample.normal) >= 0) {

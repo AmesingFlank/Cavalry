@@ -57,12 +57,13 @@ namespace DirectLighting {
         float4 randomSource = sampler.rand4();
     
         VisibilityTest visibilityTest;
-        visibilityTest.sourceGeometry = prim->shape.getID();
+        visibilityTest.sourceTriangleIndex = intersection.triangleIndex;
     
     
         Spectrum incident = light.sampleRayToPoint(intersection.position, sampler, probability, rayToLight, visibilityTest);
-    
-        if (scene.testVisibility(visibilityTest) && dot(rayToLight.direction, intersection.normal) > 0) {
+
+
+        if (scene.testVisibility(visibilityTest)) {
             if (probability == 0) {
                 printf("probability is 0\n");
             }

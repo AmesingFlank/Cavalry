@@ -88,3 +88,7 @@ inline void atomicAdd(Spectrum* target, Spectrum toAdd){
 }
 
 
+__device__ __host__
+inline bool isAllZero(const Spectrum& color) {
+    return color.x == 0 && color.y == 0 && color.z == 0;
+}

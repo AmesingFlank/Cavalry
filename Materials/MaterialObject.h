@@ -4,6 +4,8 @@
 #include "Mirror.h"
 #include "Substrate.h"
 #include "Metal.h"
+#include "Glass.h"
+
 
 #include "Color.h"
 #include "../Utils/GpuCommons.h"
@@ -11,7 +13,7 @@
 #include "../Core/Parameters.h"
 
 
-using MaterialVariant = Variant<MatteMaterial,MirrorMaterial,SubstrateMaterial,MetalMaterial>;
+using MaterialVariant = Variant<MatteMaterial,MirrorMaterial,SubstrateMaterial,MetalMaterial,GlassMaterial>;
 
 
 class MaterialObject : public MaterialVariant {

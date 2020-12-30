@@ -5,6 +5,8 @@
 #include "../Core/VisibilityTest.h"
 #include "BVHNode.h"
 
+// In this file, a "Primitive" means a Triangle.
+
 struct BVH{
     int primitivesCount;
     ArrayPair<BVHNode> nodes;
@@ -39,7 +41,6 @@ struct BVH{
         stack[0] = 0;
         int top = 0;
 
-        int resultPrim;
         float2 resultUV;
 
 #define PUSH(x) ++top; stack[top]=x;
@@ -59,7 +60,7 @@ struct BVH{
                     if(primitives[index].intersect(thisResult,ray,u,v)){
                         if(result.intersected == false || thisResult.distance < result.distance){
                             result = thisResult;
-                            resultPrim = index;
+                            result.triangleIndex = index;
                             resultUV.x = u;
                             resultUV.y = v;
                         }
@@ -96,7 +97,7 @@ struct BVH{
         }
 
         if (result.intersected) {
-            primitives[resultPrim].fillIntersectionInformation(result, ray, resultUV.x, resultUV.y);
+            primitives[result.triangleIndex].fillIntersectionInformation(result, ray, resultUV.x, resultUV.y);
         }
 
         return result.intersected;
@@ -134,7 +135,7 @@ struct BVH{
             if (node.isLeaf) {
                 for (int index = node.primitiveIndexBegin; index <= node.primitiveIndexEnd; ++index) {
                     Triangle* prim = &primitives[index];
-                    if (prim->mesh->getID() == test.sourceGeometry || prim->mesh->getID() == test.targetGeometry) {
+                    if (index == test.sourceTriangleIndex || index == test.targetTriangleIndex) {
                         continue;
                     }
                     IntersectionResult thisResult;
@@ -142,10 +143,12 @@ struct BVH{
                     if (prim->intersect(thisResult, ray,u,v)) {
                         if (test.useDistanceLimit) {
                             if (thisResult.distance < test.distanceLimit) {
+                                //printf("intersected!  source: %d, target: %d, intersection:%d\n",  test.sourceTriangleIndex, test.targetTriangleIndex, index);
                                 return false;
                             }
                         }
                         else {
+                            //printf("intersected!  source: %d, target: %d, intersection:%d\n", test.sourceTriangleIndex, test.targetTriangleIndex, index);
                             return false;
                         }
                     }

@@ -35,16 +35,15 @@ public:
 
     Primitive* prim;// index of the enclosing primitive. This field is set during buildGpuReferences()/buildCpuReferences()
 
+    // the index of the 0th triangle of this mesh in the scene-global array of triangles.
+    // this is needed when sampling the mesh.
+    int globalTriangleIndexBegin;
+
     __host__ 
     TriangleMesh();
 
     __host__ 
     TriangleMesh(int trianglesCount_, int verticesCount_,bool hasVertexNormals_, bool isCopyForKernel_);
-
-    __host__ __device__
-    const TriangleMesh* getID() const{
-        return this;
-    }
 
     __host__
     static TriangleMesh createFromPLY(const std::string& filename,const glm::mat4& transform);
@@ -119,6 +118,11 @@ public:
         int attempts = 0;
         while (true) {
             int triangleID =  sampler.randInt(trianglesCount);
+
+            // record the global index of the selected triangle.
+            // this will be used during visibility testing.
+            result.triangleIndex = triangleID + globalTriangleIndexBegin;
+
             float temp = sqrt(sampler.rand1());
             float u = 1 - temp;
             float v = temp * sampler.rand1();
@@ -147,13 +151,9 @@ public:
 
         result.intersected = true;
 
-
-
-
         float3 lightToSeenFrom = seenFrom - result.position;
         float cosine = abs(dot(result.normal, normalize(lightToSeenFrom)));
         *outputProbability = lengthSquared(lightToSeenFrom) / (cosine * area());
-
 
         return result;
     }

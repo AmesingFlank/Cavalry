@@ -140,6 +140,11 @@ __device__ inline float sinSquaredAzimuth(const float3 &w) { return sinAzimuth(w
 
 
 __device__
+inline bool sameHemisphere(const float3 &v1, const float3 &v2) {
+    return v1.z * v2.z > 0;
+}
+
+__device__
 inline float pow5(float f){
 	return (f*f)*(f*f)*f;
 }
@@ -149,4 +154,20 @@ __host__ __device__
 inline float3 reflectF(const float3& incident, const float3& normal)
 {
 	return 2.0f * normal * dot(normal, incident) - incident;
+}
+
+// Theta: Zenith Angle
+__device__ // returns whether refraction is possible (i.e. whether there is total internal reflection)
+inline bool computeRefraction(const float3 &incident, const float3 &normal, float IOR,
+                    float3& exitantOutput) {
+    // Compute $\cos \theta_\roman{t}$ using Snell's law
+    float cosThetaIncident = dot(normal, incident);
+    float sin2ThetaIncident = max(0.f, 1.f - cosThetaIncident * cosThetaIncident);
+    float sin2ThetaExitant = IOR * IOR * sin2ThetaIncident;
+
+    // Handle total internal reflection for transmission
+    if (sin2ThetaExitant >= 1) return false;
+    float cosThetaExitant = sqrt(1 - sin2ThetaExitant);
+    exitantOutput = IOR * (incident * -1.f) + (IOR * cosThetaIncident - cosThetaExitant) * normal;
+    return true;
 }

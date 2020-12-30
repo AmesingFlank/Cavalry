@@ -124,10 +124,6 @@ public:
          if (mesh->reverseOrientation) {
              result.normal *= -1;
          }
-         if (dot(result.normal, ray.direction) > 0) {
-             result.normal *= -1;
-         }
-
 
          float2 tex0 = texCoordsData[thisIndices.x];
          float2 tex1 = texCoordsData[thisIndices.y];
