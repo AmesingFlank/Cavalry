@@ -71,6 +71,9 @@ public:
 
     __device__
     virtual Spectrum eval(const float3& incident, const float3& exitant) const override {
+        if (!sameHemisphere(incident, exitant)) {
+            return make_float3(0, 0, 0);
+        }
         Spectrum diffuse = (28.f / (23.f * M_PI)) * diffuseColor * (make_float3(1,1,1) - specularColor)*
                         (1 - pow5(1 - .5f * abs(cosZenith(incident)) )) *
                         (1 - pow5(1 - .5f * abs(cosZenith(exitant)) ));

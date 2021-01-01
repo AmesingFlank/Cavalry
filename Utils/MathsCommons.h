@@ -145,6 +145,11 @@ inline bool sameHemisphere(const float3 &v1, const float3 &v2) {
 }
 
 __device__
+inline bool sameSign(float f1, float f2) {
+	return f1*f2 > 0;
+}
+
+__device__
 inline float pow5(float f){
 	return (f*f)*(f*f)*f;
 }

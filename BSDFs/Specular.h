@@ -37,6 +37,9 @@ public:
     // assuming incident and exitant are valid
     __device__
     Spectrum evalReflection(const float3& incident, const float3& exitant) const{
+        if(!sameHemisphere(incident,exitant)){
+            return make_float3(0,0,0);
+        }
         auto F = fresnel.eval(abs(cosZenith(incident))); 
         return reflectionColor *F / abs(cosZenith(incident));
     }
@@ -55,6 +58,9 @@ public:
     // assuming incident and exitant are valid
     __device__
     Spectrum evalTransmission(const float3& incident, const float3& exitant) const {
+        if(sameHemisphere(incident,exitant)){
+            return make_float3(0,0,0);
+        }
         float3 F = fresnel.eval(abs(cosZenith(incident))); 
         //printf("evaling transmission:  %f %f %f,      %f %f %f\n",  XYZ(transmissionColor),XYZ(F));
         return transmissionColor *(make_float3(1,1,1)-F) / abs(cosZenith(incident));

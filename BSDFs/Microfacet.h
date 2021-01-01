@@ -35,6 +35,9 @@ public:
 
     __device__
     Spectrum evalReflection(const float3& incident, const float3& exitant) const{
+        if(!sameHemisphere(incident,exitant)){
+            return make_float3(0,0,0);
+        }
         float cosThetaO = abs(cosZenith(exitant));
         float cosThetaI = abs(cosZenith(incident));
 
@@ -51,6 +54,9 @@ public:
 
     __device__
     Spectrum evalTransmission(const float3& incident, const float3& exitant) const {
+        if(sameHemisphere(incident,exitant)){
+            return make_float3(0,0,0);
+        }
         float cosThetaO = abs(cosZenith(exitant));
         float cosThetaI = abs(cosZenith(incident));
 

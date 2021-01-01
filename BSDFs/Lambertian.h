@@ -16,7 +16,10 @@ public:
 
     __device__
     virtual Spectrum eval(const float3& incident, const float3& exitant) const override {
-         return baseColor / M_PI;
+        if (!sameHemisphere(incident, exitant)) {
+            return make_float3(0, 0, 0);
+        }
+        return baseColor / M_PI;
     }
 
     __device__
