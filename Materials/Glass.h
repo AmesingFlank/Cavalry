@@ -18,18 +18,23 @@ public:
     Spectrum reflection;
     Spectrum transmission;
     float IOR;
+    bool perfectSpecular;
 
     GlassMaterial(){}
 
     GlassMaterial(Spectrum reflection_,Spectrum transmission_,float IOR_,Fresnel fresnel_,float uRoughness_,float vRoughness_,bool remapRoughness_):
     distribution(GGX::createFromRoughness(uRoughness_,vRoughness_,remapRoughness_)),
-    fresnel(fresnel_),reflection(reflection),transmission(transmission_),IOR(IOR_)
+    fresnel(fresnel_),reflection(reflection_),transmission(transmission_),IOR(IOR_),
+    perfectSpecular(uRoughness_==0 && vRoughness_==0)
     {
         
     }
     
     __device__
     virtual BSDFObject getBSDF(const IntersectionResult& intersection) const override {
+        if(perfectSpecular){
+            return SpecularBSDF(reflection,fresnel,true,transmission,1.f,IOR);
+        }
         return MicrofacetBSDF(reflection,distribution,fresnel,true,transmission,1.f,IOR);
     }
 
@@ -54,10 +59,13 @@ public:
         if(params.hasNum("eta")){
             IOR = params.getNum("eta");
         }
+        else if (params.hasNum("index")) {
+            IOR = params.getNum("index");
+        }
         Fresnel fresnel = Fresnel::createFromIOR(make_float3(IOR,IOR,IOR));
         
-        float uRoughness = 0.1;
-        float vRoughness = 0.1;
+        float uRoughness = 0.;
+        float vRoughness = 0.;
         bool remap = true;
         if (params.hasNum("uroughness")) {
             uRoughness = params.getNum("uroughness");

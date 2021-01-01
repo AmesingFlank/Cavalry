@@ -92,6 +92,9 @@ public:
 		if (materialType == "metal") {
 			return MaterialObject(MetalMaterial::createFromParams(def.params,textures));
 		}
+		if (materialType == "glass") {
+			return MaterialObject(GlassMaterial::createFromParams(def.params, textures));
+		}
 		return MaterialObject(MatteMaterial::createFromParams(def.params,textures));
 	}
 

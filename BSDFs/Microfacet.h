@@ -56,7 +56,7 @@ public:
 
         if (cosThetaI == 0 || cosThetaO == 0) return make_float3(0,0,0); 
 
-        float eta = cosZenith(exitant) > 0 ? (belowIOR / aboveIOR) : (aboveIOR / belowIOR);
+        float eta = cosZenith(exitant) > 0 ?  (aboveIOR / belowIOR) : (belowIOR / aboveIOR);
         float3 halfVec = normalize(exitant + incident * eta);
         if (halfVec.z < 0) halfVec = -halfVec;
         
@@ -107,7 +107,7 @@ public:
         float3 halfVec = distribution.sample(randomSource,exitant);
         //(wo, wh) < 0) return 0.;  // Should be rare
 
-        float eta = cosZenith(exitant) > 0 ? (belowIOR / aboveIOR) : (aboveIOR / belowIOR);
+        float eta = cosZenith(exitant) > 0 ?  (aboveIOR / belowIOR): (belowIOR / aboveIOR);
         if (!computeRefraction(exitant, halfVec, eta, incidentOutput)){
             return make_float3(0,0,0);
         } 
@@ -122,7 +122,7 @@ public:
         if (exitant.z * incident.z > 0) return 0;
 
         // Compute $\wh$ from $\wo$ and $\wi$ for microfacet transmission
-        float eta = cosZenith(exitant) > 0 ? (belowIOR / aboveIOR) : (aboveIOR / belowIOR);
+        float eta = cosZenith(exitant) > 0 ? (aboveIOR / belowIOR) : (belowIOR / aboveIOR);
         float3 halfVec = normalize(exitant + incident * eta);
         
         
@@ -141,14 +141,27 @@ public:
         if(!hasTransmission){
             return sampleReflection(randomSource,incidentOutput,exitant,probabilityOutput);
         }
-        bool useBRDF = randomSource.x > 0.5;
+
+        float sampleReflectionProbability = fresnel.eval(abs(cosZenith(exitant))).x;
+        if (isAllZero(reflectionColor)) {
+            sampleReflectionProbability = 0;
+        }
+        else if (isAllZero(transmissionColor)) {
+            sampleReflectionProbability = 1;
+        }
+
+        bool useBRDF = randomSource.x < sampleReflectionProbability;
         if(useBRDF){
-            randomSource.x = (randomSource.x)-0.5*2;
-            return sampleReflection(randomSource,incidentOutput,exitant,probabilityOutput);
+            randomSource.x = randomSource.x*(1.f/sampleReflectionProbability);
+            float3 result = sampleReflection(randomSource,incidentOutput,exitant,probabilityOutput);
+            *probabilityOutput *= sampleReflectionProbability;
+            return result;
         }
         else{
-            randomSource.x = randomSource.x*2;
-            return sampleTransmission(randomSource,incidentOutput,exitant,probabilityOutput);
+            randomSource.x = (randomSource.x-sampleReflectionProbability)*(1.f/(1.f-sampleReflectionProbability));
+            float3 result = sampleTransmission(randomSource, incidentOutput, exitant, probabilityOutput);
+            *probabilityOutput *= 1.f - sampleReflectionProbability;
+            return result;
         }
     }
 };

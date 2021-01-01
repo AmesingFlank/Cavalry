@@ -171,3 +171,9 @@ inline bool computeRefraction(const float3 &incident, const float3 &normal, floa
     exitantOutput = IOR * (incident * -1.f) + (IOR * cosThetaIncident - cosThetaExitant) * normal;
     return true;
 }
+
+__device__ 
+inline bool operator==(const float3 &v1, const float3& v2) {
+    // Compute $\cos \theta_\roman{t}$ using Snell's law
+    return v1.x==v2.x && v1.y==v2.y && v1.z==v2.z;
+}
