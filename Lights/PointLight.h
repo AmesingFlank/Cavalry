@@ -20,17 +20,22 @@ public:
     Spectrum color;
 
     __device__
-    virtual Spectrum sampleRayToPoint(const float3& position, SamplerObject& sampler, float& outputProbability, Ray& outputRay, VisibilityTest& outputVisibilityTest) const override{
+    virtual Spectrum sampleRayToPoint(const float3& seenFrom, SamplerObject& sampler, float& outputProbability, Ray& outputRay, VisibilityTest& outputVisibilityTest) const override{
         outputProbability = 1;
 
         outputRay.origin = position;
-        outputRay.direction = normalize(this->position - position);
+        outputRay.direction = normalize(this->position - seenFrom);
 
         outputVisibilityTest.ray = outputRay;
-        outputVisibilityTest.setDistanceLimit(length(this->position - position));
+        outputVisibilityTest.setDistanceLimit(length(this->position - seenFrom));
 
         return color;
     }
+
+    __device__
+    virtual float pdf(const Ray& sampledRay, const IntersectionResult& lightSurface) const {
+        return 1;
+    };
 
     virtual void buildCpuReferences(const SceneHandle& scene) override {};
 

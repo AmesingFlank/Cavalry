@@ -12,8 +12,12 @@ struct SceneHandle;
 class Light{
 public:
     
-     __device__
-    virtual Spectrum sampleRayToPoint(const float3& position,SamplerObject& sampler, float& outputProbability, Ray& outputRay,VisibilityTest& outputVisibilityTest) const = 0;
+    __device__
+    virtual Spectrum sampleRayToPoint(const float3& seenFrom,SamplerObject& sampler, float& outputProbability, Ray& outputRay,VisibilityTest& outputVisibilityTest) const = 0;
+
+    __device__
+    virtual float pdf(const Ray& sampledRay, const IntersectionResult& lightSurface) const = 0;
+
 
     virtual void buildCpuReferences(const SceneHandle& scene) = 0;
 
@@ -32,16 +36,22 @@ public:
 
 class EnvironmentMap : public AreaLight{
 public:
-     __device__
-    virtual Spectrum sampleRayToPoint(const float3& position, SamplerObject& sampler, float& outputProbability, Ray& outputRay,VisibilityTest& outputVisibilityTest) const override {
+    __device__
+    virtual Spectrum sampleRayToPoint(const float3& seenFrom, SamplerObject& sampler, float& outputProbability, Ray& outputRay,VisibilityTest& outputVisibilityTest) const override {
         float3 sampleOnSphere = uniformSampleSphere(sampler.rand2());
-        outputRay.origin = position;
+        outputRay.origin = seenFrom;
         outputRay.direction = sampleOnSphere;
         outputProbability = uniformSampleSpherePdf(sampleOnSphere);
 
         outputVisibilityTest.ray = outputRay;
         return EnvironmentMap::evaluateRay(outputRay);
     }
+
+    __device__
+    virtual float pdf(const Ray& sampledRay, const IntersectionResult& lightSurface) const  {
+        return uniformSampleSpherePdf(sampledRay.direction);
+    };
+
 
     __device__
     virtual Spectrum evaluateRay(const Ray& ray) const override{

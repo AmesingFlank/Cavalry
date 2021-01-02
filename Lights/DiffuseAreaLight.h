@@ -23,34 +23,33 @@ public:
 
 
     __device__
-    virtual Spectrum sampleRayToPoint(const float3& position, SamplerObject& sampler, float& outputProbability, Ray& outputRay,VisibilityTest& outputVisibilityTest) const override{
-
+    virtual Spectrum sampleRayToPoint(const float3& seenFrom, SamplerObject& sampler, float& outputProbability, Ray& outputRay,VisibilityTest& outputVisibilityTest) const override{
 
         float shapeSampleProbability = 0;
 
-        
-
-        IntersectionResult shapeSample = shape->sample(position,sampler,&shapeSampleProbability);
-
+        IntersectionResult shapeSample = shape->sample(seenFrom,sampler,&shapeSampleProbability);
         
         outputProbability = shapeSampleProbability;
 
-        outputRay.origin = position;
-        outputRay.direction = normalize(shapeSample.position - position);
+        outputRay.origin = seenFrom;
+        outputRay.direction = normalize(shapeSample.position - seenFrom);
 
         outputVisibilityTest.ray = outputRay;
         outputVisibilityTest.targetTriangleIndex = shapeSample.triangleIndex;
-        outputVisibilityTest.setDistanceLimit(length(shapeSample.position - position));
+        outputVisibilityTest.setDistanceLimit(length(shapeSample.position - seenFrom));
 
         if (dot(outputRay.direction, shapeSample.normal) >= 0) {
             return make_float3(0, 0, 0);
         }
-
         return color;
-
     }
 
-     __device__
+    __device__
+    virtual float pdf(const Ray& sampledRay, const IntersectionResult& lightSurface) const {
+        return shape->pdf(sampledRay,lightSurface);
+    };
+
+    __device__
     virtual Spectrum evaluateRay(const Ray& ray) const override{
         return color;
     }

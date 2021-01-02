@@ -158,6 +158,14 @@ public:
         return result;
     }
 
+    __device__
+    float pdf(const Ray& sampledRay, const IntersectionResult& lightSurface) const {
+        float3 lightToSeenFrom = sampledRay.origin - lightSurface.position;
+        float cosine = abs(dot(lightSurface.normal, normalize(lightToSeenFrom)));
+        return lengthSquared(lightToSeenFrom) / (cosine * area());
+    };
+
+
     void prepareForRender(Scene& scene, int meshID);
 };
 
