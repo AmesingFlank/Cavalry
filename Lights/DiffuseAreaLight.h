@@ -2,7 +2,7 @@
 #include "../Core/Light.h"
 
 
-class DiffuseAreaLight:public AreaLight{
+class DiffuseAreaLight:public Light{
 public:
 
     DiffuseAreaLight(Spectrum color_):color(color_){
@@ -50,7 +50,10 @@ public:
     };
 
     __device__
-    virtual Spectrum evaluateRay(const Ray& ray) const override{
+    virtual Spectrum evaluateRay(const Ray& rayToLight, const IntersectionResult& lightSurface) const{
+        if (dot(rayToLight.direction, lightSurface.normal) >= 0) {
+            return make_float3(0, 0, 0);
+        }
         return color;
     }
 

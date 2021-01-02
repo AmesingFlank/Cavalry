@@ -41,7 +41,7 @@ namespace DirectLighting {
         
     
         if (prim->areaLight) {
-            *result += prim->areaLight->get<DiffuseAreaLight>()->DiffuseAreaLight::evaluateRay(ray);
+            *result += prim->areaLight->get<DiffuseAreaLight>()->DiffuseAreaLight::evaluateRay(ray,intersection);
         }
     
         

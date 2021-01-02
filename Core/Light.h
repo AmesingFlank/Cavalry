@@ -28,13 +28,8 @@ public:
 
 };
 
-class AreaLight: public Light{
-public:
-    __device__
-    virtual Spectrum evaluateRay(const Ray& ray) const = 0;
-};
 
-class EnvironmentMap : public AreaLight{
+class EnvironmentMap : public Light{
 public:
     __device__
     virtual Spectrum sampleRayToPoint(const float3& seenFrom, SamplerObject& sampler, float& outputProbability, Ray& outputRay,VisibilityTest& outputVisibilityTest) const override {
@@ -54,7 +49,7 @@ public:
 
 
     __device__
-    virtual Spectrum evaluateRay(const Ray& ray) const override{
+    virtual Spectrum evaluateRay(const Ray& ray) const{
         // to be changed
         return make_float3(0.5*ray.direction.y + 0.5) / (4.0 * M_PI);
     }

@@ -34,9 +34,9 @@ int main(){
     //test(path+"TestScenes/bathroom/bathroom.pbrt");
     //test(path+"TestScenes/living-room-3/scene.pbrt");
     //test(path+"TestScenes/staircase/scene.pbrt");
-    test(path+"TestScenes/staircase2/scene.pbrt");
+    //test(path+"TestScenes/staircase2/scene.pbrt");
     //test(path+"TestScenes/ganesha/ganesha.pbrt");
-    //test(path+"TestScenes/coffee/scene.pbrt");
+    test(path+"TestScenes/coffee/scene.pbrt");
     //test(path + "TestScenes/veach-mis2/scene.pbrt");
 
 }
