@@ -74,11 +74,7 @@ public:
         if (exitant.z < 0) normal.z = -1;       
         
         if (!computeRefraction(exitant, normal, eta, incidentOutput)){
-            //printf("samping trans %f %f %f,  normal:%f %f %f,      eta: %f.  Got total internal\n", XYZ(exitant),XYZ(normal), eta);
             return make_float3(0,0,0);
-        }
-        else {
-            //printf("samping trans %f %f %f,  normal:%f %f %f,      eta: %f.  Good\n", XYZ(exitant), XYZ(normal), eta);
         }
         
         *probabilityOutput = 1;
@@ -109,6 +105,19 @@ public:
             return evalTransmission(incident,exitant);
         }
     }
+
+    
+    __device__
+    float getSampleReflectionProbability(const float3& exitant)const {
+        float p = fresnel.eval(abs(cosZenith(exitant))).x;
+        if (isAllZero(reflectionColor)) {
+            p = 0;
+        }
+        else if (isAllZero(transmissionColor)) {
+            p = 1;
+        }
+        return p;
+    }
     
     __device__
     virtual Spectrum sample(float2 randomSource, float3& incidentOutput, const float3& exitant, float* probabilityOutput) const {
@@ -116,13 +125,8 @@ public:
             return sampleReflection(randomSource,incidentOutput,exitant,probabilityOutput);
         }
 
-        float sampleReflectionProbability = fresnel.eval(abs(cosZenith(exitant))).x;
-        if (isAllZero(reflectionColor)) {
-            sampleReflectionProbability = 0;
-        }
-        else if (isAllZero(transmissionColor)) {
-            sampleReflectionProbability = 1;
-        }
+        float sampleReflectionProbability = getSampleReflectionProbability(exitant);
+        
 
         bool useBRDF = randomSource.x < sampleReflectionProbability;
         if(useBRDF){
@@ -136,6 +140,38 @@ public:
             Spectrum result = sampleTransmission(randomSource,incidentOutput,exitant,probabilityOutput);
             *probabilityOutput *= (1.f - sampleReflectionProbability);
             return result;
+        }
+    }
+
+    __device__
+    virtual float pdf(const float3& incident, const float3& exitant) const {
+        // When called on directions sampled from light sources
+        // it is very unlikely that this will ever return anything other than 0;
+        // maybe just return 0 directly?
+        if (!hasTransmission) {
+            if(!(incident.x == -exitant.x && incident.y== -exitant.y && incident.z==exitant.z)){
+                return 0;
+            }
+            return 1;
+        }
+        else if(sameHemisphere(incident,exitant)){
+            if(!(incident.x == -exitant.x && incident.y== -exitant.y && incident.z==exitant.z)){
+                return 0;
+            }
+            return getSampleReflectionProbability(exitant);
+        }
+        else{
+            float eta = cosZenith(exitant) > 0 ? (aboveIOR / belowIOR) : (belowIOR / aboveIOR);
+            float3 refraction;
+            float3 normal = make_float3(0, 0, 1);
+            if (exitant.z < 0) normal.z = -1;
+            if (!computeRefraction(exitant,normal, eta, refraction)){
+                return 0;
+            }
+            if(!(refraction==incident)){
+                return 0;
+            }
+            return 1.f-getSampleReflectionProbability(exitant);
         }
     }
     

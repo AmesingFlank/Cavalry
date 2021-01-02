@@ -57,7 +57,6 @@ public:
     Spectrum diffuseColor;
     Spectrum specularColor;
     GGX distribution;
-
     
 	__host__ __device__
 	FresnelBlendBSDF(){}
@@ -87,9 +86,14 @@ public:
     }
 
     __device__
+    float getSampleMicrofacetProbability() const{
+        return 0.5f;
+    }
+
+    __device__
     virtual Spectrum sample(float2 randomSource, float3& incidentOutput, const float3& exitant, float* probabilityOutput) const override{
         
-        float sampleMicrofacetProb = 0.5;
+        float sampleMicrofacetProb = getSampleMicrofacetProbability();
         bool shouldSampleMicrofacet = randomSource.x < sampleMicrofacetProb;
         float3 halfVec;
         if(shouldSampleMicrofacet){
@@ -109,13 +113,25 @@ public:
             }
         }
         
-        *probabilityOutput = 
-            (1.f - sampleMicrofacetProb) * cosineSampleHemispherePdf(incidentOutput) + 
-            sampleMicrofacetProb * distribution.pdf(halfVec,exitant) / (4.f*dot(exitant,halfVec));
-
+        *probabilityOutput = FresnelBlendBSDF::pdf(incidentOutput,exitant,halfVec);
+        
         return FresnelBlendBSDF::eval(incidentOutput, exitant);
 
     }
+
+    __device__
+    float pdf(const float3& incident, const float3& exitant,const float3 halfVec) const {
+        float sampleMicrofacetProb = getSampleMicrofacetProbability();
+        return (1.f - sampleMicrofacetProb) * cosineSampleHemispherePdf(incident) + 
+            sampleMicrofacetProb * distribution.pdf(halfVec,exitant) / (4.f*dot(exitant,halfVec));
+    }
+
+    __device__
+    virtual float pdf(const float3& incident, const float3& exitant) const {
+        float3 halfVec = normalize(incident + exitant);
+        return FresnelBlendBSDF::pdf(incident,exitant,halfVec);
+    }
+
 
     __device__
     virtual bool isDelta() const override { return false; };

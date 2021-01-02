@@ -99,9 +99,20 @@ public:
         float3 halfVec = distribution.sample(randomSource,exitant);
         incidentOutput = reflectF(exitant, halfVec);
 
-        *probabilityOutput = distribution.pdf(halfVec,exitant) / (4.f*dot(exitant,halfVec));
+        *probabilityOutput = pdfReflection(incidentOutput,exitant,halfVec);
 
         return evalReflection(incidentOutput, exitant);
+    }
+
+    __device__
+    float pdfReflection(const float3& incident, const float3& exitant)const{
+        float3 halfVec = normalize(incident+exitant);
+        return pdfReflection(incident,exitant,halfVec);
+    }
+
+    __device__
+    float pdfReflection(const float3& incident, const float3& exitant, const float3& halfVec)const{
+        return  distribution.pdf(halfVec,exitant) / (4.f*dot(exitant,halfVec));
     }
 
     __device__
@@ -118,20 +129,27 @@ public:
             return make_float3(0,0,0);
         } 
 
-        *probabilityOutput = pdfTransmission(exitant, incidentOutput);
+        *probabilityOutput = pdfTransmission(incidentOutput,exitant);
 
-        return evalTransmission(exitant, incidentOutput);
+        return evalTransmission(incidentOutput,exitant);
     }
 
     __device__
-    float pdfTransmission(const float3& exitant, const float3& incident)const{
-        if (exitant.z * incident.z > 0) return 0;
-
-        // Compute $\wh$ from $\wo$ and $\wi$ for microfacet transmission
+    float pdfTransmission(const float3& incident,const float3& exitant)const{
+        
         float eta = cosZenith(exitant) > 0 ? (aboveIOR / belowIOR) : (belowIOR / aboveIOR);
         float3 halfVec = normalize(exitant + incident * eta);
         
-        
+        return pdfTransmission(incident,exitant,halfVec,eta);
+    }
+
+    __device__
+    float pdfTransmission(const float3& incident, const float3& exitant, const float3& halfVec, float eta)const{
+
+        //printf("%f %f %f    vs   %f %f %f.   in: %f %f %f,   out:%f %f %f, eta:%f vs %f\n", XYZ(halfVec), XYZ(halfVec_),XYZ(incident),XYZ(exitant),eta,eta_);
+
+        if (sameHemisphere(incident,exitant)) return 0;
+
         if (dot(exitant, halfVec) * dot(incident, halfVec) > 0) return 0; 
 
         // Compute change of variables _dwh\_dwi_ for microfacet transmission
@@ -141,6 +159,18 @@ public:
         return distribution.pdf(halfVec,exitant) * dwh_dwi;
     }
 
+    __device__
+    float getSampleReflectionProbability(const float3& exitant)const{
+        float p = fresnel.eval(abs(cosZenith(exitant))).x;
+        if (isAllZero(reflectionColor)) {
+            p = 0;
+        }
+        else if (isAllZero(transmissionColor)) {
+            p = 1;
+        }
+        return p;
+    }
+    
 
     __device__
     virtual Spectrum sample(float2 randomSource, float3& incidentOutput, const float3& exitant, float* probabilityOutput) const {
@@ -148,13 +178,7 @@ public:
             return sampleReflection(randomSource,incidentOutput,exitant,probabilityOutput);
         }
 
-        float sampleReflectionProbability = fresnel.eval(abs(cosZenith(exitant))).x;
-        if (isAllZero(reflectionColor)) {
-            sampleReflectionProbability = 0;
-        }
-        else if (isAllZero(transmissionColor)) {
-            sampleReflectionProbability = 1;
-        }
+        float sampleReflectionProbability = getSampleReflectionProbability(exitant);
 
         bool useBRDF = randomSource.x < sampleReflectionProbability;
         if(useBRDF){
@@ -170,6 +194,20 @@ public:
             return result;
         }
     }
+
+    __device__
+    virtual float pdf(const float3& incident, const float3& exitant) const {
+        if (!hasTransmission) {
+            return pdfReflection(incident,exitant);
+        }
+        else if(sameHemisphere(incident,exitant)){
+            return getSampleReflectionProbability(exitant) * pdfReflection(incident,exitant);
+        }
+        else{
+            return (1.f-getSampleReflectionProbability(exitant)) * pdfTransmission(incident,exitant);
+        }
+    }
+
 };
 
 

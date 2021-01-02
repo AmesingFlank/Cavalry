@@ -27,7 +27,7 @@ public:
         
 
         incidentOutput = cosineSampleHemisphere(randomSource);
-        *probabilityOutput = cosineSampleHemispherePdf(incidentOutput);
+        *probabilityOutput = LambertianBSDF::pdf(incidentOutput,exitant);
 
         if (exitant.z < 0) {
             incidentOutput.z *= -1;
@@ -35,6 +35,11 @@ public:
 
         return LambertianBSDF::eval(incidentOutput, exitant);
 
+    }
+
+    __device__
+    virtual float pdf(const float3& incident, const float3& exitant) const {
+        return cosineSampleHemispherePdf(incident);
     }
 
 };

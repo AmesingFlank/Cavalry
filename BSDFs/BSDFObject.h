@@ -76,4 +76,18 @@ public:
 		};
 		return visit(visitor);
 	}
+
+	__device__
+    float pdf(const float3& incident, const float3& exitant) const {
+		auto visitor = [&](auto& arg) -> float {
+			using T = typename std::remove_reference<decltype(arg)>::type;
+			if constexpr (std::is_base_of<BSDF, typename T>::value) {
+				return arg.T::pdf(incident,exitant);
+			}
+			else {
+				SIGNAL_VARIANT_ERROR;
+			}
+		};
+		return visit(visitor);
+	}
 };

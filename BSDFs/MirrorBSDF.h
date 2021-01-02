@@ -38,6 +38,14 @@ public:
     }
 
     __device__
+    virtual float pdf(const float3& incident, const float3& exitant) const {
+        if(incident.x== -exitant.x && incident.y== -exitant.y && incident.z == exitant.z){
+            return 1;
+        }
+        return 0;
+    }
+
+    __device__
     virtual bool isDelta() const override { return true; };
 
 };
