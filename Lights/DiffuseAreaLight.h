@@ -35,7 +35,7 @@ public:
         outputRay.direction = normalize(shapeSample.position - seenFrom);
 
         outputVisibilityTest.ray = outputRay;
-        outputVisibilityTest.targetMesh = shape;
+        outputVisibilityTest.targetMeshIndex = shape->meshIndex;
         outputVisibilityTest.setDistanceLimit(length(shapeSample.position - seenFrom));
 
         if (dot(outputRay.direction, shapeSample.normal) >= 0) {

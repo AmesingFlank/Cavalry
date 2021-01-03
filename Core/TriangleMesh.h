@@ -37,10 +37,10 @@ public:
 
     MeshShapeType shapeType = MeshShapeType::Irregular;
 
-    Primitive* prim;// index of the enclosing primitive. This field is set during buildGpuReferences()/buildCpuReferences()
+    int meshIndex;// index of this mesh in the scene-global array of meshes
+    Primitive* prim;// the enclosing primitive. This field is set during buildGpuReferences()/buildCpuReferences()
 
     // the index of the 0th triangle of this mesh in the scene-global array of triangles.
-    // this is needed when sampling the mesh.
     int globalTriangleIndexBegin;
 
     __host__ 

@@ -136,7 +136,7 @@ struct BVH{
             if (node.isLeaf) {
                 for (int index = node.primitiveIndexBegin; index <= node.primitiveIndexEnd; ++index) {
                     Triangle* prim = &primitives[index];
-                    if (prim->mesh == test.sourceMesh || prim->mesh == test.targetMesh) {
+                    if (prim->meshIndex == test.sourceMeshIndex || prim->meshIndex == test.targetMeshIndex) {
                         continue;
                     }
                     IntersectionResult thisResult;

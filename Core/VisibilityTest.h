@@ -10,8 +10,8 @@ public:
     Ray ray;
     float distanceLimit;
     bool useDistanceLimit = false;
-    const TriangleMesh* sourceMesh = nullptr;
-    const TriangleMesh* targetMesh = nullptr;
+    int sourceMeshIndex = -1;
+    int targetMeshIndex = -1;
     
     __host__ __device__
     void setDistanceLimit(float limit){

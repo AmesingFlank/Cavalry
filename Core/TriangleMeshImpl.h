@@ -9,10 +9,12 @@
 
 
 inline void TriangleMesh::buildCpuReferences(const SceneHandle& scene,int primIndex) {
+    meshIndex = primIndex;
     prim = &scene.primitives[primIndex];
 }
 
 __device__
 inline void TriangleMesh::buildGpuReferences(const SceneHandle& scene,int primIndex) {
+    meshIndex = primIndex;
     prim = &scene.primitives[primIndex];
 }
