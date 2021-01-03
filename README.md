@@ -1,5 +1,5 @@
 # Cavalry
-A GPU Ray Tracer
+A GPU Ray Tracer written in CUDA
 
 
 > Cheers love, the cavalry's here!  -- Tracer (Lena Oxton)
@@ -8,13 +8,27 @@ Features:
 
 * GPU Bounding Volume Hierarchy construction using radix trees (Aila 2012)
 
-* (Partial) compatibility with PBRT scene definition files.
+* GPU BVH Optimization by restructuring (Aila 2013)
+
+* (Partial) compatibility with PBRT v3 scene definition files.
 
 * Halton sampler
+
+* Multi-Importance Sampling
 
 ## Sample Images
 
 ![](doc/sample_images/cornell-box.png)
-
+*Cornell Box*
 
 ![](doc/sample_images/living-room-3.png)
+*Living Room*
+
+![](doc/sample_images/bathroom2.png)
+*Bath Room*
+
+![](doc/sample_images/coffee.png)
+*Coffee Box*
+
+![](doc/sample_images/veach-mis.png)
+*Multi-Importance Sampling*
