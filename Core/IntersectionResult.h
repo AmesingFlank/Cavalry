@@ -14,8 +14,6 @@ struct IntersectionResult{
     float2 textureCoordinates;
     const Primitive* primitive;
     BSDFObject bsdf;
-    int triangleIndex; // index of the intersected triangle.
-
 
     __device__
     void findBSDF();

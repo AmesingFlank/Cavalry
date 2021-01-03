@@ -29,6 +29,7 @@ struct BVH{
 
         result.intersected = false;
         result.distance = FLT_MAX;
+        int resultTriangle = -1;
 
         BVHNode& root = nodesData[0];
         float minDistanceToRoot;
@@ -60,7 +61,7 @@ struct BVH{
                     if(primitives[index].intersect(thisResult,ray,u,v)){
                         if(result.intersected == false || thisResult.distance < result.distance){
                             result = thisResult;
-                            result.triangleIndex = index;
+                            resultTriangle = index;
                             resultUV.x = u;
                             resultUV.y = v;
                         }
@@ -97,7 +98,7 @@ struct BVH{
         }
 
         if (result.intersected) {
-            primitives[result.triangleIndex].fillIntersectionInformation(result, ray, resultUV.x, resultUV.y);
+            primitives[resultTriangle].fillIntersectionInformation(result, ray, resultUV.x, resultUV.y);
         }
 
         return result.intersected;
@@ -135,7 +136,7 @@ struct BVH{
             if (node.isLeaf) {
                 for (int index = node.primitiveIndexBegin; index <= node.primitiveIndexEnd; ++index) {
                     Triangle* prim = &primitives[index];
-                    if (index == test.sourceTriangleIndex || index == test.targetTriangleIndex) {
+                    if (prim->mesh == test.sourceMesh || prim->mesh == test.targetMesh) {
                         continue;
                     }
                     IntersectionResult thisResult;

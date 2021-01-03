@@ -44,7 +44,7 @@ TriangleMesh createDiskMesh(float radius,float height, const glm::mat4& transfor
     TriangleMesh mesh(trianglesCount,verticesCount,false,false);
     mesh.positions.cpu = positions;
     mesh.indices.cpu = indices;
-    mesh.definitelyWaterTight = false;
+    mesh.shapeType = MeshShapeType::Disk;
 
     mesh.computeArea(); std::cout << "disk area " << mesh.area() <<"   "<<radius<<"   "<<height<< std::endl;
     std::cout << "created disk mesh " << std::endl;
