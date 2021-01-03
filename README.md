@@ -27,6 +27,9 @@ Features:
 ![](doc/sample_images/bathroom2.png)
 *Bath Room*
 
+![](doc/sample_images/staircase.png)
+*Staircase*
+
 ![](doc/sample_images/coffee.png)
 *Coffee Box*
 
