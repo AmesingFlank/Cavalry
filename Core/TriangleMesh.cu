@@ -194,7 +194,6 @@ void TriangleMesh::computeArea(){
 }
 
 void TriangleMesh::copyTrianglesToScene(Scene& scene,int meshID){
-    globalTriangleIndexBegin = scene.trianglesHost.size();
     for(int i = 0;i<trianglesCount;++i){
         Triangle triangle(meshID,i);
         scene.trianglesHost.push_back(triangle);

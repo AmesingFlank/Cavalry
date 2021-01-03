@@ -83,6 +83,9 @@ TriangleMesh createSphereMesh(float radius, const glm::mat4& transform) {
     mesh.indices.cpu = *currIndices;
     mesh.shapeType = MeshShapeType::Sphere;
 
+    float3 center = apply(transform, make_float3(0,0,0));
+    float transformedRadius = length(center - apply(transform, make_float3(radius, 0, 0)));
+    mesh.shapeParams = make_float4(center.x, center.y, center.z, transformedRadius);
 
     return mesh;
 

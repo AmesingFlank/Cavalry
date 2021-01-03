@@ -182,3 +182,16 @@ inline bool operator==(const float3 &v1, const float3& v2) {
     // Compute $\cos \theta_\roman{t}$ using Snell's law
     return v1.x==v2.x && v1.y==v2.y && v1.z==v2.z;
 }
+
+
+__device__
+inline void buildCoordinateSystem(const float3& normal, float3& tangent0, float3& tangent1) {
+    if (abs(normal.x) < 0.5) {
+        tangent0 = cross(make_float3(1, 0, 0), normal);
+    }
+    else {
+        tangent0 = cross(make_float3(0, 1, 0), normal);
+    }
+    tangent0 = normalize(tangent0);
+    tangent1 = normalize(cross(normal, tangent0));
+}
