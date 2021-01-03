@@ -8,7 +8,7 @@
 #include "IntersectionResult.h"
 
 enum class MaterialType: unsigned char {
-    Matte = 0, Mirror = 1, Substrate = 2, Metal = 3, Glass = 4
+    Matte = 0, Mirror = 1, Substrate = 2, Metal = 3, Glass = 4, Plastic = 5
 };
 
 class Material{

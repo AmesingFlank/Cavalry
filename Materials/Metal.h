@@ -38,7 +38,7 @@ public:
 
     static MetalMaterial createFromParams(const Parameters& params, const std::unordered_map<std::string, Texture2D>& textures) {
         Spectrum copperF0 = make_float3(0.955,0.638,0.538);
-        Fresnel fresnel = {copperF0};
+        Fresnel fresnel = Fresnel::createFromF0(copperF0);
         
         if (params.hasNumList("eta") && params.hasNumList("k")) {
             auto etaVec = params.getNumList("eta");

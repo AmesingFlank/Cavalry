@@ -324,7 +324,7 @@ namespace PathTracing {
 
             int depth = 0;
 
-            while (thisRoundRayQueue->count() > 0 && depth < maxDepth) {
+            while (thisRoundRayQueue->count() > 0 && depth <= maxDepth) {
                 std::cout << "\ndoing depth " << depth << std::endl;
 
 

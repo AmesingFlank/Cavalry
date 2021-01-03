@@ -25,6 +25,10 @@ struct Fresnel{
         return schlick(cosTheta,f0);
     }
 
+    static Fresnel createFromF0(const Spectrum& F0){
+        return {F0};
+    }
+
     static Fresnel createFromIOR(const Spectrum& eta){
         Spectrum temp = (eta-make_float3(1,1,1)) / (eta + make_float3(1,1,1));
         Spectrum f0 = temp * temp;

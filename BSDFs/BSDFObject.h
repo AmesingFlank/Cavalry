@@ -5,6 +5,7 @@
 #include "Microfacet.h"
 #include "MirrorBSDF.h"
 #include "Specular.h"
+#include "PlasticBSDF.h"
 
 
 #include "Color.h"
@@ -12,7 +13,7 @@
 #include "../Utils/Variant.h"
 
 
-using BSDFVariant = Variant<LambertianBSDF,FresnelBlendBSDF,MirrorBSDF,MicrofacetBSDF,SpecularBSDF>;
+using BSDFVariant = Variant<LambertianBSDF,FresnelBlendBSDF,MirrorBSDF,MicrofacetBSDF,SpecularBSDF,PlasticBSDF>;
 
 
 class BSDFObject : public BSDFVariant {

@@ -21,15 +21,15 @@ public:
 
     SubstrateMaterial():diffuseColor(make_float3(100,0,0)),specularColor(make_float3(100,0,0)), diffuseTexture(0, 0, true){}
 
-    SubstrateMaterial(Spectrum diffuseColor_,Spectrum specularColor_,float uRoughness_,float vRoughness_,bool remapRoughness_):
+    SubstrateMaterial(const Spectrum& diffuseColor_,const Spectrum& specularColor_,float uRoughness_,float vRoughness_,bool remapRoughness_):
     diffuseColor(diffuseColor_),specularColor(specularColor_), diffuseTexture(0, 0, true),
     distribution(GGX::createFromRoughness(uRoughness_,vRoughness_,remapRoughness_))
     {
 
     }
 
-    SubstrateMaterial(Spectrum diffuseColor_,const Texture2D& diffuseTexture_,Spectrum specularColor_,float uRoughness_,float vRoughness_,bool remapRoughness_):
-    diffuseColor(diffuseColor_),specularColor(specularColor_), diffuseTexture(diffuseTexture_),hasDiffuseTexture(true),
+    SubstrateMaterial(const Texture2D& diffuseTexture_,const Spectrum& specularColor_,float uRoughness_,float vRoughness_,bool remapRoughness_):
+    specularColor(specularColor_), diffuseTexture(diffuseTexture_),hasDiffuseTexture(true),
     distribution(GGX::createFromRoughness(uRoughness_,vRoughness_,remapRoughness_))
     {
 
@@ -72,13 +72,17 @@ public:
         if (params.hasNum("vroughness")) {
             vRoughness = params.getNum("vroughness");
         }
+        if (params.hasNum("roughness")) {
+            uRoughness = params.getNum("roughness");
+            vRoughness = params.getNum("roughness");
+        }
         if (params.hasString("remaproughness")) {
             remap = params.getString("remaproughness") == "true";
         }
 
         if (params.hasString("Kd")) {
             std::string textureName = params.getString("Kd");
-            return SubstrateMaterial(diffuse, textures.at(textureName),specular,uRoughness,vRoughness,remap);
+            return SubstrateMaterial(textures.at(textureName),specular,uRoughness,vRoughness,remap);
         }
         return SubstrateMaterial(diffuse, specular,uRoughness,vRoughness,remap);
     }

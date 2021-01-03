@@ -5,15 +5,17 @@
 #include "Substrate.h"
 #include "Metal.h"
 #include "Glass.h"
-
+#include "Plastic.h"
 
 #include "Color.h"
 #include "../Utils/GpuCommons.h"
 #include "../Utils/Variant.h"
 #include "../Core/Parameters.h"
 
+#include <iostream>
 
-using MaterialVariant = Variant<MatteMaterial,MirrorMaterial,SubstrateMaterial,MetalMaterial,GlassMaterial>;
+
+using MaterialVariant = Variant<MatteMaterial,MirrorMaterial,SubstrateMaterial,MetalMaterial,GlassMaterial,PlasticMaterial>;
 
 
 class MaterialObject : public MaterialVariant {
@@ -95,6 +97,10 @@ public:
 		if (materialType == "glass") {
 			return MaterialObject(GlassMaterial::createFromParams(def.params, textures));
 		}
+		if (materialType == "plastic") {
+			return MaterialObject(PlasticMaterial::createFromParams(def.params, textures));
+		}
+		std::cout << "unsupported material type: " << materialType << std::endl;
 		return MaterialObject(MatteMaterial::createFromParams(def.params,textures));
 	}
 
