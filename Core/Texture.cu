@@ -6,6 +6,9 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "../Dependencies/include/stb_image.h"
 
+#define TINYEXR_IMPLEMENTATION
+#include "../Dependencies/include/tinyexr.h"
+
 Texture2D Texture2D::createFromObjectDefinition(const ObjectDefinition& def, const glm::mat4& transform, const std::filesystem::path& basePath) {
     if (def.params.hasString("filename")) {
         std::string pathString = def.params.getString("filename");
@@ -25,8 +28,43 @@ Texture2D Texture2D::createFromObjectDefinition(const ObjectDefinition& def, con
 Texture2D Texture2D::createTextureFromFile(const std::string& filename,bool shouldInvertGamma) {
     int width;
     int height;
-    uchar4* data = (uchar4*)stbi_load(filename.c_str(), &width, &height, 0, STBI_rgb_alpha);
-    std::cout << "texture size " << width << "  " << height << std::endl;
+    uchar4* data;
+
+    std::string postfix = getFileNamePostfix(filename);
+
+    if(postfix=="exr"){
+        float* out;
+        const char* err = nullptr;
+
+        int ret = LoadEXR(&out, &width, &height, filename.c_str(), &err);
+
+        if (ret != TINYEXR_SUCCESS) {
+            if (err) {
+                fprintf(stderr, "ERR : %s\n", err);
+                FreeEXRErrorMessage(err); // release memory of error message.
+                exit(1);
+            }
+        } else {
+            data = (uchar4*)malloc(width*height*4);
+            for (int i = 0; i < width*height; ++i) {
+                float r = out[i*4];
+                float g = out[i*4+1];
+                float b = out[i*4+2];
+                float a = out[i*4+3];
+                uchar4& pixel = data[i];
+                pixel.x = 255.f*r;
+                pixel.y = 255.f*g;
+                pixel.z = 255.f*b;
+                pixel.w = 255.f*a;
+            }
+            free(out); // release memory of image data
+        }
+    }
+    else {
+        data = (uchar4*)stbi_load(filename.c_str(), &width, &height, 0, STBI_rgb_alpha);
+        std::cout << "texture size " << width << "  " << height << std::endl;
+    }
+    
 
     if (shouldInvertGamma) {
         for (int i = 0; i < width*height; ++i) {

@@ -11,13 +11,16 @@ inline std::string readTextFile(const std::string& path) {
     std::string result;
     std::ifstream file;
     file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-    file.open(path);
-
-    std::stringstream stream;
-
-    stream << file.rdbuf();
-
-    result = stream.str();
+    try {
+        file.open(path);
+        std::stringstream stream;
+        stream << file.rdbuf();
+        result = stream.str();
+    }
+    catch (std::ifstream::failure e) {
+        std::cout << "ERROR: fileNotFound: " << path << std::endl;
+        exit(1);
+    }
     return result;
 }
 
