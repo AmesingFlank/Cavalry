@@ -21,61 +21,58 @@ Texture2D Texture2D::createFromObjectDefinition(const ObjectDefinition& def, con
         return Texture2D::createTextureFromFile(filename,shouldInvertGamma);
     }
     uchar4 data = make_uchar4(0, 0, 0, 0);
-    auto result = Texture2D(1, 1, &data);
+    auto result = Texture2D(&data,1,1);
     return result;
 }
 
 Texture2D Texture2D::createTextureFromFile(const std::string& filename,bool shouldInvertGamma) {
     int width;
     int height;
-    uchar4* data;
 
     std::string postfix = getFileNamePostfix(filename);
 
     if(postfix=="exr"){
-        float* out;
+        float4* out;
         const char* err = nullptr;
 
-        int ret = LoadEXR(&out, &width, &height, filename.c_str(), &err);
+        int ret = LoadEXR((float**)&out, &width, &height, filename.c_str(), &err);
 
         if (ret != TINYEXR_SUCCESS) {
             if (err) {
                 fprintf(stderr, "ERR : %s\n", err);
                 FreeEXRErrorMessage(err); // release memory of error message.
-                exit(1);
+                SIGNAL_ERROR("exr reading failed: %s\n", filename.c_str());
             }
         } else {
-            data = (uchar4*)malloc(width*height*4);
-            for (int i = 0; i < width*height; ++i) {
-                float r = out[i*4];
-                float g = out[i*4+1];
-                float b = out[i*4+2];
-                float a = out[i*4+3];
-                uchar4& pixel = data[i];
-                pixel.x = 255.f*r;
-                pixel.y = 255.f*g;
-                pixel.z = 255.f*b;
-                pixel.w = 255.f*a;
+            if (shouldInvertGamma) {
+                for (int i = 0; i < width * height; ++i) {
+                    float4& pixel = out[i];
+                    pixel.x = inverseGammaCorrect(pixel.x);
+                    pixel.y = inverseGammaCorrect(pixel.y);
+                    pixel.z = inverseGammaCorrect(pixel.z);
+                }
             }
-            free(out); // release memory of image data
+            Texture2D result((float4*)out, width, height);
+            free((void*)out);
+            return result;
         }
     }
     else {
-        data = (uchar4*)stbi_load(filename.c_str(), &width, &height, 0, STBI_rgb_alpha);
+        stbi_set_flip_vertically_on_load(true);
+        uchar4* data = (uchar4*)stbi_load(filename.c_str(), &width, &height, 0, STBI_rgb_alpha);
         std::cout << "texture size " << width << "  " << height << std::endl;
-    }
-    
 
-    if (shouldInvertGamma) {
-        for (int i = 0; i < width*height; ++i) {
-            uchar4& pixel = data[i];
-            pixel.x = 255.f * inverseGammaCorrect(pixel.x / 255.f);
-            pixel.y = 255.f * inverseGammaCorrect(pixel.y / 255.f);
-            pixel.z = 255.f * inverseGammaCorrect(pixel.z / 255.f);
+        if (shouldInvertGamma) {
+            for (int i = 0; i < width * height; ++i) {
+                uchar4& pixel = data[i];
+                pixel.x = 255.f * inverseGammaCorrect(pixel.x / 255.f);
+                pixel.y = 255.f * inverseGammaCorrect(pixel.y / 255.f);
+                pixel.z = 255.f * inverseGammaCorrect(pixel.z / 255.f);
+            }
         }
-    }
 
-    Texture2D result(data,width, height);
-    free((void*)data);
-    return result;
+        Texture2D result(data, width, height);
+        free((void*)data);
+        return result;
+    }
 }

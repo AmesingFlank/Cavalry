@@ -304,7 +304,7 @@ void parseSubsection(TokenBuf& buf, RenderSetup& result, glm::mat4 transform,con
 			}
 			else if (keyWord->word == "AreaLightSource") {
 				auto lightDef = readObjectDefinition(buf);
-				LightObject light = LightObject::createFromObjectDefinition(lightDef, transform);
+				LightObject light = LightObject::createFromObjectDefinition(lightDef, transform, basePath, textureStore.items);
 				if (light.is<DiffuseAreaLight>()) {
 					DiffuseAreaLight* diffuseLight = light.get<DiffuseAreaLight>();
 					// shapeIndex will be the index of the next shape to be added.
@@ -318,7 +318,7 @@ void parseSubsection(TokenBuf& buf, RenderSetup& result, glm::mat4 transform,con
 			}
 			else if (keyWord->word == "LightSource") {
 				auto lightDef = readObjectDefinition(buf);
-				LightObject light = LightObject::createFromObjectDefinition(lightDef, transform);
+				LightObject light = LightObject::createFromObjectDefinition(lightDef, transform,basePath,textureStore.items);
 				result.scene.lightsHost.push_back(light);
 				if (lightDef.objectName == "infinite") {
 					result.scene.environmentMapIndex = result.scene.lightsHost.size() - 1;

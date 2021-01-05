@@ -4,6 +4,8 @@
 #include "DiffuseAreaLight.h"
 
 #include "../Utils/Variant.h"
+#include "../Utils/Utils.h"
+#include <filesystem>
 
 using LightVariant = Variant<PointLight,EnvironmentMap,DiffuseAreaLight>;
 
@@ -69,27 +71,60 @@ public:
 		return visit(visitor);
 	};
 
-	static LightObject createFromObjectDefinition(const ObjectDefinition& def,const glm::mat4 transform){
+	static Spectrum vectorToSpectrum(const std::vector<float>& vec) {
+		Spectrum color;
+		if (vec.size() == 3) {
+			color.x = vec[0];
+			color.y = vec[1];
+			color.z = vec[2];
+		}
+		else {
+			float kelvin = vec[0];
+			float scale = vec[1];
+			color = colorTemperatureToRGB(kelvin) * scale;
+		}
+		return color;
+	}
+
+	static LightObject createFromObjectDefinition(const ObjectDefinition& def,const glm::mat4 transform,const std::filesystem::path& basePath, const std::unordered_map<std::string, Texture2D>& textures){
+		Spectrum color = make_float3(1, 1, 1);
+		// The "L"/"l" param is the same for all the light source supported.
+		if (def.params.hasNumList("L")) {
+			std::vector<float> colorVec = def.params.getNumList("L");
+			color = vectorToSpectrum(colorVec);
+		}
+		else if (def.params.hasNumList("l")) {
+			std::vector<float> colorVec = def.params.getNumList("l");
+			color = vectorToSpectrum(colorVec);
+		}
+		
 		if (def.objectName == "diffuse") {
-			Spectrum color = make_float3(1, 1, 1);
-			
-			if (def.params.hasNumList("L")) {
-				std::vector<float> colorVec = def.params.getNumList("L");
-				if(colorVec.size()==3){
-					color.x = colorVec[0];
-					color.y = colorVec[1];
-					color.z = colorVec[2];
-				}
-				else{
-					float kelvin = colorVec[0];
-					float scale = colorVec[1];
-					color = colorTemperatureToRGB(kelvin)*scale;
-				}
-			}
-			
 			return DiffuseAreaLight(color);
 		}
-		return LightObject(EnvironmentMap());
+		if (def.objectName == "infinite") {
+			// for infinite area light, "scale" is an alternative for "L"
+			if (def.params.hasNumList("scale")) {
+				std::vector<float> colorVec = def.params.getNumList("scale");
+				color = vectorToSpectrum(colorVec);
+			}
+			if (def.params.hasString("mapname")) {
+				std::string relativePathStr = def.params.getString("mapname");
+				std::filesystem::path relativePath(relativePathStr);
+				std::string fileName = (basePath / relativePath).generic_string();
+
+				std::string postfix = getFileNamePostfix(fileName);
+				bool shouldInvertGamma = postfix == "tga" || postfix == "png";
+
+				Texture2D texture = Texture2D::createTextureFromFile(fileName, shouldInvertGamma);
+				return EnvironmentMap(transform,color,texture);
+			}
+			else {
+				return EnvironmentMap(transform, color);
+			}
+		}
+		std::cout << "unrecognied light source " << def.objectName << std::endl;
+		return EnvironmentMap(transform,make_float3(0,0,0));
+		
 	}
 
 	void prepareForRender() {
