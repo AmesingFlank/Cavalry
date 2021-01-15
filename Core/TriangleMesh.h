@@ -105,10 +105,10 @@ public:
     }
 
 
-
+    // if useSeenFrom is false, then the seenFrom argument is ignored.
     __device__
-    IntersectionResult sample(const float3& seenFrom, SamplerObject& sampler, float* outputProbability) const {
-        if (shapeType == MeshShapeType::Sphere) {
+    IntersectionResult sample(const float3& seenFrom, SamplerObject& sampler, float* outputProbability, bool useSeenFrom = true) const {
+        if (shapeType == MeshShapeType::Sphere && useSeenFrom) {
             float3 center = make_float3(shapeParams.x, shapeParams.y, shapeParams.z);
             float radius = shapeParams.w;
             if (lengthSquared(seenFrom - center) > radius * radius) {

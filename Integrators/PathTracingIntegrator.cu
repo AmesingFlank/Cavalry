@@ -202,7 +202,7 @@ namespace PathTracing {
             else {
                 if (depth > 0) {
                     float materialPDF = myTask.materialPDF;
-                    float lightPDF = prim->areaLight->get<DiffuseAreaLight>()->DiffuseAreaLight::pdf(thisRay, intersection);
+                    float lightPDF = prim->areaLight->get<DiffuseAreaLight>()->DiffuseAreaLight::sampleRayToPointPdf(thisRay, intersection);
                     float misWeight = misPowerHeuristic(materialPDF, lightPDF);
                     if (isfinite(misWeight)) {
                         *result += prim->areaLight->get<DiffuseAreaLight>()->DiffuseAreaLight::evaluateRay(thisRay, intersection) * multiplier * misWeight;

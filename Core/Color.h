@@ -2,7 +2,7 @@
 
 #include "../Utils/GpuCommons.h"
 #include "../Utils/MathsCommons.h"
-
+#include "TransportMode.h"
 
 using Spectrum = float3;
 

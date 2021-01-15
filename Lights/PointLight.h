@@ -33,7 +33,7 @@ public:
     }
 
     __device__
-    virtual float pdf(const Ray& sampledRay, const IntersectionResult& lightSurface) const {
+    virtual float sampleRayToPointPdf(const Ray& sampledRay, const IntersectionResult& lightSurface) const {
         return 1;
     };
 

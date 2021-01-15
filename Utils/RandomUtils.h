@@ -40,6 +40,11 @@ inline float cosineSampleHemispherePdf(const float3& result) {
 }
 
 __host__ __device__
+inline float cosineSampleHemispherePdf(float cosine) {
+    return abs(cosine / M_PI);
+}
+
+__host__ __device__
 inline float uniformSampleHemispherePdf(const float3& result) {
     return 1.f / (2.f* M_PI);
 }

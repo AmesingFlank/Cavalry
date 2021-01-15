@@ -17,7 +17,17 @@ public:
     virtual Spectrum sampleRayToPoint(const float3& seenFrom,SamplerObject& sampler, float& outputProbability, Ray& outputRay,VisibilityTest& outputVisibilityTest) const = 0;
 
     __device__
-    virtual float pdf(const Ray& sampledRay, const IntersectionResult& lightSurface) const = 0;
+    virtual float sampleRayToPointPdf(const Ray& sampledRay, const IntersectionResult& lightSurface) const = 0;
+
+    __device__
+    virtual Spectrum sampleRay(SamplerObject& sampler, Ray& outputRay, float3& outputLightNormal, float& outputPositionProbability, float& outputDirectionProbability) const {
+        SIGNAL_ERROR("sampleRay not implemented\n");
+    }
+
+    __device__
+    virtual void sampleRayPdf(const Ray& sampledRay, const float3& sampledLightNormal, float& outputPositionProbability, float& outputDirectionProbability) const {
+        SIGNAL_ERROR("sampleRayPdf not implemented\n");
+    }
 
 
     virtual void buildCpuReferences(const SceneHandle& scene) = 0;
@@ -75,7 +85,7 @@ public:
     }
 
     __device__
-    virtual float pdf(const Ray& sampledRay, const IntersectionResult& lightSurface) const  {
+    virtual float sampleRayToPointPdf(const Ray& sampledRay, const IntersectionResult& lightSurface) const  {
         return uniformSampleSpherePdf(sampledRay.direction);
     };
 

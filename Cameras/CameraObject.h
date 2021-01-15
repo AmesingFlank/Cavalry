@@ -45,6 +45,21 @@ public:
 		return visit(visitor);
 	}
 
+	
+    __host__ __device__
+    void pdf(const Ray &ray, float* outputPositionProbability, float* outputDirectionProbability) const {
+		auto visitor = [&](auto& arg){
+			using T = typename std::remove_reference<decltype(arg)>::type;
+			if constexpr (std::is_base_of<Camera,typename T>::value) {
+				arg.T::pdf(ray,outputPositionProbability,outputDirectionProbability);
+			}
+			else {
+				SIGNAL_VARIANT_ERROR;
+			}
+		};
+		visit(visitor);
+	}
+
 	static CameraObject createFromObjectDefinition(const ObjectDefinition& def,const glm::mat4& cameraToWorld, int filmWidth_, int filmHeight_){
 		return CameraObject(PerspectiveCamera::createFromParams(def.params,cameraToWorld,filmWidth_,filmHeight_));
 	}

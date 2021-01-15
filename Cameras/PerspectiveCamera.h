@@ -46,4 +46,19 @@ public:
 		return ray;
 
 	}
+
+	__host__ __device__
+    virtual void pdf(const Ray &ray, float* outputPositionProbability, float* outputDirectionProbability) const override{
+
+		float3 front = apply(cameraToWorld,make_float3(0,0,1));
+		float cosTheta = dot(ray.direction, front);
+		if (cosTheta <= 0) {
+			*outputPositionProbability = 0;
+			*outputDirectionProbability = 0;
+			return;
+		}
+		
+		*outputPositionProbability = 1;
+		*outputDirectionProbability = 1.f / (cosTheta * cosTheta * cosTheta);
+	}
 };

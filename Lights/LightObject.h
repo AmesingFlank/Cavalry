@@ -139,4 +139,32 @@ public:
 		};
 		visit(visitor);
 	}
+
+	__device__
+    Spectrum sampleRay(SamplerObject& sampler, Ray& outputRay, float3& outputLightNormal, float& outputPositionProbability, float& outputDirectionProbability) const {
+        auto visitor = [&](auto& arg) -> Spectrum {
+			using T = typename std::remove_reference<decltype(arg)>::type;
+			if constexpr (std::is_base_of<Light,typename T>::value) {
+				return arg.T::sampleRay(sampler,outputRay,outputLightNormal,outputPositionProbability,outputDirectionProbability);
+			}
+			else {
+				SIGNAL_VARIANT_ERROR;
+			}
+		};
+		return visit(visitor);
+    }
+
+	__device__
+	void sampleRayPdf(const Ray& sampledRay, const float3& sampledLightNormal, float& outputPositionProbability, float& outputDirectionProbability) const {
+		auto visitor = [&](auto& arg) {
+			using T = typename std::remove_reference<decltype(arg)>::type;
+			if constexpr (std::is_base_of<Light, typename T>::value) {
+				return arg.T::sampleRayPdf(sampledRay,sampledLightNormal,outputPositionProbability,outputDirectionProbability);
+			}
+			else {
+				SIGNAL_VARIANT_ERROR;
+			}
+		};
+		visit(visitor);
+	}
 };
