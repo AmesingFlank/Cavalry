@@ -61,4 +61,16 @@ public:
 		*outputPositionProbability = 1;
 		*outputDirectionProbability = 1.f / (cosTheta * cosTheta * cosTheta);
 	}
+
+
+	__device__
+    virtual float3 getPosition() const override {
+		return apply(cameraToWorld,make_float3(0,0,0));
+	};
+
+    __device__
+    virtual float3 getFront() const override{
+		float3 front = apply(cameraToWorld,make_float3(0,0,1));
+		return front;
+	}
 };

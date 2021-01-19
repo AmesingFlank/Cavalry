@@ -60,6 +60,34 @@ public:
 		visit(visitor);
 	}
 
+	__device__
+    float3 getPosition() const {
+		auto visitor = [&](auto& arg) -> float3{
+			using T = typename std::remove_reference<decltype(arg)>::type;
+			if constexpr (std::is_base_of<Camera,typename T>::value) {
+				arg.T::getPosition();
+			}
+			else {
+				SIGNAL_VARIANT_ERROR;
+			}
+		};
+		return visit(visitor);
+	};
+
+    __device__
+    float3 getFront() const {
+		auto visitor = [&](auto& arg) -> float3{
+			using T = typename std::remove_reference<decltype(arg)>::type;
+			if constexpr (std::is_base_of<Camera,typename T>::value) {
+				arg.T::getFront();
+			}
+			else {
+				SIGNAL_VARIANT_ERROR;
+			}
+		};
+		return visit(visitor);
+	};
+
 	static CameraObject createFromObjectDefinition(const ObjectDefinition& def,const glm::mat4& cameraToWorld, int filmWidth_, int filmHeight_){
 		return CameraObject(PerspectiveCamera::createFromParams(def.params,cameraToWorld,filmWidth_,filmHeight_));
 	}

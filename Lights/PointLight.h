@@ -20,9 +20,10 @@ public:
     Spectrum color;
 
     __device__
-    virtual Spectrum sampleRayToPoint(const float3& seenFrom, SamplerObject& sampler, float& outputProbability, Ray& outputRay, VisibilityTest& outputVisibilityTest) const override{
+    virtual Spectrum sampleRayToPoint(const float3& seenFrom, SamplerObject& sampler, float& outputProbability, Ray& outputRay, VisibilityTest& outputVisibilityTest,IntersectionResult& outputLightSurface) const override{
         outputProbability = 1;
 
+        outputLightSurface.position = position;
         outputRay.origin = position;
         outputRay.direction = normalize(this->position - seenFrom);
 

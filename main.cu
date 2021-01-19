@@ -40,6 +40,7 @@ int main(){
     //test(path+"TestScenes/coffee/scene.pbrt");
     //test(path + "TestScenes/veach-mis2/scene.pbrt");
     //test(path + "TestScenes/veach-mis/mis.pbrt");
+    //test(path + "TestScenes/veach-bidir2/scene.pbrt");
     //test(path + "TestScenes/dragon/f8-21b.pbrt");
     //test(path+"TestScenes/dragon/f9-3.pbrt");
 }

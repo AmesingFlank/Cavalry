@@ -1,3 +1,4 @@
+/*
 #pragma once
 
 #include "../Core/Integrator.h"
@@ -15,4 +16,5 @@ namespace BDPT {
 
     };
 }
+*/
 

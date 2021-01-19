@@ -223,7 +223,9 @@ namespace PathTracing {
         VisibilityTest visibilityTest;
         visibilityTest.sourceMeshIndex = intersection.primitive->shape.meshIndex;
 
-        Spectrum incident = light.sampleRayToPoint(intersection.position, sampler, probability, rayToLight, visibilityTest);
+        IntersectionResult lightSurface;
+
+        Spectrum incident = light.sampleRayToPoint(intersection.position, sampler, probability, rayToLight, visibilityTest,lightSurface);
 
         if (scene.testVisibility(visibilityTest) && isfinite(probability)) {
             Spectrum materialEvalMultiplier = scene.lightsCount * multiplier / probability;

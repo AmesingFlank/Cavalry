@@ -30,11 +30,11 @@ public:
 	}
 
 	__host__ __device__
-	Spectrum sampleRayToPoint(const float3& position, SamplerObject& sampler, float& outputProbability, Ray& outputRay,VisibilityTest& outputVisibilityTest) const {
+	Spectrum sampleRayToPoint(const float3& position, SamplerObject& sampler, float& outputProbability, Ray& outputRay,VisibilityTest& outputVisibilityTest,IntersectionResult& outputLightSurface) const {
 		auto visitor = [&](auto& arg) -> Spectrum {
 			using T = typename std::remove_reference<decltype(arg)>::type;
 			if constexpr (std::is_base_of<Light,typename T>::value) {
-				return arg.T::sampleRayToPoint(position,sampler,outputProbability,outputRay,outputVisibilityTest);
+				return arg.T::sampleRayToPoint(position,sampler,outputProbability,outputRay,outputVisibilityTest,outputLightSurface);
 			}
 			else {
 				SIGNAL_VARIANT_ERROR;

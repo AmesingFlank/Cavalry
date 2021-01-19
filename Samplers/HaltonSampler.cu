@@ -15,11 +15,19 @@ threadsCount(0),samplesPerPixel(0),states(0,true),statesCopy(0, true),primes(0,t
 }
 
 __global__
-void setIndices(HaltonState* data, int count,int threadsCount) {
+void prepareStates(HaltonSampler sampler) {
     int index = blockIdx.x * blockDim.x + threadIdx.x;
-    if (index >= count) return;
+    if (index >= sampler.states.N) return;
 
-    data[index].index = HALTON_INDEX_SKIP * index;
+    HaltonState& myState = sampler.states.data[index];
+
+    //reset dimension to 0;
+    myState.dimension = 0;
+
+    if (myState.index == 0) {
+        myState.index = HALTON_INDEX_SKIP * index;
+    }
+    // else there is already a valid index to be used.
 }
 
 void HaltonSampler::prepare(int threadsCount_) {
@@ -28,11 +36,10 @@ void HaltonSampler::prepare(int threadsCount_) {
         states = GpuArray<HaltonState>(threadsCount_, false);
         statesCopy = GpuArray<HaltonState>(threadsCount_, false);
         maxDimension = GpuArray<int>(1, false);
-
-        int numBlocks, numThreads;
-        setNumBlocksThreads(threadsCount, numBlocks, numThreads);
-        setIndices << <numBlocks, numThreads >> > (states.data, states.N,threadsCount);
     }
+    int numBlocks, numThreads;
+    setNumBlocksThreads(threadsCount, numBlocks, numThreads);
+    prepareStates << <numBlocks, numThreads >> > (getCopyForKernel());
 }
 
 HaltonSampler HaltonSampler::getCopyForKernel(){
@@ -105,6 +112,8 @@ void HaltonSampler::reorderStates(GpuArray<int>& taskIndices) {
     int N = taskIndices.N;
     int numBlocks, numThreads;
     setNumBlocksThreads(N, numBlocks, numThreads);
+
+    statesCopy.clear();
     reorderHaltonStates << <numBlocks, numThreads >> > (N, states.data, statesCopy.data, taskIndices.data);
     CHECK_CUDA_ERROR("reorder halton");
 
@@ -119,6 +128,8 @@ void writeMaxHaltonDimension(HaltonSampler sampler,int* maxDimension) {
         return;
     }
     HaltonState& myState = sampler.states.data[index];
+
+    int d = *maxDimension;
     atomicMax(maxDimension, myState.dimension);
 }
 
@@ -137,9 +148,11 @@ void HaltonSampler::syncDimension() {
     int numBlocks, numThreads;
     setNumBlocksThreads(threadsCount, numBlocks, numThreads);
 
+    maxDimension.set(0, 0);
 
     writeMaxHaltonDimension <<<numBlocks, numThreads >>> (getCopyForKernel(), maxDimension.data);
     CHECK_CUDA_ERROR("write max halton dimension");
+    std::cout << "maxDimension: " << maxDimension.get(0) << std::endl;
 
     syncHaltonDimension<<<numBlocks,numThreads>>> (getCopyForKernel(), maxDimension.data);
     CHECK_CUDA_ERROR("sync halton dimension");

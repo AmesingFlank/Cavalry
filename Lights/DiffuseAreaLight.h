@@ -23,22 +23,22 @@ public:
 
 
     __device__
-    virtual Spectrum sampleRayToPoint(const float3& seenFrom, SamplerObject& sampler, float& outputProbability, Ray& outputRay,VisibilityTest& outputVisibilityTest) const override{
+    virtual Spectrum sampleRayToPoint(const float3& seenFrom, SamplerObject& sampler, float& outputProbability, Ray& outputRay,VisibilityTest& outputVisibilityTest,IntersectionResult& outputLightSurface) const override{
 
         float shapeSampleProbability = 0;
 
-        IntersectionResult shapeSample = shape->sample(seenFrom,sampler,&shapeSampleProbability);
+        outputLightSurface = shape->sample(seenFrom,sampler,&shapeSampleProbability);
         
         outputProbability = shapeSampleProbability;
 
         outputRay.origin = seenFrom;
-        outputRay.direction = normalize(shapeSample.position - seenFrom);
+        outputRay.direction = normalize(outputLightSurface.position - seenFrom);
 
         outputVisibilityTest.ray = outputRay;
         outputVisibilityTest.targetMeshIndex = shape->meshIndex;
-        outputVisibilityTest.setDistanceLimit(length(shapeSample.position - seenFrom));
+        outputVisibilityTest.setDistanceLimit(length(outputLightSurface.position - seenFrom));
 
-        if (dot(outputRay.direction, shapeSample.normal) >= 0) {
+        if (dot(outputRay.direction, outputLightSurface.normal) >= 0) {
             return make_float3(0, 0, 0);
         }
         return color;
