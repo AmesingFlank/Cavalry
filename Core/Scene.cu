@@ -126,7 +126,7 @@ void Scene::prepareForRender() {
     copyToDevice();
     buildGpuReferences();
 
-    AABB sceneBounds = trianglesHost[0].getBoundingBox();
+    sceneBounds = trianglesHost[0].getBoundingBox();
     for (int i = 1; i < trianglesHost.size(); ++i) {
         //AABB temp = trianglesHost[i].getBoundingBox();
         //std::cout << "triangle bounds " << temp.minimum.x << ", " << temp.minimum.y << ", " << temp.minimum.z << ",   to" << temp.maximum.x << ", " << temp.maximum.y << ", " << temp.maximum.z << std::endl;

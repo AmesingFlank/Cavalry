@@ -14,7 +14,7 @@ class Light{
 public:
     
     __device__
-    virtual Spectrum sampleRayToPoint(const float3& seenFrom,SamplerObject& sampler, float& outputProbability, Ray& outputRay,VisibilityTest& outputVisibilityTest,IntersectionResult& outputLightSurface) const = 0;
+    virtual Spectrum sampleRayToPoint(const float3& seenFrom,SamplerObject& sampler, float& outputProbability, Ray& outputRay,VisibilityTest& outputVisibilityTest,IntersectionResult* outputLightSurface) const = 0;
 
     __device__
     virtual float sampleRayToPointPdf(const Ray& sampledRay, const IntersectionResult& lightSurface) const = 0;
@@ -74,7 +74,7 @@ public:
 
 
     __device__
-    virtual Spectrum sampleRayToPoint(const float3& seenFrom, SamplerObject& sampler, float& outputProbability, Ray& outputRay,VisibilityTest& outputVisibilityTest,IntersectionResult& outputLightSurface) const override {
+    virtual Spectrum sampleRayToPoint(const float3& seenFrom, SamplerObject& sampler, float& outputProbability, Ray& outputRay,VisibilityTest& outputVisibilityTest,IntersectionResult* outputLightSurface) const override {
         float3 sampleOnSphere = uniformSampleSphere(sampler.rand2());
         outputRay.origin = seenFrom;
         outputRay.direction = sampleOnSphere;
@@ -100,7 +100,7 @@ public:
             float phi = atan2(dir.y, dir.x);
             phi = (phi < 0) ? (phi + 2 * M_PI) : phi;
 
-            float theta = acos(clampF(dir.z, -1, 1));
+            float theta = acos(clampF(dir.z, -1.f , 1.f));
 
             float2 texCoords = make_float2(phi / (2.f * M_PI), theta / (M_PI));
 

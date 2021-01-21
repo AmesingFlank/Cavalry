@@ -69,10 +69,11 @@ public:
 
     int environmentMapIndex  = -1;
 
+    AABB sceneBounds;
+
     SceneHandle getHostHandle() const;
 
     SceneHandle getDeviceHandle() const;
-
 
     void prepareForRender();
 

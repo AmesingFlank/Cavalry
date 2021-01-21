@@ -105,6 +105,12 @@ inline float clampF(float x, float minimum,float maximum){
 	return fmaxf(minimum,fminf(x,maximum));
 }
 
+__device__
+inline int clampF(int x, int minimum,int maximum){
+	return max(minimum,min(x,maximum));
+}
+
+
 
 //theta is the zenithAngle
 //phi is the aziumth angle
@@ -126,12 +132,12 @@ __device__ inline float tanSquaredZenith(const float3 &w) {
 
 __device__ inline float cosAzimuth(const float3 &w) {
     float sinTheta = sinZenith(w);
-    return (sinZenith == 0) ? 1 : clampF(w.x / sinTheta, -1, 1);
+    return (sinZenith == 0) ? 1 : clampF(w.x / sinTheta, -1.f, 1.f);
 }
 
 __device__ inline float sinAzimuth(const float3 &w) {
     float sinTheta = sinZenith(w);
-    return (sinZenith == 0) ? 0 : clampF(w.y / sinTheta, -1, 1);
+    return (sinZenith == 0) ? 0 : clampF(w.y / sinTheta, -1.f, 1.f);
 }
 
 __device__ inline float cosSquaredAzimuth(const float3 &w) { return cosAzimuth(w) * cosAzimuth(w); }

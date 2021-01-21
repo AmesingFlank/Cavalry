@@ -59,9 +59,8 @@ namespace DirectLighting {
         VisibilityTest visibilityTest;
         visibilityTest.sourceMeshIndex = intersection.primitive->shape.meshIndex;
     
-        IntersectionResult lightSurface;
-    
-        Spectrum incident = light.sampleRayToPoint(intersection.position, sampler, probability, rayToLight, visibilityTest,lightSurface);
+
+        Spectrum incident = light.sampleRayToPoint(intersection.position, sampler, probability, rayToLight, visibilityTest,nullptr);
 
 
         if (scene.testVisibility(visibilityTest)) {
