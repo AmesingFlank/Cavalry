@@ -99,40 +99,44 @@ struct CurandStateArray:public GpuArray<curandState> {
     }
 
 };
-/*
 
-__global__ void initSobolCurandStates ( curandStateSobol32 * states,int N, unsigned int* directionVectors);
 
-struct SobolCurandStateArray:public GpuArray<curandStateSobol32> {
+struct Distribution1D {
+    int N;
+    float* cdf;
 
-    __device__ 
-    curandStateSobol32* getState(int index) {
-        return data + (index % N);
+    __device__
+    Distribution1D(int N_, float* cdf_) :N(N_), cdf(cdf_) {
+
     }
 
-    __host__
-    SobolCurandStateArray(int N_, bool isCopyForKernel_ = false) :GpuArray<curandStateSobol32>(N_,isCopyForKernel_) {
-        if (!isCopyForKernel_) {
-            std::vector<unsigned int> directionVectorsHost(20000*32);
-            auto getDirectionVectorsResult = curandGetDirectionVectors32(directionVectorsHost.data(),CURAND_DIRECTION_VECTORS_32_JOEKUO6);
-            if(getDirectionVectorsResult != CURAND_STATUS_SUCCESS ){
-                SIGNAL_ERROR("get direction vectors failed\n");
+    __device__
+    int getCorrespondingIndex(float f) const {
+        int l = 0;
+        int r = N - 1;
+        while (l < r) {
+            int m = (l + r) / 2;
+            if (cdf[m] >= f) {
+                if (m == 0) {
+                    return 0;
+                }
+                if (cdf[m - 1] < f) {
+                    return m;
+                }
+                r = m - 1;
             }
-            
-            GpuArray<unsigned int> directionVectors = directionVectorsHost;
-
-            int numThreads = min(N, MAX_THREADS_PER_BLOCK);
-            int numBlocks = divUp(N, numThreads);
-            initSobolCurandStates << <numBlocks, numThreads >> > (data,  N, directionVectors.data);
-            CHECK_CUDA_ERROR("init sobol curand states");
+            else { // cdf[m] < f
+                l = m + 1;
+            }
         }
+        return l;
     }
-
-    SobolCurandStateArray getCopyForKernel() {
-        SobolCurandStateArray copy(N, true);
-        copy.data = data;
-        return copy;
-    }
-
 };
-*/
+
+template <int size>
+struct FixedSizeDistribution1D:public Distribution1D {
+    float data[size];
+    FixedSizeDistribution1D() : Distribution1D(size, data) {
+
+    }
+};

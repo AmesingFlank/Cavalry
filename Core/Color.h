@@ -92,3 +92,8 @@ __device__ __host__
 inline bool isAllZero(const Spectrum& color) {
     return color.x == 0 && color.y == 0 && color.z == 0;
 }
+
+__device__ __host__
+inline float luminance(const Spectrum& color){
+    return  dot(color, make_float3(0.212671f, 0.715160f, 0.072169f));
+}

@@ -6,7 +6,6 @@
 
 namespace ReinforcementLearningPathTracing {
 
-
     struct QEntry{
         static const int NUM_X = 16;
         static const int NUM_Y = 8;
@@ -14,68 +13,104 @@ namespace ReinforcementLearningPathTracing {
 
         float Q[NUM_XY];
         float cdf[NUM_XY];
-        float maxQ;
+
+        float newQ[NUM_XY];
+        float proposalCount[NUM_XY];
+        float totalProposalCount[NUM_XY];
+
+        __device__
+        float defaultQ(int cellIndex)const {
+            return 0.01;
+        }
         
         __device__
         QEntry(){
-            maxQ = 0;
-            for (int y = 0; y < NUM_Y; y++){
-                for (int x = 0; x < NUM_X; x++){
-                    const float initDensity = y / float(NUM_Y);
-                    Q[x + y * NUM_X] = initDensity;
-                    maxQ = max(maxQ,initDensity);
-                }
+            for (int i = 0; i < NUM_XY; ++i) {
+                Q[i] = defaultQ(i);
+                totalProposalCount[i] = 0;
             }
+            updateCDF();
         }
 
         __device__
-        float alpha() const{
-            return 0.85f;
+        float alpha(int cellIndex) const{
+            //printf("computing alpha[%d]:  %f %f\n", cellIndex,proposalCount[cellIndex],totalProposalCount[cellIndex]);
+            if (proposalCount[cellIndex] == 0) {
+                return 0;
+            }
+            return (proposalCount[cellIndex]) / (totalProposalCount[cellIndex] + proposalCount[cellIndex]);
+        }
+
+        __device__
+        float averageQ() {
+            float sumQ = 0;
+            int count = 0;
+            for (int i = 0; i < NUM_XY; ++i) {
+                if (totalProposalCount[i] > 0) {
+                    sumQ += Q[i];
+                    count += 1;
+                }
+            }
+            if (count == 0) {
+                return defaultQ(0);
+            }
+            float avg = sumQ / (float)count;
+            for (int i = 0; i < NUM_XY; ++i) {
+                if (totalProposalCount[i] == 0) {
+                    //Q[i] = avg;
+                }
+            }
+            return avg;
+        }
+
+        __device__
+        float sumQ() {
+            float sumQ = 0;
+            for (int i = 0; i < NUM_XY; ++i) {
+                sumQ += Q[i];    
+            }
+            return sumQ;
         }
 
         __device__
         float updateCDF(){
-            float sumQ = 0;
-            for (int y = 0; y < NUM_Y; y++){
-                for (int x = 0; x < NUM_X; x++){
-                    sumQ += Q[x + y * NUM_X];
-                }
-            }
+            //float avg = averageQ();
+
+            float sum = sumQ();
 
             float accumulatedDensity = 0;
-            for (int y = 0; y < NUM_Y; y++){
-                for (int x = 0; x < NUM_X; x++){
-                    accumulatedDensity +=  Q[x + y * NUM_X] / sumQ;
-                    cdf[x+y*NUM_X] = accumulatedDensity;
-                }
+            for (int i = 0; i < NUM_XY; ++i) {
+                accumulatedDensity += Q[i] / sum;
+                cdf[i] = accumulatedDensity;
             }
         }
 
-        __device__
-        const float getValueFunc() const{
-            return maxQ;
-        }
 
         // should only be called by one thread for each cellIndex
         __device__
         void prepareForUpdateQ(int cellIndex){
-            float* temp = &(cdf[0]); // to save memory, use the cdf array to help update Q;
-            temp[cellIndex] = 0;
-            Q[cellIndex] *= (1.f-alpha());
+            newQ[cellIndex] = 0;
+            proposalCount[cellIndex]=0;
         }
 
         __device__
-        void proposeNextQ(const float QVal, int cellIndex){
-            float* temp = &(cdf[0]); // to save memory, use the cdf array to help update Q;
-            atomicAdd(&(temp[cellIndex]), QVal);
+        void proposeNextQ(float QVal, int cellIndex){
+            atomicAdd(&(newQ[cellIndex]), QVal);
+            atomicAdd(&(proposalCount[cellIndex]), 1);
+            //printf("proposing %d %f\n", cellIndex, QVal);
         }
 
         // should only be called by one thread for each cellIndex
         __device__
         void finishUpdateQ(int cellIndex){
-            float* temp = &(cdf[0]); // to save memory, use the cdf array to help update Q;
-            Q[cellIndex] += alpha() * temp[cellIndex];
-            updateCDF();
+            float a = alpha(cellIndex);
+            if (a == 0) {
+                return;
+            }
+            float updatedQ = Q[cellIndex] * (1.f - a) + a * newQ[cellIndex] / proposalCount[cellIndex];
+            //printf("Q[%d]:   old:%f  new:%f  alpha:%f \n", cellIndex, Q[cellIndex], updatedQ, a);
+            Q[cellIndex] = updatedQ;
+            totalProposalCount[cellIndex] += proposalCount[cellIndex];
         }
 
         __device__
@@ -100,26 +135,51 @@ namespace ReinforcementLearningPathTracing {
             return l;
         }
 
-        __device__
-        float3 sampleDirectionProportionalToQ(SamplerObject& sampler, float& outputProbability, int& outputCellIndex) const
-        {
-            float f = sampler.rand1();
-            outputCellIndex = getCorrespondingIndex(f);
-            outputProbability = cdf[outputCellIndex];
-            if(outputCellIndex > 0){
-                outputProbability -= cdf[outputCellIndex-1];
-            }
-            outputProbability = (NUM_XY * outputProbability / (2*M_PI)); // Solid angle probability
-            
-            const int thetaIdx = outputCellIndex / NUM_X;
-            const int phiIdx = outputCellIndex % NUM_X;
-            const float u = ((float)thetaIdx + sampler.rand1()) / NUM_Y;
-            const float v = ((float)phiIdx + sampler.rand1()) / NUM_X;
+        static __host__ __device__  int dirToCellIndex(float3 dir) {
+            float u = dir.z;
+            float y = (u + 1.f) / 2.f;
+            int thetaIndex = clampF((int)(y * QEntry::NUM_Y), 0, QEntry::NUM_Y - 1);
 
-            return make_float3(
-                sqrt(1.0f - u * u) * cos(2 * M_PI * v),
-                sqrt(1.0f - u * u) * sin(2 * M_PI * v),
-                u);
+            dir.x /= sqrt(1.f - u * u);
+            dir.y /= sqrt(1.f - u * u);
+
+            float v = acos(dir.x)/ (2.f*M_PI);
+            if (dir.y < 0) {
+                v *= -1;
+            }
+            int phiIndex = clampF((int)(v * QEntry::NUM_X), 0, QEntry::NUM_X - 1);
+            return thetaIndex * NUM_X + phiIndex;
+        }
+
+        __device__
+        float3 sampleDirectionProportionalToQ(SamplerObject& sampler,float& outputProbability, int& outputCellIndex,const float3& surfaceNormal, const float3& exitantDir,bool requireSameSide = true) const
+        {
+            int attempts = 0;
+            while (true) {
+                float f = sampler.rand1();
+                outputCellIndex = getCorrespondingIndex(f);
+                outputProbability = cdf[outputCellIndex];
+                if (outputCellIndex > 0) {
+                    outputProbability -= cdf[outputCellIndex - 1];
+                }
+                outputProbability = (NUM_XY * outputProbability / (2 * M_PI)); // Solid angle probability
+
+                int thetaIdx = outputCellIndex / NUM_X;
+                int phiIdx = outputCellIndex % NUM_X;
+                float u = ((float)thetaIdx + sampler.rand1()) / NUM_Y;
+                u = u * 2 - 1.f;
+                float v = ((float)phiIdx + sampler.rand1()) / NUM_X;
+
+                float3 dir = make_float3(
+                    sqrt(1.0f - u * u) * cos(2 * M_PI * v),
+                    sqrt(1.0f - u * u) * sin(2 * M_PI * v),
+                    u);
+                if (sameSign(dot(dir, surfaceNormal),dot(exitantDir,surfaceNormal)) || attempts>10 || (!requireSameSide)) {
+                    //printf("sampled %d %f,   %f %f %f\n", outputCellIndex, outputProbability, XYZ(dir));
+                    return dir;
+                }
+                ++attempts;
+            }
         }
     };
 

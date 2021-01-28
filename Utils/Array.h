@@ -173,8 +173,15 @@ struct GpuArray{
         return copy;
     }
 
+    __host__
+    std::vector<T> toVector() const{
+        std::vector<T> vec(N);
+        HANDLE_ERROR(cudaMemcpy(vec.data(), data, sizeof(T)*N, cudaMemcpyDeviceToHost));
+        return vec;
+    }
+
     __host__ __device__
-    T get(int i) {
+    T get(int i) const{
 #ifdef __CUDA_ARCH__
         return data[i];
 #else

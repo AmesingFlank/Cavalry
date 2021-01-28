@@ -105,7 +105,7 @@ inline float clampF(float x, float minimum,float maximum){
 	return fmaxf(minimum,fminf(x,maximum));
 }
 
-__device__
+__device__ __host__
 inline int clampF(int x, int minimum,int maximum){
 	return max(minimum,min(x,maximum));
 }
