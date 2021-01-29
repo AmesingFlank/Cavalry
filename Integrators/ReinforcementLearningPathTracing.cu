@@ -69,16 +69,21 @@ namespace ReinforcementLearningPathTracing {
         return pdfA / (pdfA + pdfB);
     }
 
+    
+    // use q entry index as part of the key for sorting. this improves locality.
     __global__
-    void writeIndicesAndKeys(int N, LightingTask* tasks, int* indices, unsigned char* keys) {
+    void writeIndicesAndKeys(int N, LightingTask* tasks, int* indices, int* keys,AABB sceneBounds) {
         int index = blockIdx.x * blockDim.x + threadIdx.x;
         if (index >= N) {
             return;
         }
         
         indices[index] = index;
-        keys[index] = static_cast<unsigned char>(tasks[index].intersection.primitive->material.getType());
+        int materialID = static_cast<int>(tasks[index].intersection.primitive->material.getType());
+        int entryIndex = findQEntry(sceneBounds, tasks[index].intersection.position);
 
+        int key = Q_TABLE_SIZE * Q_TABLE_SIZE * Q_TABLE_SIZE * materialID + entryIndex;
+        keys[index] = key;
     }
 
     __global__
@@ -94,22 +99,22 @@ namespace ReinforcementLearningPathTracing {
 
     // sort the lighting queue using material as key.
     // in addition to lighting tasks, we also sort the sampler states and nextRay tasks, so that the low-descrepancy properties of the sampler isn't ruined.
-    void sortLightingQueue(TaskQueue<LightingTask>& lightQueue, TaskQueue<LightingTask>& lightQueueCopy, TaskQueue<RayTask>& rayQueue, TaskQueue<RayTask>& rayQueueCopy, SamplerObject& sampler) {
+    void sortLightingQueue(TaskQueue<LightingTask>& lightQueue, TaskQueue<LightingTask>& lightQueueCopy, TaskQueue<RayTask>& rayQueue, TaskQueue<RayTask>& rayQueueCopy, SamplerObject& sampler,AABB sceneBounds) {
         int N = lightQueue.count();
         if (N == 0) return;
 
         lightQueueCopy.setCount(N);
 
         GpuArray<int> indices(N);
-        GpuArray<unsigned char> keys(N);
+        GpuArray<int> keys(N);
 
         int numBlocks, numThreads;
         setNumBlocksThreads(N, numBlocks, numThreads);
 
-        writeIndicesAndKeys << <numBlocks, numThreads >> > (N, lightQueue.tasks.data, indices.data, keys.data);
+        writeIndicesAndKeys << <numBlocks, numThreads >> > (N, lightQueue.tasks.data, indices.data, keys.data,sceneBounds);
         CHECK_CUDA_ERROR("write indices and keys");
 
-        thrust::sort_by_key(thrust::device, keys.data, keys.data+N, indices.data);
+        thrust::stable_sort_by_key(thrust::device, keys.data, keys.data+N, indices.data);
 
         applySortedIndices << <numBlocks, numThreads >> > (N,indices.data, lightQueue.tasks.data, lightQueueCopy.tasks.data, rayQueue.tasks.data, rayQueueCopy.tasks.data);
         CHECK_CUDA_ERROR("apply sort");
@@ -523,7 +528,7 @@ namespace ReinforcementLearningPathTracing {
 
                 std::string sortEvent = std::string("sort queue ") + std::to_string(round) + " " + std::to_string(depth);
                 Timer::getInstance().timedRun(sortEvent, [&](){
-                    sortLightingQueue(lightingQueue, lightingQueueCopy, *nextRoundRayQueue,*thisRoundRayQueue,samplerObject);
+                    sortLightingQueue(lightingQueue, lightingQueueCopy, *nextRoundRayQueue,*thisRoundRayQueue,samplerObject,scene.sceneBounds);
                 });
 
                 if (lightingQueue.count() > 0) {
