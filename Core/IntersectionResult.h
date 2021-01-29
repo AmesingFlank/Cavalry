@@ -29,14 +29,24 @@ struct IntersectionResult{
     float3 worldToLocal(const float3& v) const{
         float3 tangent0, tangent1;
         findTangents(tangent0, tangent1);
-        glm::mat3 mat = buildMat3UsingVecsAsRows(tangent0, tangent1, normal);
-        return to_float3(mat * to_vec3(v));
+        return worldToLocal(v, tangent1, tangent0);
     }
 
     __device__
     float3 localToWorld(const float3& v) const{
         float3 tangent0, tangent1;
         findTangents(tangent0, tangent1);
+        return localToWorld(v, tangent0, tangent1);
+    }
+
+    __device__
+    float3 worldToLocal(const float3& v, const float3& tangent0, const float3& tangent1) const {
+        glm::mat3 mat = buildMat3UsingVecsAsRows(tangent0, tangent1, normal);
+        return to_float3(mat * to_vec3(v));
+    }
+
+    __device__
+    float3 localToWorld(const float3& v, const float3& tangent0, const float3& tangent1) const {
         glm::mat3 mat = buildMat3UsingVecsAsCols(tangent0, tangent1, normal);
         return to_float3(mat * to_vec3(v));
     }

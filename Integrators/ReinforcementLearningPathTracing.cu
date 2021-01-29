@@ -204,6 +204,9 @@ namespace ReinforcementLearningPathTracing {
         QDistribution dist;
         float3 exitantDir = thisRay.direction * -1.f;
 
+        float3 tangent0, tangent1;
+        intersection.findTangents(tangent0, tangent1);
+
         float valueSum = 0;
         for (int cellIndex = 0; cellIndex < QEntry::NUM_XY; ++cellIndex) {
             int thetaIdx = cellIndex / QEntry::NUM_X;
@@ -212,12 +215,14 @@ namespace ReinforcementLearningPathTracing {
             u = u * 2 - 1.f;
             float v = ((float)phiIdx + 0.5f) / QEntry::NUM_X;
 
+            float xyScale = sqrt(1.0f - u * u);
+            float phi = 2 * M_PI * v;
             float3 dir = make_float3(
-                sqrt(1.0f - u * u) * cos(2 * M_PI * v),
-                sqrt(1.0f - u * u) * sin(2 * M_PI * v),
+                xyScale * cos(phi),
+                xyScale * sin(phi),
                 u);
-            float3 exitantLocal = intersection.worldToLocal(exitantDir);
-            float3 incidentLocal = intersection.worldToLocal(dir);
+            float3 exitantLocal = intersection.worldToLocal(exitantDir,tangent0,tangent1);
+            float3 incidentLocal = intersection.worldToLocal(dir,tangent0,tangent1);
 
             Spectrum scattering = intersection.bsdf.eval(incidentLocal, exitantLocal);
             float value = luminance(scattering) * entry.Q[cellIndex] * abs(dot(dir, intersection.normal));
@@ -235,7 +240,7 @@ namespace ReinforcementLearningPathTracing {
         
         nextRay.direction = entry.sampleDirectionProportionalToQ(sampler,entryInfo.cellIndex, intersection.normal, exitantDir);
         nextRay.origin = intersection.position + nextRay.direction * 0.0001f;
-        Spectrum nextMultiplier = intersection.bsdf.eval(intersection.worldToLocal(nextRay.direction),intersection.worldToLocal(exitantDir));
+        Spectrum nextMultiplier = intersection.bsdf.eval(intersection.worldToLocal(nextRay.direction,tangent0,tangent1),intersection.worldToLocal(exitantDir,tangent0,tangent1));
 
         entryInfo.multiplier = luminance(nextMultiplier * abs(dot(nextRay.direction, intersection.normal)) / nextRayProbability);
 
@@ -341,6 +346,9 @@ namespace ReinforcementLearningPathTracing {
             int thisQEntryIndex = findQEntry(sceneBounds, intersection.position);
             QEntry& thisEntry = QTable.data[thisQEntryIndex];
 
+            float3 tangent0, tangent1;
+            intersection.findTangents(tangent0, tangent1);
+
             for (int cellIndex = 0; cellIndex < QEntry::NUM_XY; ++cellIndex) {
                 int thetaIdx = cellIndex / QEntry::NUM_X;
                 int phiIdx = cellIndex % QEntry::NUM_X;
@@ -348,12 +356,14 @@ namespace ReinforcementLearningPathTracing {
                 u = u * 2 - 1.f;
                 float v = ((float)phiIdx + 0.5f) / QEntry::NUM_X;
 
+                float xyScale = sqrt(1.0f - u * u);
+                float phi = 2 * M_PI * v;
                 float3 dir = make_float3(
-                    sqrt(1.0f - u * u) * cos(2 * M_PI * v),
-                    sqrt(1.0f - u * u) * sin(2 * M_PI * v),
+                    xyScale * cos(phi),
+                    xyScale * sin(phi),
                     u);
-                float3 exitantLocal = intersection.worldToLocal(exitantRay.direction);
-                float3 incidentLocal = intersection.worldToLocal(dir);
+                float3 exitantLocal = intersection.worldToLocal(exitantRay.direction, tangent0, tangent1);
+                float3 incidentLocal = intersection.worldToLocal(dir, tangent0, tangent1);
 
                 Spectrum scattering = intersection.bsdf.eval(incidentLocal, exitantLocal);
                 Spectrum thisDirQ = (2.f * M_PI / (float)QEntry::NUM_XY) * abs(dot(dir, intersection.normal)) * scattering * thisEntry.Q[cellIndex];
