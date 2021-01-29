@@ -131,11 +131,23 @@ struct Distribution1D {
         }
         return l;
     }
+
+    __device__
+    int sample(float randomSource, float& outputProbability) {
+        int result = getCorrespondingIndex(randomSource);
+        outputProbability = cdf[result];
+        if (result > 0) {
+            outputProbability -= cdf[result - 1];
+        }
+        return result;
+    }
 };
 
 template <int size>
 struct FixedSizeDistribution1D:public Distribution1D {
     float data[size];
+
+    __device__
     FixedSizeDistribution1D() : Distribution1D(size, data) {
 
     }

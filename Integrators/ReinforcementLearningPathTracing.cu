@@ -158,7 +158,7 @@ namespace ReinforcementLearningPathTracing {
     }
 
     __global__
-    void genNextRay(SceneHandle scene, SamplerObject sampler, TaskQueue<LightingTask> tasks, TaskQueue<RayTask> nextRoundRayQueue, int depth, AABB sceneBounds, GpuArray<QEntry> QTable, GpuArray<QDistribution> QDistributions) {
+    void genNextRay(SceneHandle scene, SamplerObject sampler, TaskQueue<LightingTask> tasks, TaskQueue<RayTask> nextRoundRayQueue, int depth, AABB sceneBounds, GpuArray<QEntry> QTable) {
         int tasksCount = tasks.count();
         int index = blockIdx.x * blockDim.x + threadIdx.x;
         if (index >= tasksCount) {
@@ -199,10 +199,41 @@ namespace ReinforcementLearningPathTracing {
         */
 
         QEntryInfo entryInfo;
-        entryInfo.entryIndex = findQEntry(sceneBounds,intersection.position);
+        entryInfo.entryIndex = findQEntry(sceneBounds, intersection.position);
         QEntry& entry = QTable.data[entryInfo.entryIndex];
+        QDistribution dist;
         float3 exitantDir = thisRay.direction * -1.f;
-        nextRay.direction = entry.sampleDirectionProportionalToQ(sampler,nextRayProbability,entryInfo.cellIndex, intersection.normal, exitantDir);
+
+        float valueSum = 0;
+        for (int cellIndex = 0; cellIndex < QEntry::NUM_XY; ++cellIndex) {
+            int thetaIdx = cellIndex / QEntry::NUM_X;
+            int phiIdx = cellIndex % QEntry::NUM_X;
+            float u = ((float)thetaIdx + 0.5f) / QEntry::NUM_Y;
+            u = u * 2 - 1.f;
+            float v = ((float)phiIdx + 0.5f) / QEntry::NUM_X;
+
+            float3 dir = make_float3(
+                sqrt(1.0f - u * u) * cos(2 * M_PI * v),
+                sqrt(1.0f - u * u) * sin(2 * M_PI * v),
+                u);
+            float3 exitantLocal = intersection.worldToLocal(exitantDir);
+            float3 incidentLocal = intersection.worldToLocal(dir);
+
+            Spectrum scattering = intersection.bsdf.eval(incidentLocal, exitantLocal);
+            float value = luminance(scattering) * entry.Q[cellIndex] * abs(dot(dir, intersection.normal));
+            dist.cdf[cellIndex] = value; // temprarily use cdf array to store the value. saves memory
+            valueSum += value;
+        }
+        float accumulated = 0;
+        for (int cellIndex = 0; cellIndex < QEntry::NUM_XY; ++cellIndex) {
+            accumulated += dist.cdf[cellIndex] / valueSum;
+            dist.cdf[cellIndex] = accumulated;
+        }
+        entryInfo.cellIndex = dist.sample(sampler.rand1(), nextRayProbability);
+        nextRayProbability = (QEntry::NUM_XY * nextRayProbability / (4 * M_PI)); // Solid angle probability
+
+        
+        nextRay.direction = entry.sampleDirectionProportionalToQ(sampler,entryInfo.cellIndex, intersection.normal, exitantDir);
         nextRay.origin = intersection.position + nextRay.direction * 0.0001f;
         Spectrum nextMultiplier = intersection.bsdf.eval(intersection.worldToLocal(nextRay.direction),intersection.worldToLocal(exitantDir));
 
@@ -217,10 +248,6 @@ namespace ReinforcementLearningPathTracing {
 
         RayTask nextTask = { nextRay,multiplier,result,nextRayProbability, intersection.bsdf.isDelta(),entryInfo };
         nextRoundRayQueue.push(nextTask);
-
-        if (entryInfo.entryIndex == 2 && entryInfo.cellIndex==4) {
-            //printf("%f %f %f    %f %f %f    %d\n", XYZ(intersection.position), XYZ(nextRay.direction),entryInfo.cellIndex);
-        }
     }
 
 
@@ -279,7 +306,7 @@ namespace ReinforcementLearningPathTracing {
             int thisQEntryIndex = findQEntry(sceneBounds, intersection.position);
             QEntry& thisEntry = QTable.data[thisQEntryIndex];
             int cellIndex = QEntry::dirToCellIndex(rayToLight.direction);
-            //thisEntry.proposeNextQ(luminance(incident), cellIndex);
+            //thisEntry.proposeNextQ(luminance(incident)*scene.lightsCount / probability, cellIndex);
         }
     }
 
@@ -398,14 +425,6 @@ namespace ReinforcementLearningPathTracing {
         QTable.data[entryIndex].finishUpdateQ(cellIndex);
     }
 
-    __global__
-    void updateCDF(GpuArray<QEntry> QTable) {
-        int index = blockIdx.x * blockDim.x + threadIdx.x;
-        if (index >= QTable.N) {
-            return;
-        }
-        QTable.data[index].updateCDF();
-    }
 
     void debugPrintQTable(const GpuArray<QEntry>& QTable) {
         int size = Q_TABLE_SIZE * Q_TABLE_SIZE * Q_TABLE_SIZE;
@@ -424,17 +443,7 @@ namespace ReinforcementLearningPathTracing {
         }
     }
 
-    __global__ void debugTestEntrySampling(SamplerObject sampler) {
-        QEntry entry;
-        entry.Q[0] = 0.2;
-        entry.updateCDF();
-        for (int i = 0; i < 10; ++i) {
-            float prob;
-            int cell;
-            float3 w = entry.sampleDirectionProportionalToQ(sampler, prob, cell, make_float3(0, 0, 1), make_float3(0, 0, 1));
-            printf("sampled cell %d with prob %f:  %f %f %f\n", cell, prob, XYZ(w));
-        }
-    }
+
 
     void RLPTIntegrator::render(const Scene& scene, const CameraObject& camera, FilmObject& film) {
 
@@ -461,7 +470,6 @@ namespace ReinforcementLearningPathTracing {
             //SIGNAL_ERROR("done testing\n");
     
             GpuArray<Spectrum> result(samplesCount);
-            GpuArray<FixedSizeDistribution1D<QEntry::NUM_XY>> QDistributions(samplesCount,false);
 
             TaskQueue<RayTask> rayQueue0(samplesCount);
             TaskQueue<RayTask> rayQueue1(samplesCount);
@@ -531,15 +539,11 @@ namespace ReinforcementLearningPathTracing {
                     finishUpdateQ<<<numBlocks,numThreads>>>(QTable.getCopyForKernel());
                     CHECK_CUDA_ERROR("finish update q");
 
-                    setNumBlocksThreads(QTable.N, numBlocks, numThreads);
-                    updateCDF<< <numBlocks, numThreads >> > (QTable.getCopyForKernel());
-                    CHECK_CUDA_ERROR("updateCDF");
-
                     sampler->syncDimension();
                     lightingQueue.setNumBlocksThreads(numBlocks, numThreads);
                     std::string genNextRayEvent = std::string("genNext ") + std::to_string(round) + " " + std::to_string(depth);
                     Timer::getInstance().timedRun(genNextRayEvent, [&]() {
-                        genNextRay << <numBlocks, numThreads >> > (sceneHandle, samplerObject.getCopyForKernel(), lightingQueue.getCopyForKernel(), nextRoundRayQueue->getCopyForKernel(), depth,scene.sceneBounds,QTable.getCopyForKernel(),QDistributions.getCopyForKernel());
+                        genNextRay << <numBlocks, numThreads >> > (sceneHandle, samplerObject.getCopyForKernel(), lightingQueue.getCopyForKernel(), nextRoundRayQueue->getCopyForKernel(), depth,scene.sceneBounds,QTable.getCopyForKernel());
                     });
                 }
 

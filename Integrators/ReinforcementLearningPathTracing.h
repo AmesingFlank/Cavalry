@@ -12,7 +12,6 @@ namespace ReinforcementLearningPathTracing {
         static const int NUM_XY = NUM_X * NUM_Y;
 
         float Q[NUM_XY];
-        float cdf[NUM_XY];
 
         float newQ[NUM_XY];
         float proposalCount[NUM_XY];
@@ -20,7 +19,7 @@ namespace ReinforcementLearningPathTracing {
 
         __device__
         float defaultQ(int cellIndex)const {
-            return 0.01;
+            return 0.091;
         }
         
         __device__
@@ -29,7 +28,6 @@ namespace ReinforcementLearningPathTracing {
                 Q[i] = defaultQ(i);
                 totalProposalCount[i] = 0;
             }
-            updateCDF();
         }
 
         __device__
@@ -72,19 +70,6 @@ namespace ReinforcementLearningPathTracing {
             return sumQ;
         }
 
-        __device__
-        float updateCDF(){
-            //float avg = averageQ();
-
-            float sum = sumQ();
-
-            float accumulatedDensity = 0;
-            for (int i = 0; i < NUM_XY; ++i) {
-                accumulatedDensity += Q[i] / sum;
-                cdf[i] = accumulatedDensity;
-            }
-        }
-
 
         // should only be called by one thread for each cellIndex
         __device__
@@ -113,27 +98,6 @@ namespace ReinforcementLearningPathTracing {
             totalProposalCount[cellIndex] += proposalCount[cellIndex];
         }
 
-        __device__
-        int getCorrespondingIndex(float f) const{
-            int l = 0;
-            int r = NUM_XY -1;
-            while(l<r){
-                int m = (l+r)/2;
-                if(cdf[m] >= f){
-                    if(m==0){
-                        return 0;
-                    }
-                    if(cdf[m-1] < f){
-                        return m;
-                    }
-                    r = m-1;
-                }
-                else{ // cdf[m] < f
-                    l = m+1;
-                }
-            }
-            return l;
-        }
 
         static __host__ __device__  int dirToCellIndex(float3 dir) {
             float u = dir.z;
@@ -152,20 +116,12 @@ namespace ReinforcementLearningPathTracing {
         }
 
         __device__
-        float3 sampleDirectionProportionalToQ(SamplerObject& sampler,float& outputProbability, int& outputCellIndex,const float3& surfaceNormal, const float3& exitantDir,bool requireSameSide = true) const
+        float3 sampleDirectionProportionalToQ(SamplerObject& sampler,int cellIndex,const float3& surfaceNormal, const float3& exitantDir,bool requireSameSide = true) const
         {
             int attempts = 0;
             while (true) {
-                float f = sampler.rand1();
-                outputCellIndex = getCorrespondingIndex(f);
-                outputProbability = cdf[outputCellIndex];
-                if (outputCellIndex > 0) {
-                    outputProbability -= cdf[outputCellIndex - 1];
-                }
-                outputProbability = (NUM_XY * outputProbability / (2 * M_PI)); // Solid angle probability
-
-                int thetaIdx = outputCellIndex / NUM_X;
-                int phiIdx = outputCellIndex % NUM_X;
+                int thetaIdx = cellIndex / NUM_X;
+                int phiIdx = cellIndex % NUM_X;
                 float u = ((float)thetaIdx + sampler.rand1()) / NUM_Y;
                 u = u * 2 - 1.f;
                 float v = ((float)phiIdx + sampler.rand1()) / NUM_X;
