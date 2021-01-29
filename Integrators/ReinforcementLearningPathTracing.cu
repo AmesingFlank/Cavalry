@@ -18,7 +18,6 @@ namespace ReinforcementLearningPathTracing {
     struct QEntryInfo {
         int entryIndex = -1;
         int cellIndex = -1;
-        float multiplier;
     };
 
     __device__
@@ -191,58 +190,64 @@ namespace ReinforcementLearningPathTracing {
         Ray nextRay;
         float nextRayProbability;
 
-        /*
-        float3 nextDirectionLocal;
-        Spectrum nextMultiplier = intersection.bsdf.sample(sampler.rand2(), nextDirectionLocal, intersection.worldToLocal(thisRay.direction * -1.f), &nextRayProbability);
-        nextRay.direction = intersection.localToWorld(nextDirectionLocal);
-        nextRay.origin = intersection.position + nextRay.direction * 0.0001f;
-        */
-
-        QEntryInfo entryInfo;
-        entryInfo.entryIndex = findQEntry(sceneBounds, intersection.position);
-        QEntry& entry = QTable.data[entryInfo.entryIndex];
-        QDistribution dist;
-        float3 exitantDir = thisRay.direction * -1.f;
-
         float3 tangent0, tangent1;
         intersection.findTangents(tangent0, tangent1);
 
-        float valueSum = 0;
-        for (int cellIndex = 0; cellIndex < QEntry::NUM_XY; ++cellIndex) {
-            int thetaIdx = cellIndex / QEntry::NUM_X;
-            int phiIdx = cellIndex % QEntry::NUM_X;
-            float u = ((float)thetaIdx + 0.5f) / QEntry::NUM_Y;
-            u = u * 2 - 1.f;
-            float v = ((float)phiIdx + 0.5f) / QEntry::NUM_X;
+        float3 exitantDir = thisRay.direction * -1.f;
 
-            float xyScale = sqrt(1.0f - u * u);
-            float phi = 2 * M_PI * v;
-            float3 dir = make_float3(
-                xyScale * cos(phi),
-                xyScale * sin(phi),
-                u);
-            float3 exitantLocal = intersection.worldToLocal(exitantDir,tangent0,tangent1);
-            float3 incidentLocal = intersection.worldToLocal(dir,tangent0,tangent1);
+        QEntryInfo entryInfo;
+        entryInfo.entryIndex = findQEntry(sceneBounds, intersection.position);
 
-            Spectrum scattering = intersection.bsdf.eval(incidentLocal, exitantLocal);
-            float value = luminance(scattering) * entry.Q[cellIndex] * abs(dot(dir, intersection.normal));
-            dist.cdf[cellIndex] = value; // temprarily use cdf array to store the value. saves memory
-            valueSum += value;
+        Spectrum nextMultiplier;
+
+        if (intersection.bsdf.isDelta()) {
+            float3 nextDirectionLocal;
+            nextMultiplier = intersection.bsdf.sample(sampler.rand2(), nextDirectionLocal, intersection.worldToLocal(exitantDir,tangent0,tangent1), &nextRayProbability);
+            nextRay.direction = intersection.localToWorld(nextDirectionLocal);
+            nextRay.origin = intersection.position + nextRay.direction * 0.0001f;
+            entryInfo.cellIndex = QEntry::dirToCellIndex(nextRay.direction);
         }
-        float accumulated = 0;
-        for (int cellIndex = 0; cellIndex < QEntry::NUM_XY; ++cellIndex) {
-            accumulated += dist.cdf[cellIndex] / valueSum;
-            dist.cdf[cellIndex] = accumulated;
+        else {
+            
+            QEntry& entry = QTable.data[entryInfo.entryIndex];
+            QDistribution dist;
+
+            float valueSum = 0;
+            for (int cellIndex = 0; cellIndex < QEntry::NUM_XY; ++cellIndex) {
+                int thetaIdx = cellIndex / QEntry::NUM_X;
+                int phiIdx = cellIndex % QEntry::NUM_X;
+                float u = ((float)thetaIdx + 0.5f) / QEntry::NUM_Y;
+                u = u * 2 - 1.f;
+                float v = ((float)phiIdx + 0.5f) / QEntry::NUM_X;
+
+                float xyScale = sqrt(1.0f - u * u);
+                float phi = 2 * M_PI * v;
+                float3 dir = make_float3(
+                    xyScale * cos(phi),
+                    xyScale * sin(phi),
+                    u);
+                float3 exitantLocal = intersection.worldToLocal(exitantDir, tangent0, tangent1);
+                float3 incidentLocal = intersection.worldToLocal(dir, tangent0, tangent1);
+
+                Spectrum scattering = intersection.bsdf.eval(incidentLocal, exitantLocal);
+                float value = luminance(scattering) * entry.Q[cellIndex] * abs(dot(dir, intersection.normal));
+                dist.cdf[cellIndex] = value; // temprarily use cdf array to store the value. saves memory
+                valueSum += value;
+            }
+            float accumulated = 0;
+            for (int cellIndex = 0; cellIndex < QEntry::NUM_XY; ++cellIndex) {
+                accumulated += dist.cdf[cellIndex] / valueSum;
+                dist.cdf[cellIndex] = accumulated;
+            }
+            entryInfo.cellIndex = dist.sample(sampler.rand1(), nextRayProbability);
+            nextRayProbability = (QEntry::NUM_XY * nextRayProbability / (4 * M_PI)); // Solid angle probability
+
+
+            nextRay.direction = entry.sampleDirectionProportionalToQ(sampler, entryInfo.cellIndex, intersection.normal, exitantDir);
+            nextRay.origin = intersection.position + nextRay.direction * 0.0001f;
+
+            nextMultiplier = intersection.bsdf.eval(intersection.worldToLocal(nextRay.direction, tangent0, tangent1), intersection.worldToLocal(exitantDir, tangent0, tangent1));
         }
-        entryInfo.cellIndex = dist.sample(sampler.rand1(), nextRayProbability);
-        nextRayProbability = (QEntry::NUM_XY * nextRayProbability / (4 * M_PI)); // Solid angle probability
-
-        
-        nextRay.direction = entry.sampleDirectionProportionalToQ(sampler,entryInfo.cellIndex, intersection.normal, exitantDir);
-        nextRay.origin = intersection.position + nextRay.direction * 0.0001f;
-        Spectrum nextMultiplier = intersection.bsdf.eval(intersection.worldToLocal(nextRay.direction,tangent0,tangent1),intersection.worldToLocal(exitantDir,tangent0,tangent1));
-
-        entryInfo.multiplier = luminance(nextMultiplier * abs(dot(nextRay.direction, intersection.normal)) / nextRayProbability);
 
         if (isAllZero(nextMultiplier)) {
             multiplier = make_float3(0, 0, 0);
@@ -385,7 +390,7 @@ namespace ReinforcementLearningPathTracing {
         Spectrum* result = &results[index];
         *result = make_float3(0, 0, 0);
         Spectrum multiplier = make_float3(1, 1, 1);
-        QEntryInfo nullEntry = { -1,-1,0 };
+        QEntryInfo nullEntry = { -1,-1};
         RayTask task = { ray,multiplier,result,true,1,nullEntry };
         rayQueue.push(task);
         sampler.startPixel();
