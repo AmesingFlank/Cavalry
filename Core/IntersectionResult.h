@@ -29,7 +29,7 @@ struct IntersectionResult{
     float3 worldToLocal(const float3& v) const{
         float3 tangent0, tangent1;
         findTangents(tangent0, tangent1);
-        return worldToLocal(v, tangent1, tangent0);
+        return worldToLocal(v, tangent0, tangent1);
     }
 
     __device__
