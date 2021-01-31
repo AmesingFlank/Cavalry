@@ -14,8 +14,6 @@
 class SimpleSampler: public Sampler{
 public:
 
-    
-
     CurandStateArray states;
 
     __host__
@@ -69,6 +67,10 @@ public:
     };
 
 
-    virtual GpuArray<CameraSample> genAllCameraSamples(const CameraObject& camera, FilmObject& film)  override;
+    virtual GpuArray<CameraSample> genAllCameraSamples(const CameraObject& camera, FilmObject& film, int bytesNeededPerSample)  override;
+
+    virtual int bytesNeededPerThread() override {
+        return sizeof(curandState);
+    }
 
 };

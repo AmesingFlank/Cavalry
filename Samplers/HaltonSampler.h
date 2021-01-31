@@ -90,9 +90,13 @@ public:
         return make_float4(HaltonSampler::rand1(),HaltonSampler::rand1(),HaltonSampler::rand1(),HaltonSampler::rand1());
     };
 
-    virtual GpuArray<CameraSample> genAllCameraSamples(const CameraObject& camera, FilmObject& film)  override;
+    virtual GpuArray<CameraSample> genAllCameraSamples(const CameraObject& camera, FilmObject& film, int bytesNeededPerSample)  override;
 
     virtual void reorderStates(GpuArray<int>& taskIndices) override;
 
     virtual void syncDimension() override;
+
+    virtual int bytesNeededPerThread() override {
+        return 2*sizeof(HaltonState);
+    }
 };

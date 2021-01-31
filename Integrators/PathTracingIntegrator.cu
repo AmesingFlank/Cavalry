@@ -287,10 +287,13 @@ namespace PathTracing {
 
 
     void PathTracingIntegrator::render(const Scene& scene, const CameraObject& camera, FilmObject& film) {
+        int bytesNeededPerThread = sizeof(CameraSample) + sampler->bytesNeededPerThread() + sizeof(Spectrum) + sizeof(RayTask)*2 + sizeof(LightingTask)*2 + sizeof(MaterialEvalTask) ;
+        std::cout<<"Running Path Tracing Integrator. Bytes needed per thread: "<<bytesNeededPerThread<<std::endl;
+
         int round = 0;
 
         while(!isFinished( scene, camera,  film)){
-            GpuArray<CameraSample> allSamples = sampler->genAllCameraSamples(camera, film);
+            GpuArray<CameraSample> allSamples = sampler->genAllCameraSamples(camera, film,bytesNeededPerThread);
 
             SceneHandle sceneHandle = scene.getDeviceHandle();
     

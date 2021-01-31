@@ -75,11 +75,11 @@ void genHaltonCameraSample(CameraSample* resultPointer, int samplesCount, int wi
 }
 
 
-GpuArray<CameraSample> HaltonSampler::genAllCameraSamples(const CameraObject& camera, FilmObject& film) {
+GpuArray<CameraSample> HaltonSampler::genAllCameraSamples(const CameraObject& camera, FilmObject& film, int bytesNeededPerSample) {
     int width = film.getWidth();
     int height = film.getHeight();
 
-    int thisSPP = decideSamplesPerPixel(film,samplesPerPixel);
+    int thisSPP = decideSamplesPerPixel(film,samplesPerPixel,bytesNeededPerSample);
 
     int count = width*height * thisSPP;
 

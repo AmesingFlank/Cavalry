@@ -111,8 +111,11 @@ namespace DirectLighting {
 
     void DirectLightingIntegrator::render(const Scene& scene, const CameraObject& camera, FilmObject& film) {
 
+        int bytesNeededPerThread = sizeof(Spectrum) + sizeof(DirectLighting::MaterialEvalTask) + sizeof(CameraSample) + sampler->bytesNeededPerThread();
+        std::cout<<"Running Direct Lighting Integrator. Bytes needed per thread: "<<bytesNeededPerThread<<std::endl;
+
         while(!isFinished(scene,camera,film)){
-            GpuArray<CameraSample> allSamples = sampler->genAllCameraSamples(camera, film);
+            GpuArray<CameraSample> allSamples = sampler->genAllCameraSamples(camera, film,bytesNeededPerThread);
 
             SceneHandle sceneHandle = scene.getDeviceHandle();
 
