@@ -249,7 +249,7 @@ namespace PathTracing {
         Ray& exitantRay = myTask.exitantRay;
 
         float lightPDF = myTask.lightPDF;
-        float materialPDF = intersection.bsdf.pdf(rayToLight.direction, exitantRay.direction);
+        float materialPDF = intersection.bsdf.pdf(intersection.worldToLocal(rayToLight.direction), intersection.worldToLocal(exitantRay.direction));
         float misWeight = misPowerHeuristic(lightPDF, materialPDF);
 
         *result += intersection.primitive->material.eval(rayToLight, incident, exitantRay, intersection) * multiplier * misWeight;

@@ -7,9 +7,19 @@
 namespace ReinforcementLearningPathTracing {
 
     struct QEntry{
-        static const int NUM_X = 16;
-        static const int NUM_Y = 8;
-        static const int NUM_XY = NUM_X * NUM_Y;
+        static constexpr int NUM_X = 16;
+        static constexpr int NUM_Y = 8;
+        static constexpr int NUM_XY = NUM_X * NUM_Y;
+
+        __host__ __device__
+        static constexpr float INV_NUM_X() {
+            return 1.f / (float)NUM_X;
+        }
+
+        __host__ __device__
+        static constexpr float INV_NUM_Y() {
+            return 1.f / (float)NUM_Y;
+        }
 
         float Q[NUM_XY];
 
