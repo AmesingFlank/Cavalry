@@ -51,15 +51,16 @@ namespace ReinforcementLearningPathTracing {
         QEntryInfo previousQEntry;
     };
 
-    struct MaterialEvalTask {
-        IntersectionResult intersection;
-        Ray rayToLight;
-        Spectrum incident;
-        Ray exitantRay;
-        Spectrum multiplier;
-        Spectrum* result;
+    struct LightingResult {
+        Spectrum lightingContrib;
+        float3 rayToLightDirection;
         float lightPDF;
-        QEntryInfo previousQEntry;
+    };
+
+    struct NextRayInfo {
+        float3 dir;
+        float surfacePDF;
+        int cellIndex;
     };
 
     __device__
@@ -162,7 +163,7 @@ namespace ReinforcementLearningPathTracing {
     }
 
     __global__
-    void genNextRay(SceneHandle scene, SamplerObject sampler, TaskQueue<LightingTask> tasks, TaskQueue<RayTask> nextRoundRayQueue, int depth, AABB sceneBounds, GpuArray<QEntry> QTable) {
+    void genNextRay(SceneHandle scene, SamplerObject sampler, TaskQueue<LightingTask> tasks, TaskQueue<RayTask> nextRoundRayQueue, int depth, AABB sceneBounds, GpuArray<QEntry> QTable,GpuArray<NextRayInfo> nextRayInfos) {
         int tasksCount = tasks.count();
         int index = blockIdx.x * blockDim.x + threadIdx.x;
         if (index >= tasksCount) {
@@ -213,43 +214,11 @@ namespace ReinforcementLearningPathTracing {
             entryInfo.cellIndex = QEntry::dirToCellIndex(nextRay.direction);
         }
         else {
-            
-            QEntry& entry = QTable.data[entryInfo.entryIndex];
-            QDistribution dist;
+            NextRayInfo& info = nextRayInfos.data[index];
 
-            float valueSum = 0;
-            float3 exitantLocal = intersection.worldToLocal(exitantDir, tangent0, tangent1);
-
-            for (int cellIndex = 0; cellIndex < QEntry::NUM_XY; ++cellIndex) {
-                int thetaIdx = cellIndex / QEntry::NUM_X;
-                int phiIdx = cellIndex % QEntry::NUM_X;
-                float u = ((float)thetaIdx + 0.5f) * QEntry::INV_NUM_Y();
-                u = u * 2 - 1.f;
-                float v = ((float)phiIdx + 0.5f) * QEntry::INV_NUM_X();
-
-                float xyScale = sqrt(1.0f - u * u);
-                float phi = 2 * M_PI * v;
-                float3 dir = make_float3(
-                    xyScale * cos(phi),
-                    xyScale * sin(phi),
-                    u);
-                float3 incidentLocal = intersection.worldToLocal(dir, tangent0, tangent1);
-
-                Spectrum scattering = intersection.bsdf.eval(incidentLocal, exitantLocal);
-                float value = luminance(scattering) * entry.Q[cellIndex] * abs(dot(dir, intersection.normal));
-                dist.cdf[cellIndex] = value; // temprarily use cdf array to store the value. saves memory
-                valueSum += value;
-            }
-            float accumulated = 0;
-            for (int cellIndex = 0; cellIndex < QEntry::NUM_XY; ++cellIndex) {
-                accumulated += dist.cdf[cellIndex] / valueSum;
-                dist.cdf[cellIndex] = accumulated;
-            }
-            entryInfo.cellIndex = dist.sample(sampler.rand1(), nextRayProbability);
-            nextRayProbability = (QEntry::NUM_XY * nextRayProbability / (4 * M_PI)); // Solid angle probability
-
-
-            nextRay.direction = entry.sampleDirectionProportionalToQ(sampler, entryInfo.cellIndex, intersection.normal, exitantDir);
+            entryInfo.cellIndex = info.cellIndex;
+            nextRayProbability = info.surfacePDF;
+            nextRay.direction = info.dir;
             nextRay.origin = intersection.position + nextRay.direction * 0.0001f;
 
             nextMultiplier = intersection.bsdf.eval(intersection.worldToLocal(nextRay.direction, tangent0, tangent1), intersection.worldToLocal(exitantDir, tangent0, tangent1));
@@ -268,7 +237,7 @@ namespace ReinforcementLearningPathTracing {
 
 
     __global__
-    void computeLighting(SceneHandle scene, SamplerObject sampler, TaskQueue<LightingTask> tasks,TaskQueue<MaterialEvalTask> materialEvalQueue,int depth,AABB sceneBounds,GpuArray<QEntry> QTable) {
+    void computeLighting(SceneHandle scene, SamplerObject sampler, TaskQueue<LightingTask> tasks, int depth,AABB sceneBounds,GpuArray<QEntry> QTable,GpuArray<LightingResult> results) {
         int tasksCount = tasks.count();
         int index = blockIdx.x * blockDim.x + threadIdx.x;
         if (index >= tasksCount) {
@@ -315,48 +284,49 @@ namespace ReinforcementLearningPathTracing {
 
         Spectrum incident = light.sampleRayToPoint(intersection.position, sampler, probability, rayToLight, visibilityTest, nullptr);
 
-        Spectrum materialEvalMultiplier = scene.lightsCount * multiplier / probability;
-
         if (!(scene.testVisibility(visibilityTest) && isfinite(probability))) {
             // then light is occluded. But still call materialEval in order to update Q.
             incident = make_float3(0, 0, 0); 
             probability = 1;
         }
-        materialEvalQueue.push({ intersection,rayToLight,incident,exitantRay,materialEvalMultiplier,result,probability,myTask.previousQEntry });
+        Spectrum lightingContrib = intersection.primitive->material.eval(rayToLight, incident, exitantRay, intersection);
+        lightingContrib *= scene.lightsCount / probability;
+
+        results.data[index].lightingContrib = lightingContrib;
+        results.data[index].lightPDF = probability;
+        results.data[index].rayToLightDirection = rayToLight.direction;
 
     }
 
     __global__
-    void evalMaterial(SceneHandle scene,TaskQueue<MaterialEvalTask> tasks, AABB sceneBounds,GpuArray<QEntry> QTable) {
-        int tasksCount = tasks.count();
+    void computeQDistributions(SceneHandle scene,TaskQueue<LightingTask> lightingTasks, GpuArray<LightingResult> lightingResults, AABB sceneBounds,GpuArray<QEntry> QTable,SamplerObject sampler,GpuArray<NextRayInfo> nextRayInfos) {
+        int tasksCount = lightingTasks.count();
         int index = blockIdx.x * blockDim.x + threadIdx.x;
         if (index >= tasksCount) {
             return;
         }
 
-        MaterialEvalTask& myTask = tasks.tasks.data[index];
+        LightingTask& myTask = lightingTasks.tasks.data[index];
         IntersectionResult& intersection = myTask.intersection;
         Spectrum* result = myTask.result;
         Spectrum& multiplier = myTask.multiplier;
-        Spectrum& incident = myTask.incident;
         QEntryInfo previousQEntry = myTask.previousQEntry;
 
-        Ray& rayToLight = myTask.rayToLight;
-        Ray& exitantRay = myTask.exitantRay;
+        float3 incidentDir = lightingResults.data[index].rayToLightDirection;
+        float3 exitantDir = myTask.thisRay.direction * -1.f;
 
-        Spectrum scattered = intersection.primitive->material.eval(rayToLight, incident, exitantRay, intersection);
         
 
         float sumWeightedQ = 0.f; // This will be used for two different things: updating Q table, and computing surfacePDF (for MIS);
-        float rayToLightQ;
-        int rayToLightCellIndex = QEntry::dirToCellIndex(rayToLight.direction);
 
         int thisQEntryIndex = findQEntry(sceneBounds, intersection.position);
         QEntry& thisEntry = QTable.data[thisQEntryIndex];
 
         float3 tangent0, tangent1;
         intersection.findTangents(tangent0, tangent1);
-        float3 exitantLocal = intersection.worldToLocal(exitantRay.direction, tangent0, tangent1);
+        float3 exitantLocal = intersection.worldToLocal(exitantDir, tangent0, tangent1);
+
+        QDistribution dist;
 
         for (int cellIndex = 0; cellIndex < QEntry::NUM_XY; ++cellIndex) {
             int thetaIdx = cellIndex / QEntry::NUM_X;
@@ -376,29 +346,44 @@ namespace ReinforcementLearningPathTracing {
             float scattering = luminance(intersection.bsdf.eval(incidentLocal, exitantLocal));
             float thisDirQ = abs(dot(dir, intersection.normal)) * scattering * thisEntry.Q[cellIndex];
             sumWeightedQ += thisDirQ;
-            if (cellIndex == rayToLightCellIndex) {
-                rayToLightQ = thisDirQ;
-            }
+            dist.cdf[cellIndex] = thisDirQ;
         }
+        float accumulatedDensity = 0;
+        for (int cellIndex = 0; cellIndex < QEntry::NUM_XY; ++cellIndex) {
+            float density = dist.cdf[cellIndex] / sumWeightedQ;
+            accumulatedDensity += density;
+            dist.cdf[cellIndex] = accumulatedDensity;
+        }
+
         sumWeightedQ *= (4.f * M_PI / (float)QEntry::NUM_XY);
 
+        // updated Q
         if (previousQEntry.entryIndex != -1) {
             // update q table
-            float proposal = sumWeightedQ + luminance(scattered) * scene.lightsCount / myTask.lightPDF;
+            float proposal = sumWeightedQ + luminance(lightingResults.data[index].lightingContrib);
             QTable.data[previousQEntry.entryIndex].proposeNextQ(proposal, previousQEntry.cellIndex);
         }
 
-        float surfacePDF = ((float)QEntry::NUM_XY / (4.f*M_PI)) * rayToLightQ / sumWeightedQ;
-        //surfacePDF = intersection.bsdf.pdf(rayToLight.direction, exitantLocal);
-
+        // compute MIS
+        int rayToLightCellIndex = QEntry::dirToCellIndex(exitantDir);
+        float surfacePDF = dist.cdf[rayToLightCellIndex];
+        if (rayToLightCellIndex > 0) {
+            surfacePDF -= dist.cdf[rayToLightCellIndex-1];
+        }
         if (sumWeightedQ == 0) {
             surfacePDF = 0;
         }
-
-        float lightPDF = myTask.lightPDF;
-
+        float lightPDF = lightingResults.data[index].lightPDF;
         float misWeight = misPowerHeuristic(lightPDF, surfacePDF);
-        *result += scattered * multiplier * misWeight;
+
+        *result += lightingResults.data[index].lightingContrib * multiplier * misWeight;
+
+        // sample next ray Dir
+        float& nextRayProbability = nextRayInfos.data[index].surfacePDF;
+        nextRayInfos.data[index].cellIndex = dist.sample(sampler.rand1(), nextRayProbability);
+        nextRayProbability = (QEntry::NUM_XY * nextRayProbability / (4 * M_PI)); // Solid angle probability
+
+        nextRayInfos.data[index].dir = thisEntry.sampleDirectionProportionalToQ(sampler, nextRayInfos.data[index].cellIndex, intersection.normal, exitantDir);
 
     }
 
@@ -486,7 +471,7 @@ namespace ReinforcementLearningPathTracing {
 
     void RLPTIntegrator::render(const Scene& scene, const CameraObject& camera, FilmObject& film) {
 
-        int bytesNeededPerThread = sizeof(CameraSample) + sampler->bytesNeededPerThread() + sizeof(Spectrum) + sizeof(RayTask)*2 + sizeof(LightingTask)*2 + sizeof(MaterialEvalTask) ;
+        int bytesNeededPerThread = sizeof(CameraSample) + sampler->bytesNeededPerThread() + sizeof(Spectrum) + sizeof(RayTask)*2 + sizeof(LightingTask)*2 + sizeof(LightingResult)+sizeof(NextRayInfo)+4*sizeof(int) ;
         std::cout<<"Running RL Path Tracing Integrator. Bytes needed per thread: "<<bytesNeededPerThread<<std::endl;
 
         int numBlocks, numThreads;
@@ -522,7 +507,8 @@ namespace ReinforcementLearningPathTracing {
             TaskQueue<LightingTask> lightingQueue(samplesCount);
             TaskQueue<LightingTask> lightingQueueCopy(samplesCount);
 
-            TaskQueue<MaterialEvalTask> materialEvalQueue(samplesCount);
+            GpuArray<LightingResult> lightingResults(samplesCount);
+            GpuArray<NextRayInfo> nextRayInfos(samplesCount);
 
             int QCellsCount = QTable.N * QEntry::NUM_XY;
 
@@ -563,18 +549,14 @@ namespace ReinforcementLearningPathTracing {
                     lightingQueue.setNumBlocksThreads(numBlocks, numThreads);
                     std::string lightingEvent = std::string("lighting ") + std::to_string(round) + " " + std::to_string(depth);
                     Timer::getInstance().timedRun(lightingEvent, [&]() {
-                        computeLighting << <numBlocks, numThreads >> > (sceneHandle, samplerObject.getCopyForKernel(), lightingQueue.getCopyForKernel(), materialEvalQueue.getCopyForKernel(), depth,scene.sceneBounds,QTable.getCopyForKernel());
+                        computeLighting << <numBlocks, numThreads >> > (sceneHandle, samplerObject.getCopyForKernel(), lightingQueue.getCopyForKernel(), depth,scene.sceneBounds,QTable.getCopyForKernel(), lightingResults.getCopyForKernel());
                     });
 
-                    
 
-                    if (materialEvalQueue.count() > 0) {
-                        materialEvalQueue.setNumBlocksThreads(numBlocks, numThreads);
-                        std::string materialEvent = std::string("material ") + std::to_string(round) + " " + std::to_string(depth);
-                        Timer::getInstance().timedRun(materialEvent, [&]() {
-                            evalMaterial << <numBlocks, numThreads >> > (sceneHandle,materialEvalQueue.getCopyForKernel(),scene.sceneBounds,QTable.getCopyForKernel());
-                        });
-                    }
+                    std::string materialEvent = std::string("compute Q ") + std::to_string(round) + " " + std::to_string(depth);
+                    Timer::getInstance().timedRun(materialEvent, [&]() {
+                        computeQDistributions << <numBlocks, numThreads >> > (sceneHandle, lightingQueue.getCopyForKernel(), lightingResults.getCopyForKernel(), scene.sceneBounds, QTable.getCopyForKernel(), samplerObject.getCopyForKernel(), nextRayInfos.getCopyForKernel());
+                    });
 
 
                     setNumBlocksThreads(QCellsCount,numBlocks,numThreads);
@@ -585,14 +567,13 @@ namespace ReinforcementLearningPathTracing {
                     lightingQueue.setNumBlocksThreads(numBlocks, numThreads);
                     std::string genNextRayEvent = std::string("genNext ") + std::to_string(round) + " " + std::to_string(depth);
                     Timer::getInstance().timedRun(genNextRayEvent, [&]() {
-                        genNextRay << <numBlocks, numThreads >> > (sceneHandle, samplerObject.getCopyForKernel(), lightingQueue.getCopyForKernel(), nextRoundRayQueue->getCopyForKernel(), depth,scene.sceneBounds,QTable.getCopyForKernel());
+                        genNextRay << <numBlocks, numThreads >> > (sceneHandle, samplerObject.getCopyForKernel(), lightingQueue.getCopyForKernel(), nextRoundRayQueue->getCopyForKernel(), depth,scene.sceneBounds,QTable.getCopyForKernel(), nextRayInfos.getCopyForKernel());
                     });
                 }
 
                 sampler->syncDimension();
 
                 lightingQueue.clear();
-                materialEvalQueue.clear();
 
                 ++depth;
                 std::swap(thisRoundRayQueue, nextRoundRayQueue);
