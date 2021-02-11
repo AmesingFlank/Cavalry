@@ -3,4 +3,4 @@
 #include "../Core/RenderSetup.h"
 #include <string>
 
-RenderSetup readRenderSetup(const std::string& pbrtFilePath);
+RenderSetup readRenderSetup(const Parameters& renderParameters);

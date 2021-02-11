@@ -4,9 +4,9 @@
 #include "../Utils/Utils.h"
 #include <filesystem>
 
-RenderSetup readRenderSetup(const std::string& pbrtFilePath){
-    std::filesystem::path filePath = std::filesystem::path(pbrtFilePath);
+RenderSetup readRenderSetup(const Parameters& params){
+    std::filesystem::path filePath = std::filesystem::path(params.getString("input"));
     std::filesystem::path basePath = filePath.parent_path();
     TokenBuf tokens = runLexing(filePath);
-    return runParsing(tokens,basePath);
+    return runParsing(tokens,basePath,params);
 }

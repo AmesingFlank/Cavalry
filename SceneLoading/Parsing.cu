@@ -174,7 +174,7 @@ bool readTransform(TokenBuf& buf, glm::mat4& transform){
 }
 
 
-void parseSceneWideOptions(TokenBuf& buf,RenderSetup& result){
+void parseSceneWideOptions(TokenBuf& buf,RenderSetup& result, const Parameters& overridenParams){
 
 	glm::mat4 transform(1.0);
 
@@ -205,15 +205,24 @@ void parseSceneWideOptions(TokenBuf& buf,RenderSetup& result){
 			}
 			else if(keyWord->word == "Film"){
 				filmDef = readObjectDefinition(buf);
+				if (overridenParams.hasString("output")) {
+					filmDef.params.strings["filename"] = overridenParams.getString("output");
+				}
 			}
 			else if(keyWord->word == "Sampler"){
 				samplerDef = readObjectDefinition(buf);
+				if (overridenParams.hasNum("spp")) {
+					samplerDef.params.nums["pixelsamples"] = overridenParams.getNum("spp");
+				}
 			}
 			else if (readTransform(buf, transform)) {
 
 			}
 			else if(keyWord->word == "Integrator"){
 				integratorDef = readObjectDefinition(buf);
+				if (overridenParams.hasString("integrator")) {
+					integratorDef.objectName = overridenParams.getString("integrator");
+				}
 			}
 			
 			else{
@@ -371,14 +380,14 @@ void parseSubsection(TokenBuf& buf, RenderSetup& result, glm::mat4 transform,con
 }
 
 
-RenderSetup runParsing(TokenBuf tokens, const std::filesystem::path& basePath) {
+RenderSetup runParsing(TokenBuf tokens, const std::filesystem::path& basePath, const Parameters& overridenParams) {
 
 	RenderSetup result;
 	MaterialStorage materials;
 	TextureStorage textures;
 
 
-	parseSceneWideOptions(tokens, result);
+	parseSceneWideOptions(tokens, result,overridenParams);
 
 	bool nextShapeHasAreaLight = false;
 	std::shared_ptr<MaterialObject> currentMaterial = nullptr;
