@@ -29,11 +29,11 @@ public:
 	}
 
 	__device__
-	int randInt(int N) {
+	int randInt(int N, SamplingState& samplingState) {
 		auto visitor = [&](auto& arg) -> int {
 			using T = typename std::remove_reference<decltype(arg)>::type;
 			if constexpr (std::is_base_of<Sampler, typename T>::value) {
-				return arg.T::randInt(N);
+				return arg.T::randInt(N,samplingState);
 			}
 			else {
 				SIGNAL_VARIANT_ERROR;
@@ -43,11 +43,11 @@ public:
 	}
 
     __host__ __device__
-    float rand1(){
+    float rand1(SamplingState& samplingState){
         auto visitor = [&](auto& arg) -> float{
 			using T = typename std::remove_reference<decltype(arg)>::type;
 			if constexpr (std::is_base_of<Sampler,typename T>::value) {
-				return arg.T::rand1();
+				return arg.T::rand1(samplingState);
 			}
 			else {
 				SIGNAL_VARIANT_ERROR;
@@ -57,11 +57,11 @@ public:
     }
 
 	__device__
-    float2 rand2(){
+    float2 rand2(SamplingState& samplingState){
         auto visitor = [&](auto& arg) -> float2{
 			using T = typename std::remove_reference<decltype(arg)>::type;
 			if constexpr (std::is_base_of<Sampler,typename T>::value) {
-				return arg.T::rand2();
+				return arg.T::rand2(samplingState);
 			}
 			else {
 				SIGNAL_VARIANT_ERROR;
@@ -71,11 +71,11 @@ public:
     }
 
 	__device__
-    float4 rand4(){
+    float4 rand4(SamplingState& samplingState){
         auto visitor = [&](auto& arg) -> float4{
 			using T = typename std::remove_reference<decltype(arg)>::type;
 			if constexpr (std::is_base_of<Sampler,typename T>::value) {
-				return arg.T::rand4();
+				return arg.T::rand4(samplingState);
 			}
 			else {
 				SIGNAL_VARIANT_ERROR;
@@ -141,11 +141,11 @@ public:
 
 
 	__device__
-	void startPixel(){
+	void startPixel(SamplingState& samplingState, unsigned long long lastIndex){
 		auto visitor = [&](auto& arg){
 			using T = typename std::remove_reference<decltype(arg)>::type;
 			if constexpr (std::is_base_of<Sampler,typename T>::value) {
-				arg.T::startPixel();
+				arg.T::startPixel(samplingState,lastIndex);
 			}
 			else {
 				SIGNAL_VARIANT_ERROR;

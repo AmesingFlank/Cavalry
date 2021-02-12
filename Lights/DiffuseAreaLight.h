@@ -23,11 +23,11 @@ public:
 
 
     __device__
-    virtual Spectrum sampleRayToPoint(const float3& seenFrom, SamplerObject& sampler, float& outputProbability, Ray& outputRay,VisibilityTest& outputVisibilityTest,IntersectionResult* outputLightSurface) const override{
+    virtual Spectrum sampleRayToPoint(const float3& seenFrom, SamplerObject& sampler, SamplingState& samplingState,float& outputProbability, Ray& outputRay,VisibilityTest& outputVisibilityTest,IntersectionResult* outputLightSurface) const override{
 
         float shapeSampleProbability = 0;
 
-        IntersectionResult lightSurface = shape->sample(seenFrom,sampler,&shapeSampleProbability);
+        IntersectionResult lightSurface = shape->sample(seenFrom,sampler,samplingState,&shapeSampleProbability);
         
         outputProbability = shapeSampleProbability;
 
@@ -62,11 +62,11 @@ public:
     }
 
     __device__
-    virtual Spectrum sampleRay(SamplerObject& sampler, Ray& outputRay, float3& outputLightNormal, float& outputPositionProbability, float& outputDirectionProbability) const override{
+    virtual Spectrum sampleRay(SamplerObject& sampler, SamplingState& samplingState, Ray& outputRay, float3& outputLightNormal, float& outputPositionProbability, float& outputDirectionProbability) const override{
 
-        IntersectionResult shapeSample = shape->sample(make_float3(0,0,0),sampler,&outputPositionProbability,false);
+        IntersectionResult shapeSample = shape->sample(make_float3(0,0,0),sampler,samplingState,&outputPositionProbability,false);
 
-        float3 dir = cosineSampleHemisphere(sampler.rand2());
+        float3 dir = cosineSampleHemisphere(sampler.rand2(samplingState));
         outputDirectionProbability = cosineSampleHemispherePdf(dir);
 
         outputLightNormal = shapeSample.normal;

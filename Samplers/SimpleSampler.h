@@ -26,18 +26,15 @@ public:
     SimpleSampler getCopyForKernel();
 
     __device__
-    virtual int randInt(int N) {
-
+    virtual int randInt(int N, SamplingState& samplingState)override {
         int index = blockIdx.x * blockDim.x + threadIdx.x;
-
         curandState* myState = states.getState(index);
         return curand(myState) % N;
 
     }
 
     __device__
-	virtual float rand1() override {
-
+	virtual float rand1(SamplingState& samplingState) override {
         int index = blockIdx.x * blockDim.x + threadIdx.x;
 
         curandState* myState = states.getState(index);
@@ -46,19 +43,16 @@ public:
     };
 
     __device__
-	virtual float2 rand2() override {
-
+	virtual float2 rand2(SamplingState& samplingState) override {
         int index = blockIdx.x * blockDim.x + threadIdx.x;
 
         curandState* myState = states.getState(index);
         return make_float2(curand_uniform(myState), curand_uniform(myState));
-
     };
 
 
     __device__
-	virtual float4 rand4() override {
-
+	virtual float4 rand4(SamplingState& samplingState) override {
         int index = blockIdx.x * blockDim.x + threadIdx.x;
 
         curandState* myState = states.getState(index);

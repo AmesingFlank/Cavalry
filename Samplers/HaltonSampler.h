@@ -9,10 +9,6 @@
 #include <random>
 #include <iostream>
 
-struct HaltonState{
-    int dimension;
-    unsigned long long index;
-};
 
 __device__
 inline float runHalton(unsigned int base, unsigned long long i){
@@ -34,10 +30,7 @@ public:
     int samplesPerPixel;
     int threadsCount;
 
-    GpuArray<HaltonState> states;
-    GpuArray<HaltonState> statesCopy; // used for reordering
     GpuArray<unsigned int> primes;
-    GpuArray<int> maxDimension;
 
     __host__
     HaltonSampler(int samplesPerPixel_);
@@ -51,19 +44,15 @@ public:
     virtual void prepare(int threadsCount) override;
 
     __device__
-    virtual void startPixel() override{
+    virtual void startPixel(SamplingState& samplingState, unsigned long long lastIndex) override{
         int index = blockIdx.x * blockDim.x + threadIdx.x;
-
-        HaltonState& myState = states.data[index];
-
-        myState.dimension = 0;
-        myState.index += HALTON_INDEX_SKIP * (unsigned long)threadsCount;
-        *maxDimension.data = 0; // because every thread will reset dimension to 0;
+        samplingState.dimension = 2;
+        samplingState.index = lastIndex + 1 + index ;
     }
 
     __device__
-    virtual int randInt(int N) override{
-        float f = HaltonSampler::rand1();
+    virtual int randInt(int N, SamplingState& samplingState) override{
+        float f = HaltonSampler::rand1(samplingState);
         int result = f*N; //truncation;
         if (result >= N) result = N - 1;
 
@@ -71,23 +60,21 @@ public:
     }
 
     __device__
-	virtual float rand1() override {
-        int index = blockIdx.x * blockDim.x + threadIdx.x;
-        HaltonState& myState = states.data[index];
-        unsigned int base = primes.data[myState.dimension];
-        myState.dimension += 1;
-        return runHalton(base, myState.index);
+	virtual float rand1(SamplingState& samplingState) override {
+        unsigned int base = primes.data[samplingState.dimension];
+        samplingState.dimension += 1;
+        return runHalton(base, samplingState.index*HALTON_INDEX_SKIP);
     };
 
     __device__
-	virtual float2 rand2() override {
-        return make_float2(HaltonSampler::rand1(), HaltonSampler::rand1());
+	virtual float2 rand2(SamplingState& samplingState) override {
+        return make_float2(HaltonSampler::rand1(samplingState), HaltonSampler::rand1(samplingState));
     };
 
 
     __device__
-	virtual float4 rand4() override {
-        return make_float4(HaltonSampler::rand1(),HaltonSampler::rand1(),HaltonSampler::rand1(),HaltonSampler::rand1());
+	virtual float4 rand4(SamplingState& samplingState) override {
+        return make_float4(HaltonSampler::rand1(samplingState), HaltonSampler::rand1(samplingState), HaltonSampler::rand1(samplingState), HaltonSampler::rand1(samplingState));
     };
 
     virtual GpuArray<CameraSample> genAllCameraSamples(const CameraObject& camera, FilmObject& film, int bytesNeededPerSample)  override;
@@ -97,6 +84,6 @@ public:
     virtual void syncDimension() override;
 
     virtual int bytesNeededPerThread() override {
-        return 2*sizeof(HaltonState);
+        return 0;
     }
 };

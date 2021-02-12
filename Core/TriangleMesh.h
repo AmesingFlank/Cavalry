@@ -107,12 +107,12 @@ public:
 
     // if useSeenFrom is false, then the seenFrom argument is ignored.
     __device__
-    IntersectionResult sample(const float3& seenFrom, SamplerObject& sampler, float* outputProbability, bool useSeenFrom = true) const {
+    IntersectionResult sample(const float3& seenFrom, SamplerObject& sampler,SamplingState& samplingState, float* outputProbability, bool useSeenFrom = true) const {
         if (shapeType == MeshShapeType::Sphere && useSeenFrom) {
             float3 center = make_float3(shapeParams.x, shapeParams.y, shapeParams.z);
             float radius = shapeParams.w;
             if (lengthSquared(seenFrom - center) > radius * radius) {
-                return sampleSphere(seenFrom, sampler, outputProbability, center, radius);
+                return sampleSphere(seenFrom, sampler.rand2(samplingState), outputProbability, center, radius);
             }
         }
         
@@ -122,11 +122,11 @@ public:
         IntersectionResult result;
 
 
-        int triangleID =  sampler.randInt(trianglesCount);
+        int triangleID =  sampler.randInt(trianglesCount,samplingState);
 
-        float temp = sqrt(sampler.rand1());
+        float temp = sqrt(sampler.rand1(samplingState));
         float u = 1 - temp;
-        float v = temp * sampler.rand1();
+        float v = temp * sampler.rand1(samplingState);
 
 
         int3 thisIndices = indicesData[triangleID];
@@ -153,7 +153,7 @@ public:
     }
 
     __device__
-    IntersectionResult sampleSphere(const float3& seenFrom, SamplerObject& sampler, float* outputProbability, const float3& center, float radius) const {
+    IntersectionResult sampleSphere(const float3& seenFrom, float2 randomSource, float* outputProbability, const float3& center, float radius) const {
 
         // Sample sphere uniformly inside subtended cone
 
@@ -170,7 +170,7 @@ public:
         float invSinThetaMax = 1 / sinThetaMax;
         float cosThetaMax = sqrt(max((float)0.f, 1 - sinThetaMax2));
 
-        float2 u = sampler.rand2();
+        float2 u = randomSource;
 
         float cosTheta = (cosThetaMax - 1) * u.x + 1;
         float sinTheta2 = 1 - cosTheta * cosTheta;

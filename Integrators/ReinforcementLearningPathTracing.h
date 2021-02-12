@@ -126,26 +126,19 @@ namespace ReinforcementLearningPathTracing {
         }
 
         __device__
-        float3 sampleDirectionProportionalToQ(SamplerObject& sampler,int cellIndex,const float3& surfaceNormal, const float3& exitantDir,bool requireSameSide = true) const
+        float3 sampleDirectionInCell(float2 randomSource,int cellIndex,const float3& surfaceNormal, const float3& exitantDir,bool requireSameSide = true) const
         {
-            int attempts = 0;
-            while (true) {
-                int thetaIdx = cellIndex / NUM_X;
-                int phiIdx = cellIndex % NUM_X;
-                float u = ((float)thetaIdx + sampler.rand1()) / NUM_Y;
-                u = u * 2 - 1.f;
-                float v = ((float)phiIdx + sampler.rand1()) / NUM_X;
+            int thetaIdx = cellIndex / NUM_X;
+            int phiIdx = cellIndex % NUM_X;
+            float u = ((float)thetaIdx + randomSource.y) / NUM_Y;
+            u = u * 2 - 1.f;
+            float v = ((float)phiIdx + randomSource.x) / NUM_X;
 
-                float3 dir = make_float3(
-                    sqrt(1.0f - u * u) * cos(2 * M_PI * v),
-                    sqrt(1.0f - u * u) * sin(2 * M_PI * v),
-                    u);
-                if (sameSign(dot(dir, surfaceNormal),dot(exitantDir,surfaceNormal)) || attempts>10 || (!requireSameSide)) {
-                    //printf("sampled %d %f,   %f %f %f\n", outputCellIndex, outputProbability, XYZ(dir));
-                    return dir;
-                }
-                ++attempts;
-            }
+            float3 dir = make_float3(
+                sqrt(1.0f - u * u) * cos(2 * M_PI * v),
+                sqrt(1.0f - u * u) * sin(2 * M_PI * v),
+                u);
+            return dir;
         }
     };
 

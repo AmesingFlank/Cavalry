@@ -14,13 +14,13 @@ class Light{
 public:
     
     __device__
-    virtual Spectrum sampleRayToPoint(const float3& seenFrom,SamplerObject& sampler, float& outputProbability, Ray& outputRay,VisibilityTest& outputVisibilityTest,IntersectionResult* outputLightSurface) const = 0;
+    virtual Spectrum sampleRayToPoint(const float3& seenFrom,SamplerObject& sampler,SamplingState& samplingState, float& outputProbability, Ray& outputRay,VisibilityTest& outputVisibilityTest,IntersectionResult* outputLightSurface) const = 0;
 
     __device__
     virtual float sampleRayToPointPdf(const Ray& sampledRay, const IntersectionResult& lightSurface) const = 0;
 
     __device__
-    virtual Spectrum sampleRay(SamplerObject& sampler, Ray& outputRay, float3& outputLightNormal, float& outputPositionProbability, float& outputDirectionProbability) const {
+    virtual Spectrum sampleRay(SamplerObject& sampler,SamplingState& samplingState, Ray& outputRay, float3& outputLightNormal, float& outputPositionProbability, float& outputDirectionProbability) const {
         SIGNAL_ERROR("sampleRay not implemented\n");
     }
 
@@ -74,8 +74,8 @@ public:
 
 
     __device__
-    virtual Spectrum sampleRayToPoint(const float3& seenFrom, SamplerObject& sampler, float& outputProbability, Ray& outputRay,VisibilityTest& outputVisibilityTest,IntersectionResult* outputLightSurface) const override {
-        float3 sampleOnSphere = uniformSampleSphere(sampler.rand2());
+    virtual Spectrum sampleRayToPoint(const float3& seenFrom, SamplerObject& sampler,SamplingState& samplingState, float& outputProbability, Ray& outputRay,VisibilityTest& outputVisibilityTest,IntersectionResult* outputLightSurface) const override {
+        float3 sampleOnSphere = uniformSampleSphere(sampler.rand2(samplingState));
         outputRay.origin = seenFrom;
         outputRay.direction = sampleOnSphere;
         outputProbability = uniformSampleSpherePdf(sampleOnSphere);

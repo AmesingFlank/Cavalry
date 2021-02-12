@@ -20,13 +20,18 @@ namespace DirectLighting {
     };
     
     __device__
-    static void renderRay(const SceneHandle& scene, const Ray& ray, SamplerObject& sampler, Spectrum* result, TaskQueue<MaterialEvalTask>& materialEvalQueue) {
+    static void renderRay(const SceneHandle& scene, const Ray& ray, SamplerObject& sampler, Spectrum* result, TaskQueue<MaterialEvalTask>& materialEvalQueue,unsigned long long lastSampleIndex) {
+        int index = blockIdx.x * blockDim.x + threadIdx.x;
+
         IntersectionResult intersection;
         scene.intersect(intersection, ray);
     
         *result = make_float3(0, 0, 0);
-       
-        sampler.startPixel();
+
+        SamplingState samplingState; 
+        sampler.startPixel(samplingState,lastSampleIndex);
+
+
         if (!intersection.intersected) {
             if (scene.hasEnvironmentMap()) {
                 *result = scene.getEnvironmentMap()->EnvironmentMap::evaluateRay(ray);
@@ -48,19 +53,19 @@ namespace DirectLighting {
     
         Ray exitantRay = { intersection.position,ray.direction * -1 };
     
-        int lightIndex = sampler.randInt(scene.lightsCount);
+        int lightIndex = sampler.randInt(scene.lightsCount,samplingState);
     
     
         const LightObject& light = scene.lights[lightIndex];
         Ray rayToLight;
         float probability;
-        float4 randomSource = sampler.rand4();
+        float4 randomSource = sampler.rand4(samplingState);
     
         VisibilityTest visibilityTest;
         visibilityTest.sourceMeshIndex = intersection.primitive->shape.meshIndex;
     
 
-        Spectrum incident = light.sampleRayToPoint(intersection.position, sampler, probability, rayToLight, visibilityTest,nullptr);
+        Spectrum incident = light.sampleRayToPoint(intersection.position, sampler, samplingState, probability, rayToLight, visibilityTest,nullptr);
 
 
         if (scene.testVisibility(visibilityTest)) {
@@ -76,7 +81,7 @@ namespace DirectLighting {
     
     
     __global__
-    void renderAllSamples(CameraSample* samples, int samplesCount, SceneHandle scene, CameraObject camera, SamplerObject sampler, Spectrum* results,TaskQueue<MaterialEvalTask> materialEvalQueue) {
+    void renderAllSamples(CameraSample* samples, int samplesCount, SceneHandle scene, CameraObject camera, SamplerObject sampler, Spectrum* results,TaskQueue<MaterialEvalTask> materialEvalQueue,unsigned long long lastSampleIndex) {
         int index = blockIdx.x * blockDim.x + threadIdx.x;
         if (index >= samplesCount) {
             return;
@@ -85,7 +90,7 @@ namespace DirectLighting {
         Ray ray = camera.genRay(samples[index]);
         Spectrum* result = &results[index];
     
-        renderRay(scene, ray, sampler,result,materialEvalQueue);
+        renderRay(scene, ray, sampler,result,materialEvalQueue,lastSampleIndex);
     
     }
     
@@ -114,6 +119,8 @@ namespace DirectLighting {
         int bytesNeededPerThread = sizeof(Spectrum) + sizeof(DirectLighting::MaterialEvalTask) + sizeof(CameraSample) + sampler->bytesNeededPerThread();
         std::cout<<"Running Direct Lighting Integrator. Bytes needed per thread: "<<bytesNeededPerThread<<std::endl;
 
+        unsigned long long lastSampleIndex = -1;
+
         while(!isFinished(scene,camera,film)){
             GpuArray<CameraSample> allSamples = sampler->genAllCameraSamples(camera, film,bytesNeededPerThread);
 
@@ -133,14 +140,15 @@ namespace DirectLighting {
 
             CHECK_IF_CUDA_ERROR("before render all samples");
             DirectLighting::renderAllSamples << <numBlocks, numThreads >> >
-                (allSamples.data, samplesCount, sceneHandle, camera, samplerObject.getCopyForKernel(), result.data, materialEvalQueue.getCopyForKernel());
+                (allSamples.data, samplesCount, sceneHandle, camera, samplerObject.getCopyForKernel(), result.data, materialEvalQueue.getCopyForKernel(),lastSampleIndex);
             CHECK_IF_CUDA_ERROR("render all samples");
+            lastSampleIndex += allSamples.N;
 
             materialEvalQueue.forAll(
                 [] __device__
                 (DirectLighting::MaterialEvalTask & task) {
-                DirectLighting::runMaterialEval(task);
-            }
+                    DirectLighting::runMaterialEval(task);
+                }
             );
 
             DirectLighting::addSamplesToFilm << <numBlocks, numThreads >> > (film.getCopyForKernel(), result.data, allSamples.data, samplesCount);
