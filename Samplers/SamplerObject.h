@@ -167,31 +167,6 @@ public:
 		visit(visitor);
 	}
 
-	void reorderStates(GpuArray<int>& taskIndices) {
-		auto visitor = [&](auto& arg) {
-			using T = typename std::remove_reference<decltype(arg)>::type;
-			if constexpr (std::is_base_of<Sampler, typename T>::value) {
-				arg.T::reorderStates(taskIndices);
-			}
-			else {
-				SIGNAL_VARIANT_ERROR;
-			}
-		};
-		visit(visitor);
-	};
-
-	void syncDimension(){
-		auto visitor = [&](auto& arg) {
-			using T = typename std::remove_reference<decltype(arg)>::type;
-			if constexpr (std::is_base_of<Sampler, typename T>::value) {
-				arg.T::syncDimension();
-			}
-			else {
-				SIGNAL_VARIANT_ERROR;
-			}
-		};
-		visit(visitor);
-	};
 
 	int bytesNeededPerThread() {
 		auto visitor = [&](auto& arg) -> int{

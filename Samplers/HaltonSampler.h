@@ -79,10 +79,6 @@ public:
 
     virtual GpuArray<CameraSample> genAllCameraSamples(const CameraObject& camera, FilmObject& film, int bytesNeededPerSample)  override;
 
-    virtual void reorderStates(GpuArray<int>& taskIndices) override;
-
-    virtual void syncDimension() override;
-
     virtual int bytesNeededPerThread() override {
         return 0;
     }

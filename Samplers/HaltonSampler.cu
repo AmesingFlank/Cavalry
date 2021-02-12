@@ -77,14 +77,3 @@ GpuArray<CameraSample> HaltonSampler::genAllCameraSamples(const CameraObject& ca
     CHECK_IF_CUDA_ERROR("gen halton camera samples");
     return result;
 }
-
-
-
-
-void HaltonSampler::reorderStates(GpuArray<int>& taskIndices) {
-
-}
-
-void HaltonSampler::syncDimension() {
-
-};
