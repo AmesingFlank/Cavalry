@@ -36,7 +36,7 @@ BVH::BVH(int primitivesCount_,bool isCopyForKernel_):primitivesCount(primitivesC
 
 BVH BVH::getCopyForKernel(){
     BVH copy(primitivesCount,true);
-    copy.nodes.gpu = nodes.gpu.getCopyForKernel();
+    copy.nodes = nodes.getCopyForKernel();
     return copy;
 }
 
@@ -342,7 +342,7 @@ BVH BVH::build(Triangle* primitivesDevice, int primitivesCount,const AABB& scene
     CHECK_IF_CUDA_ERROR("compute bounds");
 
 
-    GpuArray<BVHRestructureNode> restructureNodes(bvh.nodes.gpu.N,false);
+    GpuArray<BVHRestructureNode> restructureNodes(bvh.nodes.N,false);
 
     mergeNodesArray <<< numBlocksInternals, numThreadsInternals >>> (primitivesCount,leaves.data,internals.data, restructureNodes.data);
     CHECK_IF_CUDA_ERROR("merge nodes array");  
@@ -350,8 +350,8 @@ BVH BVH::build(Triangle* primitivesDevice, int primitivesCount,const AABB& scene
     optimizeBVH(primitivesCount, restructureNodes);
 
     int numBlocksAllNodes, numThreadsAllNodes;
-    setNumBlocksThreads(bvh.nodes.gpu.N, numBlocksAllNodes, numThreadsAllNodes);
-    copyToBVH <<< numBlocksAllNodes, numThreadsAllNodes >> > (bvh.nodes.gpu.N, restructureNodes.data,bvh.nodes.gpu.data);
+    setNumBlocksThreads(bvh.nodes.N, numBlocksAllNodes, numThreadsAllNodes);
+    copyToBVH <<< numBlocksAllNodes, numThreadsAllNodes >> > (bvh.nodes.N, restructureNodes.data,bvh.nodes.data);
     CHECK_CUDA_ERROR("final copy");
 
     return bvh;

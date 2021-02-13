@@ -9,7 +9,7 @@
 
 struct BVH{
     int primitivesCount;
-    ArrayPair<BVHNode> nodes;
+    GpuArray<BVHNode> nodes;
 
     BVH();
     BVH(int primitivesCount_,bool isCopyForKernel_ = false);
@@ -23,7 +23,7 @@ struct BVH{
     __device__
     bool intersect(IntersectionResult& result, const Ray& ray, Triangle* primitives) const {
 
-        BVHNode* nodesData = nodes.gpu.data;
+        BVHNode* nodesData = nodes.data;
 
         float3 invDir = make_float3(1, 1, 1) / ray.direction;
 
@@ -108,7 +108,7 @@ struct BVH{
 
     __device__
     bool testVisibility(const VisibilityTest& test, Triangle* primitives) const {
-        BVHNode* nodesData = nodes.gpu.data;
+        BVHNode* nodesData = nodes.data;
 
         Ray ray = test.ray;
         float3 invDir = make_float3(1,1,1) / ray.direction;
