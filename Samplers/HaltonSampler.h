@@ -30,10 +30,10 @@ public:
     int samplesPerPixel;
     int threadsCount;
 
-    GpuArray<unsigned int> primes;
+    GpuArray<unsigned int> primes = GpuArray<unsigned int>(0,true);
 
     __host__
-    HaltonSampler(int samplesPerPixel_);
+    HaltonSampler(int samplesPerPixel_,bool isCopyForKernel_=false);
 
     __host__ 
     HaltonSampler();

@@ -152,11 +152,6 @@ namespace ReinforcementLearningPathTracing {
         
     }
 
-    __device__
-    void buildQDistribution(QDistribution& dist, QEntry& entry) {
-
-    }
-
     __global__
     void genNextRay(SceneHandle scene, SamplerObject sampler, TaskQueue<LightingTask> tasks, TaskQueue<RayTask> nextRoundRayQueue, int depth, AABB sceneBounds, GpuArray<QEntry> QTable,GpuArray<NextRayInfo> nextRayInfos) {
         int tasksCount = tasks.count();
