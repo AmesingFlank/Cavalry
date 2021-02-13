@@ -167,7 +167,7 @@ struct GpuArray{
     }
 
     __host__
-    GpuArray getCopyForKernel() {
+    GpuArray getCopyForKernel() const {
         GpuArray copy(N, true);
         copy.data = data;
         return copy;

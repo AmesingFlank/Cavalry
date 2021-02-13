@@ -34,7 +34,7 @@ BVH::BVH(int primitivesCount_,bool isCopyForKernel_):primitivesCount(primitivesC
 
 }
 
-BVH BVH::getCopyForKernel(){
+BVH BVH::getCopyForKernel()const{
     BVH copy(primitivesCount,true);
     copy.nodes = nodes.getCopyForKernel();
     return copy;

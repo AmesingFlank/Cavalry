@@ -14,7 +14,7 @@ struct BVH{
     BVH();
     BVH(int primitivesCount_,bool isCopyForKernel_ = false);
 
-    BVH getCopyForKernel();
+    BVH getCopyForKernel() const;
 
     static BVH build(Triangle* trianglesDevice, int trianglesCount, const AABB& sceneBounds);
 
