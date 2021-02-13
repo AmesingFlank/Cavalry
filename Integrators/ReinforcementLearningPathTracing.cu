@@ -153,7 +153,7 @@ namespace ReinforcementLearningPathTracing {
     }
 
     __global__
-    void genNextRay(SceneHandle scene, SamplerObject sampler, TaskQueue<LightingTask> tasks, TaskQueue<RayTask> nextRoundRayQueue, int depth, AABB sceneBounds, GpuArray<QEntry> QTable,GpuArray<NextRayInfo> nextRayInfos) {
+    void genNextRay(SceneHandle scene, SamplerObject sampler, TaskQueue<LightingTask> tasks, TaskQueue<RayTask> nextRoundRayQueue, int depth, GpuArray<QEntry> QTable,GpuArray<NextRayInfo> nextRayInfos) {
         int tasksCount = tasks.count();
         int index = blockIdx.x * blockDim.x + threadIdx.x;
         if (index >= tasksCount) {
@@ -192,7 +192,7 @@ namespace ReinforcementLearningPathTracing {
         float3 exitantDir = thisRay.direction * -1.f;
 
         QEntryInfo entryInfo;
-        entryInfo.entryIndex = findQEntry(sceneBounds, intersection.position);
+        entryInfo.entryIndex = findQEntry(scene.sceneBounds, intersection.position);
 
         Spectrum nextMultiplier;
 
@@ -227,7 +227,7 @@ namespace ReinforcementLearningPathTracing {
 
 
     __global__
-    void computeLighting(SceneHandle scene, SamplerObject sampler, TaskQueue<LightingTask> tasks, int depth,AABB sceneBounds,GpuArray<QEntry> QTable,GpuArray<LightingResult> results) {
+    void computeLighting(SceneHandle scene, SamplerObject sampler, TaskQueue<LightingTask> tasks, int depth,GpuArray<QEntry> QTable,GpuArray<LightingResult> results) {
         int tasksCount = tasks.count();
         int index = blockIdx.x * blockDim.x + threadIdx.x;
         if (index >= tasksCount) {
@@ -289,7 +289,7 @@ namespace ReinforcementLearningPathTracing {
     }
 
     __global__
-    void computeQDistributions(SceneHandle scene,TaskQueue<LightingTask> lightingTasks, GpuArray<LightingResult> lightingResults, AABB sceneBounds,GpuArray<QEntry> QTable,SamplerObject sampler,GpuArray<NextRayInfo> nextRayInfos) {
+    void computeQDistributions(SceneHandle scene,TaskQueue<LightingTask> lightingTasks, GpuArray<LightingResult> lightingResults, GpuArray<QEntry> QTable,SamplerObject sampler,GpuArray<NextRayInfo> nextRayInfos) {
         int tasksCount = lightingTasks.count();
         int index = blockIdx.x * blockDim.x + threadIdx.x;
         if (index >= tasksCount) {
@@ -309,7 +309,7 @@ namespace ReinforcementLearningPathTracing {
 
         float sumWeightedQ = 0.f; // This will be used for two different things: updating Q table, and computing surfacePDF (for MIS);
 
-        int thisQEntryIndex = findQEntry(sceneBounds, intersection.position);
+        int thisQEntryIndex = findQEntry(scene.sceneBounds, intersection.position);
         QEntry& thisEntry = QTable.data[thisQEntryIndex];
 
         float3 tangent0, tangent1;
@@ -582,13 +582,13 @@ namespace ReinforcementLearningPathTracing {
                     lightingQueue.setNumBlocksThreads(numBlocks, numThreads);
                     std::string lightingEvent = std::string("lighting ") + std::to_string(round) + " " + std::to_string(depth);
                     Timer::getInstance().timedRun(lightingEvent, [&]() {
-                        computeLighting << <numBlocks, numThreads >> > (sceneHandle, samplerObject.getCopyForKernel(), lightingQueue.getCopyForKernel(), depth,scene.sceneBounds,QTable.getCopyForKernel(), lightingResults.getCopyForKernel());
+                        computeLighting << <numBlocks, numThreads >> > (sceneHandle, samplerObject.getCopyForKernel(), lightingQueue.getCopyForKernel(), depth,QTable.getCopyForKernel(), lightingResults.getCopyForKernel());
                     });
 
 
                     std::string materialEvent = std::string("compute Q ") + std::to_string(round) + " " + std::to_string(depth);
                     Timer::getInstance().timedRun(materialEvent, [&]() {
-                        computeQDistributions << <numBlocks, numThreads >> > (sceneHandle, lightingQueue.getCopyForKernel(), lightingResults.getCopyForKernel(), scene.sceneBounds, QTable.getCopyForKernel(), samplerObject.getCopyForKernel(), nextRayInfos.getCopyForKernel());
+                        computeQDistributions << <numBlocks, numThreads >> > (sceneHandle, lightingQueue.getCopyForKernel(), lightingResults.getCopyForKernel(), QTable.getCopyForKernel(), samplerObject.getCopyForKernel(), nextRayInfos.getCopyForKernel());
                     });
 
 
@@ -601,7 +601,7 @@ namespace ReinforcementLearningPathTracing {
                     lightingQueue.setNumBlocksThreads(numBlocks, numThreads);
                     std::string genNextRayEvent = std::string("genNext ") + std::to_string(round) + " " + std::to_string(depth);
                     Timer::getInstance().timedRun(genNextRayEvent, [&]() {
-                        genNextRay << <numBlocks, numThreads >> > (sceneHandle, samplerObject.getCopyForKernel(), lightingQueue.getCopyForKernel(), nextRoundRayQueue->getCopyForKernel(), depth,scene.sceneBounds,QTable.getCopyForKernel(), nextRayInfos.getCopyForKernel());
+                        genNextRay << <numBlocks, numThreads >> > (sceneHandle, samplerObject.getCopyForKernel(), lightingQueue.getCopyForKernel(), nextRoundRayQueue->getCopyForKernel(), depth,QTable.getCopyForKernel(), nextRayInfos.getCopyForKernel());
                     });
                 }
 

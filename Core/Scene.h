@@ -26,6 +26,8 @@ struct SceneHandle{
 
     BVH bvh;
 
+    AABB sceneBounds;
+
     __host__ __device__
     const EnvironmentMap* getEnvironmentMap() const{
         return environmentMapLightObject->get<EnvironmentMap>();

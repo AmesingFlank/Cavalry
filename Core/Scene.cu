@@ -15,7 +15,8 @@ SceneHandle Scene::getHostHandle() const{
         (LightObject*)lightsHost.data(),
         lightsHost.size(), 
         envMap,
-        bvh
+        bvh,
+        sceneBounds
     };
 }
 
@@ -32,7 +33,8 @@ SceneHandle Scene::getDeviceHandle()const {
         lightsDevice.data,
         (size_t)lightsDevice.N,
         envMap,
-        bvh
+        bvh,
+        sceneBounds
     };
 }
 
