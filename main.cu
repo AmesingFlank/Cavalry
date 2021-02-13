@@ -4,12 +4,8 @@
 
 #include "Core/Renderer.h"
 #include "Core/Parameters.h"
-#include "Films/FilmObject.h"
 #include "SceneLoading/SceneLoading.h"
 #include "Utils/Timer.h"
-
-
-
 
 
 void run(const Parameters& renderParameters) {

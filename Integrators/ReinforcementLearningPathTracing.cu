@@ -567,12 +567,12 @@ namespace ReinforcementLearningPathTracing {
                 thisRoundRayQueue->clear();
 
 
-                std::string sortEvent = std::string("sort queue ") + std::to_string(round) + " " + std::to_string(depth);
-                Timer::getInstance().timedRun(sortEvent, [&](){
-                    sortLightingQueue(lightingQueue, lightingQueueCopy, scene.sceneBounds);
-                });
-
                 if (lightingQueue.count() > 0) {
+                    std::string sortEvent = std::string("sort queue ") + std::to_string(round) + " " + std::to_string(depth);
+                    Timer::getInstance().timedRun(sortEvent, [&]() {
+                        sortLightingQueue(lightingQueue, lightingQueueCopy, scene.sceneBounds);
+                    });
+
                     setNumBlocksThreads(QCellsCount, numBlocks, numThreads);
                     prepareForUpdateQ << <numBlocks, numThreads >> > (QTable.getCopyForKernel());
                     CHECK_CUDA_ERROR("prepare update q");
