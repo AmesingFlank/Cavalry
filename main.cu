@@ -11,12 +11,12 @@
 void run(const Parameters& renderParameters) {
     RenderSetup setup = readRenderSetup(renderParameters);
 
-    Timer::getInstance().start("all");
-    Timer::getInstance().start("preparation");
+    Timer::getInstance().start("Rendering");
+    Timer::getInstance().start("Preparation");
     setup.scene.prepareForRender();
-    Timer::getInstance().stop("preparation");
+    Timer::getInstance().stop("Preparation");
     auto& result = setup.renderer.render(setup.scene);
-    Timer::getInstance().stop("all");
+    Timer::getInstance().stop("Rendering");
     result.saveToPNG(setup.getOutputFileName());
     Timer::getInstance().printStatistics();
 }

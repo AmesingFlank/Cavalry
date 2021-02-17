@@ -31,3 +31,5 @@ Debug/
 *.depnd
 *CMakeCache.txt
 *CMakeFiles*
+
+*__pycache__*

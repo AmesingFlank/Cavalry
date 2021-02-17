@@ -86,7 +86,7 @@ public:
             }
             auto event = events.at(name);
             double milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(event.end - event.start).count();
-            std::cout<<name<<"  took   "<<milliseconds<<"ms"<<std::endl;
+            std::cout<<name<<" took "<<milliseconds<<"ms"<<std::endl;
         }
     }
 
