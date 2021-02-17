@@ -1,6 +1,7 @@
 import os
 import subprocess
-from utils import begins_with
+from utils import begins_with, replace_extension
+from exr_to_png import convert
 import sys
 from pathlib import Path
 import json
@@ -55,9 +56,12 @@ class CavalryPathRenderer(Renderer):
     def __init__(self):
         super().__init__()
         self.name = "path"
+    
+    def get_output_file_name(self,scene_name,spp):
+        return f"{scene_name}/{scene_name}_{spp}spp_{self.name}.png"
 
     def render(self,input_file,scene_name,spp,time_data):
-        cavalry_path = cavalry_path = "C:/Users/Dunfan/Code/VSIDE/Cavalry/build_tmp/Release/Cavalry.exe"
+        cavalry_path = "C:/Users/Dunfan/Code/VSIDE/Cavalry/build_tmp/Release/Cavalry.exe"
 
         output_file = self.get_output_file_name(scene_name,spp)
         command = [cavalry_path,"--input",input_file,"--output",f"{output_file}","--spp",f"{spp}","--integrator","path"]
@@ -74,7 +78,7 @@ class CavalryRLPathRenderer(Renderer):
         self.name = "rlpath"
 
     def render(self,input_file,scene_name,spp,time_data):
-        cavalry_path = cavalry_path = "C:/Users/Dunfan/Code/VSIDE/Cavalry/build_tmp/Release/Cavalry.exe"
+        cavalry_path = "C:/Users/Dunfan/Code/VSIDE/Cavalry/build_tmp/Release/Cavalry.exe"
 
         output_file = self.get_output_file_name(scene_name,spp)
         command = [cavalry_path,"--input",input_file,"--output",f"{output_file}","--spp",f"{spp}","--integrator","rlpath"]
@@ -86,11 +90,41 @@ class CavalryRLPathRenderer(Renderer):
                 self.record_time(time_data,spp,time)
 
 
+class Mitsuba(Renderer):
+    def __init__(self):
+        super().__init__()
+        self.name = "mitsuba"
+    
+    def render(self,input_file,scene_name,spp,time_data):
+        if spp not in [4,16,64,256,1024]:
+            return
+
+        input_file = replace_extension(input_file,"xml")
+        mitsuba_path = "C:/Users/Dunfan/Code/mitsuba/mitsuba2/build/dist/mitsuba.exe"
+
+        output_file = self.get_output_file_name(scene_name,spp)
+        output_exr = replace_extension(output_file,"exr")
+        command = [mitsuba_path,input_file,"--output",f"{output_exr}",f"-Dspp={spp}"]
+
+        result_lines = self.run_command(command)
+        for line in result_lines:
+            if "Rendering finished" in line:
+                time = line.split('(')[1].split()[1].split(')')[0]
+                unit = time[-1]
+                time = float(time[:-1])
+                if(unit == 'm'):
+                    time *= 60
+                self.record_time(time_data,spp,time)
+
+        convert(output_exr,output_file)
+        #os.remove(output_exr)
+
+
 def render_batch(input_file,scene_name,max_spp):
     Path(scene_name).mkdir(parents=True, exist_ok=True)
-    spp = 1
+    spp = 4
     time_data = {}
-    renderers = [PBRT3(), CavalryPathRenderer(),CavalryRLPathRenderer()]
+    renderers = [PBRT3(), CavalryPathRenderer(),CavalryRLPathRenderer(),Mitsuba()]
     while spp <= max_spp:
         for renderer in renderers:
             renderer.render(input_file,scene_name,spp,time_data)
@@ -98,10 +132,10 @@ def render_batch(input_file,scene_name,max_spp):
     
     time_data_path = f"{scene_name}/time_data.json"
     with open(time_data_path,"w") as f:
-        f.write(json.dumps(time_data))
+        f.write(json.dumps(time_data,indent=2))
 
 if __name__ == "__main__":
     input_file = sys.argv[1]
     scene_name = sys.argv[2]
     time_data = {}
-    render_batch(input_file,scene_name,1)
+    render_batch(input_file,scene_name,16)
