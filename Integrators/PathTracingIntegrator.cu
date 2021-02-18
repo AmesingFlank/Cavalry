@@ -158,7 +158,7 @@ namespace PathTracing {
         float3 nextDirectionLocal;
         Spectrum nextMultiplier = intersection.bsdf.sample(sampler.rand2(myTask.samplingState), nextDirectionLocal, intersection.worldToLocal(thisRay.direction * -1.f), &nextRayProbability);
         nextRay.direction = intersection.localToWorld(nextDirectionLocal);
-        nextRay.origin = intersection.position + nextRay.direction * 0.0001f;
+        nextRay.origin = intersection.position + nextRay.direction * 0.001f;
         if (isAllZero(nextMultiplier)) {
             multiplier = make_float3(0, 0, 0);
         }

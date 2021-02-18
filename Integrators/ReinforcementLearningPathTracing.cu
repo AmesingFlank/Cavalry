@@ -200,7 +200,7 @@ namespace ReinforcementLearningPathTracing {
             float3 nextDirectionLocal;
             nextMultiplier = intersection.bsdf.sample(sampler.rand2(myTask.samplingState), nextDirectionLocal, intersection.worldToLocal(exitantDir,tangent0,tangent1), &nextRayProbability);
             nextRay.direction = intersection.localToWorld(nextDirectionLocal);
-            nextRay.origin = intersection.position + nextRay.direction * 0.0001f;
+            nextRay.origin = intersection.position + nextRay.direction * 0.001f;
             entryInfo.cellIndex = QEntry::dirToCellIndex(nextRay.direction);
         }
         else {
@@ -209,7 +209,7 @@ namespace ReinforcementLearningPathTracing {
             entryInfo.cellIndex = info.cellIndex;
             nextRayProbability = info.surfacePDF;
             nextRay.direction = info.dir;
-            nextRay.origin = intersection.position + nextRay.direction * 0.0001f;
+            nextRay.origin = intersection.position + nextRay.direction * 0.001f;
 
             nextMultiplier = intersection.bsdf.eval(intersection.worldToLocal(nextRay.direction, tangent0, tangent1), intersection.worldToLocal(exitantDir, tangent0, tangent1));
         }

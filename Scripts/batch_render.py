@@ -138,4 +138,4 @@ if __name__ == "__main__":
     input_file = sys.argv[1]
     scene_name = sys.argv[2]
     time_data = {}
-    render_batch(input_file,scene_name,16)
+    render_batch(input_file,scene_name,1024)
