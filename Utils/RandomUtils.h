@@ -16,12 +16,28 @@ inline float2 uniformSampleDisk(float2 randomSource) {
     return make_float2(r * cos(theta), r * sin(theta));
 }
 
+__host__ __device__
+inline float2 concentricSampleDisk(const float2 &randomSource) {
+    float2 uOffset = 2.f * randomSource - make_float2(1, 1);
+
+    if (uOffset.x == 0 && uOffset.y == 0) return make_float2(0, 0);
+
+    float theta, r;
+    if (abs(uOffset.x) > abs(uOffset.y)) {
+        r = uOffset.x;
+        theta = (M_PI/4.f) * (uOffset.y / uOffset.x);
+    } else {
+        r = uOffset.y;
+        theta = (M_PI/2.f) - (M_PI/4.f) * (uOffset.x / uOffset.y);
+    }
+    return r * make_float2(cos(theta),sin(theta));
+}
 
 __host__ __device__
 inline float3 cosineSampleHemisphere(float2 randomSource) {
-    float2 xy = uniformSampleDisk(randomSource);
-    float zSquared = max(0.f, 1.f - xy.x * xy.x - xy.y * xy.y);
-    return make_float3(xy.x, xy.y, sqrt(zSquared));
+    float2 d = concentricSampleDisk(randomSource);
+    float z = sqrt(max(0.f, 1 - d.x * d.x - d.y * d.y)); 
+    return make_float3(d.x, d.y, z);
 }
 
 __host__ __device__
