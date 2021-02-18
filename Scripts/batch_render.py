@@ -124,13 +124,19 @@ def render_batch(input_file,scene_name,max_spp):
     Path(scene_name).mkdir(parents=True, exist_ok=True)
     spp = 4
     time_data = {}
+    time_data_path = f"{scene_name}/time_data.json"
+    
+    # load any previously computed time_data
+    if Path(time_data_path).is_file():
+        with open(time_data_path,"r") as f:
+            time_data = json.loads(f.read())
+
     renderers = [PBRT3(), CavalryPathRenderer(),CavalryRLPathRenderer(),Mitsuba()]
     while spp <= max_spp:
         for renderer in renderers:
             renderer.render(input_file,scene_name,spp,time_data)
         spp *= 2
     
-    time_data_path = f"{scene_name}/time_data.json"
     with open(time_data_path,"w") as f:
         f.write(json.dumps(time_data,indent=2))
 
