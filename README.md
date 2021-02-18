@@ -12,9 +12,7 @@ Features:
 
 * (Partial) compatibility with PBRT v3 scene definition files.
 
-* Halton sampler
-
-* Multi-Importance Sampling
+* Reinforcement Learning Guided Path Tracing
 
 ## Sample Images
 
