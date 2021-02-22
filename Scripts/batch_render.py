@@ -114,6 +114,8 @@ class Mitsuba(Renderer):
                 time = float(time[:-1])
                 if(unit == 'm'):
                     time *= 60
+                if(unit == 'h'):
+                    time *= 3600
                 self.record_time(time_data,spp,time)
 
         convert(output_exr,output_file)
