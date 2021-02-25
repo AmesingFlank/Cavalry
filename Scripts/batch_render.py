@@ -96,15 +96,17 @@ class Mitsuba(Renderer):
         self.name = "mitsuba"
     
     def render(self,input_file,scene_name,spp,time_data):
-        if spp not in [4,16,64,256,1024]:
-            return
 
         input_file = replace_extension(input_file,"xml")
         mitsuba_path = "C:/Users/Dunfan/Code/mitsuba/mitsuba2/build/dist/mitsuba.exe"
 
+        sampler = "ldsampler"
+        if spp not in [4,16,64,256,1024,4096]: #ldsampler only accepts power of 4..
+            sampler = "independent"
+
         output_file = self.get_output_file_name(scene_name,spp)
         output_exr = replace_extension(output_file,"exr")
-        command = [mitsuba_path,input_file,"--output",f"{output_exr}",f"-Dspp={spp}"]
+        command = [mitsuba_path,input_file,"--output",f"{output_exr}",f"-Dspp={spp}",f"-Dsampler={sampler}"]
 
         result_lines = self.run_command(command)
         for line in result_lines:
