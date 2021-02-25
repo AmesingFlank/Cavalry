@@ -11,12 +11,12 @@
 
 
 __device__
-inline float runHalton(unsigned int base, unsigned long long i){
+inline float runHalton(unsigned int base, unsigned long long i,unsigned short* perm){
     float r = 0;
     float f = 1;
     while(i>0){
         f = f/base;
-        r = r + f*(i%base);
+        r = r + f*(perm[i%base]);
         i = i/base;
     }
     return r;
@@ -30,7 +30,11 @@ public:
     int samplesPerPixel;
     int threadsCount;
 
-    GpuArray<unsigned int> primes = GpuArray<unsigned int>(0,true);
+    GpuArray<unsigned int> primes  ;
+
+    GpuArray<unsigned short> permutations ; // array that stores permutation for all bases (primes)
+    GpuArray<unsigned int> permutationsStart ;
+
 
     __host__
     HaltonSampler(int samplesPerPixel_,bool isCopyForKernel_=false);
@@ -62,8 +66,10 @@ public:
     __device__
 	virtual float rand1(SamplingState& samplingState) override {
         unsigned int base = primes.data[samplingState.dimension];
+        unsigned short* perm = permutations.data + permutationsStart.data[samplingState.dimension];
+
         samplingState.dimension += 1;
-        return runHalton(base, samplingState.index*HALTON_INDEX_SKIP);
+        return runHalton(base, samplingState.index*HALTON_INDEX_SKIP,perm);
     };
 
     __device__
