@@ -84,11 +84,11 @@ public:
 		return visit(visitor);
     }
 
-	GpuArray<CameraSample> genAllCameraSamples(const CameraObject& camera, FilmObject& film, int bytesNeededPerSample) {
+	GpuArray<CameraSample> genAllCameraSamples(const CameraObject& camera, FilmObject& film, int bytesNeededPerSample,int maxSamplesPerRound = -1) {
 		auto visitor = [&](auto& arg) -> GpuArray<CameraSample> {
 			using T = typename std::remove_reference<decltype(arg)>::type;
 			if constexpr (std::is_base_of<Sampler, typename T>::value) {
-				return arg.T::genAllCameraSamples(camera, film,bytesNeededPerSample);
+				return arg.T::genAllCameraSamples(camera, film,bytesNeededPerSample,maxSamplesPerRound);
 			}
 			else {
 				SIGNAL_VARIANT_ERROR;

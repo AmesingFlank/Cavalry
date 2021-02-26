@@ -36,7 +36,7 @@ public:
 	__device__
 	virtual float4 rand4(SamplingState& samplingState) = 0;
 
-	virtual GpuArray<CameraSample> genAllCameraSamples(const CameraObject& camera, FilmObject& film, int bytesNeededPerSample) = 0;
+	virtual GpuArray<CameraSample> genAllCameraSamples(const CameraObject& camera, FilmObject& film, int bytesNeededPerSample, int maxSamplesPerRound = -1) = 0;
 
 
 	virtual int bytesNeededPerThread() = 0;

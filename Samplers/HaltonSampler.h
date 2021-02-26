@@ -22,7 +22,7 @@ inline float runHalton(unsigned int base, unsigned long long i,unsigned short* p
     return r;
 }
 
-#define HALTON_INDEX_SKIP 409ULL
+#define HALTON_INDEX_SKIP 8167ULL //a big prime
 
 class HaltonSampler: public Sampler{
 public:
@@ -69,7 +69,7 @@ public:
         unsigned short* perm = permutations.data + permutationsStart.data[samplingState.dimension];
 
         samplingState.dimension += 1;
-        return runHalton(base, samplingState.index*HALTON_INDEX_SKIP,perm);
+        return runHalton(base, samplingState.index,perm);
     };
 
     __device__
@@ -83,7 +83,7 @@ public:
         return make_float4(HaltonSampler::rand1(samplingState), HaltonSampler::rand1(samplingState), HaltonSampler::rand1(samplingState), HaltonSampler::rand1(samplingState));
     };
 
-    virtual GpuArray<CameraSample> genAllCameraSamples(const CameraObject& camera, FilmObject& film, int bytesNeededPerSample)  override;
+    virtual GpuArray<CameraSample> genAllCameraSamples(const CameraObject& camera, FilmObject& film, int bytesNeededPerSample,int maxSamplesPerRound = -1)  override;
 
     virtual int bytesNeededPerThread() override {
         return 0;

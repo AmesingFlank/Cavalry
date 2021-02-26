@@ -4,4 +4,4 @@
 #include "../Films/FilmObject.h"
 
 
-int decideSamplesPerPixel(FilmObject& film, int totalSPP,int bytesNeededPerSample);
+int decideSamplesPerPixel(FilmObject& film, int totalSPP,int bytesNeededPerSample, int maxSamplesPerRound = -1);
