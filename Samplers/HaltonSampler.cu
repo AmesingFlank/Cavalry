@@ -93,9 +93,9 @@ void genHaltonCameraSample(CameraSample* resultPointer, int samplesCount, int wi
     int x = pixelIndex % width;
     int y = pixelIndex / width;
 
-    CameraSample sample{ (float)x + 0.5 , (float)y +0.5 };
-    sample.x += 0.5*sampler.HaltonSampler::rand1(state) - 0.25;
-    sample.y += 0.5*sampler.HaltonSampler::rand1(state) - 0.25;
+    CameraSample sample{ x , y };
+    sample.x += sampler.HaltonSampler::rand1(state);
+    sample.y += sampler.HaltonSampler::rand1(state);
 
     resultPointer[index] = sample;
 }

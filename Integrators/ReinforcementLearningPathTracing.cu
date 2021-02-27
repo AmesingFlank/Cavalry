@@ -54,7 +54,8 @@ namespace ReinforcementLearningPathTracing {
     };
 
     struct LightingResult {
-        Spectrum lightingContrib;
+        Spectrum indirectLightingContrib;
+        Spectrum directLightingContrib;
         float3 rayToLightDirection;
         float lightPDF;
     };
@@ -63,6 +64,7 @@ namespace ReinforcementLearningPathTracing {
         float3 dir;
         float surfacePDF;
         int cellIndex;
+        bool valid; // whether or not a valid ray dir has been computed during computeQDist
     };
 
     __device__
@@ -196,7 +198,9 @@ namespace ReinforcementLearningPathTracing {
 
         Spectrum nextMultiplier;
 
-        if (intersection.bsdf.isDelta()) {
+        NextRayInfo& info = nextRayInfos.data[index];
+
+        if (intersection.bsdf.isDelta() || !info.valid) {
             float3 nextDirectionLocal;
             nextMultiplier = intersection.bsdf.sample(sampler.rand2(myTask.samplingState), nextDirectionLocal, intersection.worldToLocal(exitantDir,tangent0,tangent1), &nextRayProbability);
             nextRay.direction = intersection.localToWorld(nextDirectionLocal);
@@ -204,8 +208,6 @@ namespace ReinforcementLearningPathTracing {
             entryInfo.cellIndex = QEntry::dirToCellIndex(nextRay.direction);
         }
         else {
-            NextRayInfo& info = nextRayInfos.data[index];
-
             entryInfo.cellIndex = info.cellIndex;
             nextRayProbability = info.surfacePDF;
             nextRay.direction = info.dir;
@@ -243,6 +245,8 @@ namespace ReinforcementLearningPathTracing {
 
         const Primitive* prim = intersection.primitive;
 
+        Spectrum directLightingContrib = make_float3(0, 0, 0);
+
         if (prim->areaLight) {
             if (myTask.sampledFromDeltaBSDF) {
                 // then don't apply MIS, because the sampleRayToPoint call had a 0 probability of finding any radiance;
@@ -254,11 +258,14 @@ namespace ReinforcementLearningPathTracing {
                     float lightPDF = prim->areaLight->get<DiffuseAreaLight>()->DiffuseAreaLight::sampleRayToPointPdf(thisRay, intersection);
                     float misWeight = misPowerHeuristic(surfacePDF, lightPDF);
                     if (isfinite(misWeight)) {
-                        *result += prim->areaLight->get<DiffuseAreaLight>()->DiffuseAreaLight::evaluateRay(thisRay, intersection) * multiplier * misWeight;
+                        Spectrum emmited = prim->areaLight->get<DiffuseAreaLight>()->DiffuseAreaLight::evaluateRay(thisRay, intersection);
+                        directLightingContrib = emmited;
+                        *result += emmited * multiplier * misWeight;
                     }
                 }
             }
         }
+        results.data[index].directLightingContrib = directLightingContrib;
 
         Ray exitantRay = { intersection.position,thisRay.direction * -1 };
 
@@ -279,10 +286,10 @@ namespace ReinforcementLearningPathTracing {
             incident = make_float3(0, 0, 0); 
             probability = 1;
         }
-        Spectrum lightingContrib = intersection.primitive->material.eval(rayToLight, incident, exitantRay, intersection);
-        lightingContrib *= scene.lightsCount / probability;
+        Spectrum indirectLightingContrib = intersection.primitive->material.eval(rayToLight, incident, exitantRay, intersection);
+        indirectLightingContrib *= scene.lightsCount / probability;
 
-        results.data[index].lightingContrib = lightingContrib;
+        results.data[index].indirectLightingContrib = indirectLightingContrib;
         results.data[index].lightPDF = probability;
         results.data[index].rayToLightDirection = rayToLight.direction;
 
@@ -350,31 +357,42 @@ namespace ReinforcementLearningPathTracing {
         // updated Q
         if (previousQEntry.entryIndex != -1) {
             // update q table
-            float proposal = sumWeightedQ + luminance(lightingResults.data[index].lightingContrib);
+            auto& lightingRes = lightingResults.data[index];
+            float proposal = sumWeightedQ + luminance(lightingRes.indirectLightingContrib + lightingRes.directLightingContrib);
             QTable.data[previousQEntry.entryIndex].proposeNextQ(proposal, previousQEntry.cellIndex);
         }
 
         // compute MIS
-        int rayToLightCellIndex = QEntry::dirToCellIndex(exitantDir);
-        float surfacePDF = dist.cdf[rayToLightCellIndex];
-        if (rayToLightCellIndex > 0) {
-            surfacePDF -= dist.cdf[rayToLightCellIndex-1];
-        }
-        if (sumWeightedQ == 0) {
+        int rayToLightCellIndex = QEntry::dirToCellIndex(incidentDir);
+        float surfacePDF;
+        if (sumWeightedQ != 0) {
             surfacePDF = 0;
+            float surfacePDF = dist.cdf[rayToLightCellIndex];
+            if (rayToLightCellIndex > 0) {
+                surfacePDF -= dist.cdf[rayToLightCellIndex - 1];
+            }
+            surfacePDF = (QEntry::NUM_XY * surfacePDF / (4 * M_PI)); // Solid angle probability
+        }
+        else {
+            float3 incidentLocal = intersection.worldToLocal(incidentDir, tangent0, tangent1);
+            surfacePDF = intersection.bsdf.pdf(incidentLocal,exitantLocal);
         }
         float lightPDF = lightingResults.data[index].lightPDF;
         float misWeight = misPowerHeuristic(lightPDF, surfacePDF);
 
-        *result += lightingResults.data[index].lightingContrib * multiplier * misWeight;
+        *result += lightingResults.data[index].indirectLightingContrib * multiplier * misWeight;
 
         // sample next ray Dir
         float& nextRayProbability = nextRayInfos.data[index].surfacePDF;
-        nextRayInfos.data[index].cellIndex = dist.sample(sampler.rand1(myTask.samplingState), nextRayProbability);
-        nextRayProbability = (QEntry::NUM_XY * nextRayProbability / (4 * M_PI)); // Solid angle probability
-
-        nextRayInfos.data[index].dir = thisEntry.sampleDirectionInCell(sampler.rand2(myTask.samplingState), nextRayInfos.data[index].cellIndex, intersection.normal, exitantDir);
-
+        if (sumWeightedQ != 0) {
+            nextRayInfos.data[index].cellIndex = dist.sample(sampler.rand1(myTask.samplingState), nextRayProbability);
+            nextRayProbability = (QEntry::NUM_XY * nextRayProbability / (4 * M_PI)); // Solid angle probability
+            nextRayInfos.data[index].dir = thisEntry.sampleDirectionInCell(sampler.rand2(myTask.samplingState), nextRayInfos.data[index].cellIndex, intersection.normal, exitantDir);
+            nextRayInfos.data[index].valid = true;
+        }
+        else {
+            nextRayInfos.data[index].valid = false;
+        }
     }
 
 
@@ -440,7 +458,7 @@ namespace ReinforcementLearningPathTracing {
 
         findMaxDimension << <numBlocks, numThreads >> > (tasks, N, maxDimension.data);
         CHECK_CUDA_ERROR("write max halton dimension");
-        std::cout << "maxDimension: " << maxDimension.get(0) << std::endl;
+        //std::cout << "maxDimension: " << maxDimension.get(0) << std::endl;
 
         setMaxDimension << <numBlocks, numThreads >> > (tasks, N, maxDimension.data);
         CHECK_CUDA_ERROR("sync halton dimension");
@@ -475,6 +493,16 @@ namespace ReinforcementLearningPathTracing {
         int entryIndex = index / QEntry::NUM_XY;
         int cellIndex = index % QEntry::NUM_XY;
         QTable.data[entryIndex].finishUpdateQ(cellIndex);
+    }
+
+    __global__
+    void averageQ(GpuArray<QEntry> QTable) {
+        int index = blockIdx.x * blockDim.x + threadIdx.x;
+        if (index >= QTable.N ) {
+            return;
+        }
+        
+        QTable.data[index].averageQ();
     }
 
 
@@ -551,8 +579,8 @@ namespace ReinforcementLearningPathTracing {
 
             lastSampleIndex += samplesCount;
 
-            while (thisRoundRayQueue->count() > 0 && depth <= maxDepth) {
-                std::cout << "\ndoing depth " << depth << std::endl;
+            while (thisRoundRayQueue->count() > 0 && depth < maxDepth) {
+                //std::cout << "\ndoing depth " << depth << std::endl;
 
                 //if(depth>=2)  debugPrintQTable(QTable);
 
@@ -586,8 +614,8 @@ namespace ReinforcementLearningPathTracing {
                     });
 
 
-                    std::string materialEvent = std::string("compute Q ") + std::to_string(round) + " " + std::to_string(depth);
-                    Timer::getInstance().timedRun(materialEvent, [&]() {
+                    std::string QEvent = std::string("compute Q ") + std::to_string(round) + " " + std::to_string(depth);
+                    Timer::getInstance().timedRun(QEvent, [&]() {
                         computeQDistributions << <numBlocks, numThreads >> > (sceneHandle, lightingQueue.getCopyForKernel(), lightingResults.getCopyForKernel(), QTable.getCopyForKernel(), samplerObject.getCopyForKernel(), nextRayInfos.getCopyForKernel());
                     });
 
@@ -595,6 +623,10 @@ namespace ReinforcementLearningPathTracing {
                     setNumBlocksThreads(QCellsCount,numBlocks,numThreads);
                     finishUpdateQ<<<numBlocks,numThreads>>>(QTable.getCopyForKernel());
                     CHECK_CUDA_ERROR("finish update q");
+
+                    setNumBlocksThreads(QTable.N, numBlocks, numThreads);
+                    averageQ << <numBlocks, numThreads >> > (QTable.getCopyForKernel());
+                    CHECK_CUDA_ERROR("average q");
 
                     syncDimension(lightingQueue.tasks.data, lightingQueue.count(), maxDimension);
 

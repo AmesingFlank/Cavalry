@@ -31,6 +31,9 @@ class Timer
         Timer(const Timer &)               = delete;
         void operator=(const Timer &)  = delete;
 
+        bool alwaysCheckCudaError = false;
+        bool alwaysPrintStats = false;
+
 
 public:
     TimeType now(){
@@ -61,8 +64,8 @@ public:
         event.end = now();
     }
 
-    void timedRun(const std::string& eventName,std::function<void()> f,bool checkCudaError = true) {
-        if (checkCudaError) {
+    void timedRun(const std::string& eventName,std::function<void()> f,bool checkCudaError = false,bool printStats = false) {
+        if (checkCudaError || alwaysCheckCudaError) {
             CHECK_IF_CUDA_ERROR((std::string("before ") + eventName).c_str());
         }
         
@@ -70,12 +73,14 @@ public:
 
         f();
 
-        if (checkCudaError) {
+        if (checkCudaError || alwaysCheckCudaError) {
             CHECK_CUDA_ERROR((std::string("after ") + eventName).c_str());
         }
         
-        Timer::getInstance().stop(eventName);
-        Timer::getInstance().printStatistics(eventName);
+        stop(eventName);
+        if (printStats || alwaysPrintStats) {
+            Timer::getInstance().printStatistics(eventName);
+        }
     }
 
     void printStatistics() const {

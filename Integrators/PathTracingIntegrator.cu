@@ -311,7 +311,7 @@ namespace PathTracing {
 
         findMaxDimension << <numBlocks, numThreads >> > (tasks,N, maxDimension.data);
         CHECK_CUDA_ERROR("write max halton dimension");
-        std::cout << "maxDimension: " << maxDimension.get(0) << std::endl;
+        //std::cout << "maxDimension: " << maxDimension.get(0) << std::endl;
 
         setMaxDimension <<<numBlocks, numThreads >>> (tasks, N, maxDimension.data);
         CHECK_CUDA_ERROR("sync halton dimension");
@@ -364,8 +364,8 @@ namespace PathTracing {
 
             lastSampleIndex += samplesCount;
 
-            while (thisRoundRayQueue->count() > 0 && depth <= maxDepth) {
-                std::cout << "\ndoing depth " << depth << std::endl;
+            while (thisRoundRayQueue->count() > 0 && depth < maxDepth) {
+                //std::cout << "\ndoing depth " << depth << std::endl;
 
 
                 thisRoundRayQueue->setNumBlocksThreads(numBlocks, numThreads);

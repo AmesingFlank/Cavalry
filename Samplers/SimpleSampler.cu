@@ -34,9 +34,9 @@ void genNaiveSample(CameraSample* resultPointer, int samplesCount, int width, in
 
     SamplingState unused{ 0,0 };
 
-    CameraSample sample{ (float)x + 0.5 , (float)y +0.5 };
-    sample.x += 0.5*sampler.rand1(unused) - 0.25;
-    sample.y += 0.5*sampler.rand1(unused) - 0.25;
+    CameraSample sample{x,y };
+    sample.x += sampler.rand1(unused) ;
+    sample.y += sampler.rand1(unused) ;
 
     resultPointer[index] = sample;
 }

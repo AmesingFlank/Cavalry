@@ -29,7 +29,7 @@ namespace ReinforcementLearningPathTracing {
 
         __device__
         float defaultQ(int cellIndex)const {
-            return 0.091;
+            return 1;
         }
         
         __device__
@@ -65,7 +65,8 @@ namespace ReinforcementLearningPathTracing {
             float avg = sumQ / (float)count;
             for (int i = 0; i < NUM_XY; ++i) {
                 if (totalProposalCount[i] == 0) {
-                    //Q[i] = avg;
+                    Q[i] = avg;
+                    //printf("updaing avg%f\n", avg);
                 }
             }
             return avg;

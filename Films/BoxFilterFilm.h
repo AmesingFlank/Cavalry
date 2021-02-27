@@ -19,16 +19,21 @@ public:
 	__device__
 	virtual void addSample(const CameraSample& sample, const Spectrum& spectrum) override{
 
-        int x = round(sample.x-0.5);
-		int y = round(sample.y-0.5);
-		int index = y*width + x;
 
-		if (x >= width || y >= height || x < 0 || y < 0) {
-			SIGNAL_ERROR("error sample location %d %d %d %d\n", x, y, width, height);
+		int x0 = floor(sample.x);
+		int x1 = ceil(sample.x);
+		int y0 = floor(sample.y);
+		int y1 = ceil(sample.y);
+		for (int x = x0; x <= x1; ++x) {
+			for (int y = y0; y <= y1; ++y) {
+				if (!(x >= width || y >= height || x < 0 || y < 0)) {
+					int index = y * width + x;
+					atomicAdd(&(samplesSum.data[index]), spectrum);
+					atomicAdd(&(samplesCount.data[index]), 1);
+				}
+			}
 		}
-		
-        atomicAdd(&(samplesSum.data[index]),spectrum);
-        atomicAdd(&(samplesCount.data[index]), 1);
+
 	}
 
 	virtual RenderResult readCurrentResult()  override;
