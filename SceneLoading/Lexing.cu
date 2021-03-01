@@ -14,35 +14,38 @@ TokenBuf runLexing(const std::filesystem::path& inputPath){
             ++pos;
             continue;
         }
-        if(input[pos]=='#'){
+        else if(input[pos]=='#'){
             while(pos<input.size() && input[pos] != '\n'){
                 ++pos;
             }
             ++pos;
             continue;
         }
-        if(input[pos]=='['){
+        else if(input[pos]=='['){
             result.tokens.push_back(std::make_shared<LeftSquareBracketToken>());
             ++pos;
             continue;
         }
-        if(input[pos]==']'){
+        else if(input[pos]==']'){
             result.tokens.push_back(std::make_shared<RightSquareBracketToken>());
             ++pos;
             continue;
         }
         
 
-        if(isLetter(input[pos])){
+        else if(isLetter(input[pos])){
             KeyWordToken::read(input,pos,result);
             continue;
         }
-        if(input[pos]=='\"'){
+        else if(input[pos]=='\"'){
             StringToken::read(input,pos,result);
             continue;
         }
-        if(isDigit(input[pos]) || input[pos] == '-' ||input[pos] == '.' ){
+        else if(isDigit(input[pos]) || input[pos] == '-' ||input[pos] == '.' ){
             NumToken::read(input,pos,result);
+        }
+        else {
+            SIGNAL_ERROR("unrecognized character %c\n", input[pos]);
         }
     }
     return result;

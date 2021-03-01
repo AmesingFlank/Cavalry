@@ -325,19 +325,11 @@ namespace ReinforcementLearningPathTracing {
 
         QDistribution dist;
 
-        for (int cellIndex = 0; cellIndex < QEntry::NUM_XY; ++cellIndex) {
-            int thetaIdx = cellIndex / QEntry::NUM_X;
-            int phiIdx = cellIndex % QEntry::NUM_X;
-            float u = ((float)thetaIdx + 0.5f) * QEntry::INV_NUM_Y();
-            u = u * 2 - 1.f;
-            float v = ((float)phiIdx + 0.5f) * QEntry::INV_NUM_X();
+        float2 positionInCell = sampler.rand2(myTask.samplingState);
 
-            float xyScale = sqrt(1.0f - u * u);
-            float phi = 2 * M_PI * v;
-            float3 dir = make_float3(
-                xyScale * cos(phi),
-                xyScale * sin(phi),
-                u);
+        for (int cellIndex = 0; cellIndex < QEntry::NUM_XY; ++cellIndex) {
+
+            float3 dir = thisEntry.sampleDirectionInCell(positionInCell, cellIndex);
             float3 incidentLocal = intersection.worldToLocal(dir, tangent0, tangent1);
 
             float scattering = luminance(intersection.bsdf.eval(incidentLocal, exitantLocal));
@@ -387,7 +379,7 @@ namespace ReinforcementLearningPathTracing {
         if (sumWeightedQ != 0) {
             nextRayInfos.data[index].cellIndex = dist.sample(sampler.rand1(myTask.samplingState), nextRayProbability);
             nextRayProbability = (QEntry::NUM_XY * nextRayProbability / (4 * M_PI)); // Solid angle probability
-            nextRayInfos.data[index].dir = thisEntry.sampleDirectionInCell(sampler.rand2(myTask.samplingState), nextRayInfos.data[index].cellIndex, intersection.normal, exitantDir);
+            nextRayInfos.data[index].dir = thisEntry.sampleDirectionInCell(positionInCell, nextRayInfos.data[index].cellIndex);
             nextRayInfos.data[index].valid = true;
         }
         else {

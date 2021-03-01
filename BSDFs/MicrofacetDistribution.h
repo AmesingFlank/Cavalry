@@ -68,12 +68,18 @@ struct GGX {
 
     // sample a microfacet normal.
     __device__
-    float3 sample(float2 randomSource, const float3& exitant)const {
+    float3 sample(float2 randomSource, float3 exitant)const {
+        bool flip = exitant.z < 0;
+        if (flip) {
+            exitant *= -1.f;
+        }
+
         float3 exitantStretched =
-        normalize(make_float3(alpha_x * exitant.x, alpha_y * exitant.y, abs(exitant.z)));
+        normalize(make_float3(alpha_x * exitant.x, alpha_y * exitant.y,  exitant.z ));
 
         float slope_x, slope_y;
         GGX::sampleGGX11(cosZenith(exitantStretched), randomSource, &slope_x, &slope_y);
+        //printf("%f      %f %f     %f %f\n", cosZenith(exitantStretched), slope_x, slope_y, randomSource.x, randomSource.y);
 
         //rotate
         float temp = cosAzimuth(exitantStretched) * slope_x - sinAzimuth(exitantStretched) * slope_y;
@@ -85,8 +91,8 @@ struct GGX {
         slope_y = alpha_y * slope_y;
 
         float3 result = normalize(make_float3(-slope_x, -slope_y, 1.));
-        if (exitant.z < 0) {
-            result.z *= -1;
+        if (flip) {
+            result *= -1.f;
         }
         return result;
     }
@@ -134,8 +140,10 @@ struct GGX {
             (U2 * (U2 * (U2 * 0.093073f + 0.309420f) - 1.000000f) + 0.597999f);
         *slope_y = S * z * sqrt(1.f + *slope_x * *slope_x);
 
+        //printf("%f %f %f   %f %f %f\n",tmp, B, D,slope_x_1,slope_x_2,*slope_x);
     }
 
+    __host__ __device__
     static GGX createFromRoughness(float uRoughness,float vRoughness,bool remap){
         if(remap){
             return {GGX::roughnessToAlpha(uRoughness),GGX::roughnessToAlpha(vRoughness)};

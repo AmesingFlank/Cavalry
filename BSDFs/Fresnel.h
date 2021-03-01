@@ -95,14 +95,18 @@ public:
     }
 
     __device__
-    virtual Spectrum sample(float2 randomSource, float3& incidentOutput, const float3& exitant, float* probabilityOutput) const override{
+    virtual Spectrum sample(float2 randomSource, float3& incidentOutput, const float3& exitant_, float* probabilityOutput) const override{
+        bool flip = exitant_.z < 0;
+        float3 exitant = exitant_;
         
+
         float sampleMicrofacetProb = getSampleMicrofacetProbability();
         bool shouldSampleMicrofacet = randomSource.x < sampleMicrofacetProb;
         float3 halfVec;
         if(shouldSampleMicrofacet){
             randomSource.x = randomSource.x * (1.f / sampleMicrofacetProb);
             halfVec = distribution.sample(randomSource,exitant);
+            //printf("halfVec %f %f %f\n", XYZ(halfVec));
             incidentOutput = reflectF(exitant, halfVec);
             if (!sameHemisphere(incidentOutput, exitant)) {
                 return make_float3(0, 0, 0);
@@ -111,16 +115,14 @@ public:
         else{
             randomSource.x =  (randomSource.x-sampleMicrofacetProb) * (1.f / (1.f- sampleMicrofacetProb));
             incidentOutput = cosineSampleHemisphere(randomSource);
-            halfVec = normalize(incidentOutput + exitant);
             if (exitant.z < 0) {
                 incidentOutput.z *= -1;
             }
+            halfVec = normalize(incidentOutput + exitant);
         }
-        
-        *probabilityOutput = FresnelBlendBSDF::pdf(incidentOutput,exitant,halfVec);
-        
-        return FresnelBlendBSDF::eval(incidentOutput, exitant);
+        *probabilityOutput = FresnelBlendBSDF::pdf(incidentOutput,exitant_,halfVec);
 
+        return FresnelBlendBSDF::eval(incidentOutput, exitant_);
     }
 
     __device__

@@ -69,7 +69,7 @@ HaltonSampler::HaltonSampler(int samplesPerPixel_, bool isCopyForKernel_):
 threadsCount(0),primes(0,true),permutations(0,true),permutationsStart(0,true){
     samplesPerPixel = samplesPerPixel_;
     if (!isCopyForKernel_) {
-        auto primesHost = computePrimes(1024);
+        auto primesHost = computePrimes(8192);
         primes = primesHost;
         buildPermutations(permutations,permutationsStart,primesHost);
     }

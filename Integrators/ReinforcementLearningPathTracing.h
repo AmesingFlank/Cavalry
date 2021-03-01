@@ -127,17 +127,20 @@ namespace ReinforcementLearningPathTracing {
         }
 
         __device__
-        float3 sampleDirectionInCell(float2 randomSource,int cellIndex,const float3& surfaceNormal, const float3& exitantDir,bool requireSameSide = true) const
+        float3 sampleDirectionInCell(float2 randomSource,int cellIndex) const
         {
             int thetaIdx = cellIndex / NUM_X;
             int phiIdx = cellIndex % NUM_X;
-            float u = ((float)thetaIdx + randomSource.y) / NUM_Y;
+            float u = ((float)thetaIdx + randomSource.x) * INV_NUM_Y();
             u = u * 2 - 1.f;
-            float v = ((float)phiIdx + randomSource.x) / NUM_X;
+            float v = ((float)phiIdx + randomSource.y) * INV_NUM_X();
+
+            float xyScale = sqrt(1.0f - u * u);
+            float phi = 2 * M_PI * v;
 
             float3 dir = make_float3(
-                sqrt(1.0f - u * u) * cos(2 * M_PI * v),
-                sqrt(1.0f - u * u) * sin(2 * M_PI * v),
+                xyScale * cos(phi),
+                xyScale * sin(phi),
                 u);
             return dir;
         }
