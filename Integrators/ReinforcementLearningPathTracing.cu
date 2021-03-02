@@ -357,17 +357,20 @@ namespace ReinforcementLearningPathTracing {
         // compute MIS
         int rayToLightCellIndex = QEntry::dirToCellIndex(incidentDir);
         float surfacePDF;
+
+        float3 incidentLocal = intersection.worldToLocal(incidentDir, tangent0, tangent1);
+        float materialPDF = intersection.bsdf.pdf(incidentLocal, exitantLocal);
+
         if (sumWeightedQ != 0) {
-            surfacePDF = 0;
-            float surfacePDF = dist.cdf[rayToLightCellIndex];
+            surfacePDF = dist.cdf[rayToLightCellIndex];
             if (rayToLightCellIndex > 0) {
                 surfacePDF -= dist.cdf[rayToLightCellIndex - 1];
             }
             surfacePDF = (QEntry::NUM_XY * surfacePDF / (4 * M_PI)); // Solid angle probability
         }
-        else {
-            float3 incidentLocal = intersection.worldToLocal(incidentDir, tangent0, tangent1);
-            surfacePDF = intersection.bsdf.pdf(incidentLocal,exitantLocal);
+        if(sumWeightedQ==0 || surfacePDF == 0){
+            // then we shouldn't trust surfacePDF, probably because we haven't done enough learning
+            surfacePDF = materialPDF;
         }
         float lightPDF = lightingResults.data[index].lightPDF;
         float misWeight = misPowerHeuristic(lightPDF, surfacePDF);

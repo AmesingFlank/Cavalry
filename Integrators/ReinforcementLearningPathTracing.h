@@ -118,10 +118,11 @@ namespace ReinforcementLearningPathTracing {
             dir.x /= sqrt(1.f - u * u);
             dir.y /= sqrt(1.f - u * u);
 
-            float v = acos(dir.x)/ (2.f*M_PI);
+            float v = acos(dir.x);
             if (dir.y < 0) {
-                v *= -1;
+                v = (2.f * M_PI)-v;
             }
+            v = v / (2.f * M_PI);
             int phiIndex = clampF((int)(v * QEntry::NUM_X), 0, QEntry::NUM_X - 1);
             return thetaIndex * NUM_X + phiIndex;
         }
