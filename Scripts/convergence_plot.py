@@ -13,7 +13,10 @@ def read_data(scene_name):
 
 def plot_error_vs_time(time_data,error_data,scene_name):
     fig, ax = plt.subplots()
-    for renderer in error_data:
+
+    for renderer in ['path','rlpath','pbrt3','mitsuba']:
+        if renderer not in error_data or renderer not in time_data:
+            print(f"warning! renderer {renderer} not found")
         times = []
         errors = []
         for spp_str in error_data[renderer]:
@@ -25,10 +28,13 @@ def plot_error_vs_time(time_data,error_data,scene_name):
         errors = [e for t,e in sorted(zip(times,errors))]
         times = [t for t,e in sorted(zip(times,errors))]
 
-        errors = [0 if e==0 else math.log2(e) for e in errors]
-        times = [0 if t==0 else math.log2(t) for t in times]
+        errors = errors[:-1] # exclude final item, which is used as reference image
+        times = times[:-1]
+        
+        ax.plot(times, errors,marker='o',markersize=4, label=renderer) 
 
-        ax.plot(times, errors, label=renderer) 
+    ax.set_xscale("log",basex=2)
+    ax.set_yscale("log",basey=2)
 
     ax.set_xlabel('time/s') 
     ax.set_ylabel('MSE')  
