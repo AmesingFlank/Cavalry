@@ -153,4 +153,9 @@ struct GGX {
         }
     }
 
+    __device__
+    bool isAlmostDelta() const  { 
+        return alpha_x < 0.05 || alpha_y < 0.05; 
+    };
+
 };

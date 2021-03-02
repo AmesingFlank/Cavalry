@@ -142,5 +142,10 @@ public:
     __device__
     virtual bool isDelta() const override { return false; };
 
+    __device__
+    virtual bool isAlmostDelta() const override { 
+        return distribution.isAlmostDelta(); 
+    };
+
 };
 

@@ -65,6 +65,20 @@ public:
 	}
 
 	__device__
+	bool isAlmostDelta() const {
+		auto visitor = [&](auto& arg) -> bool {
+			using T = typename std::remove_reference<decltype(arg)>::type;
+			if constexpr (std::is_base_of<BSDF, typename T>::value) {
+				return arg.T::isAlmostDelta();
+			}
+			else {
+				SIGNAL_VARIANT_ERROR;
+			}
+		};
+		return visit(visitor);
+	}
+
+	__device__
 	Spectrum sample(float2 randomSource, float3& incidentOutput, const float3& exitant, float* probabilityOutput) const {
 		auto visitor = [&](auto& arg) -> Spectrum {
 			using T = typename std::remove_reference<decltype(arg)>::type;

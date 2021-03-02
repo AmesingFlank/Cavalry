@@ -200,7 +200,7 @@ namespace ReinforcementLearningPathTracing {
 
         NextRayInfo& info = nextRayInfos.data[index];
 
-        if (intersection.bsdf.isDelta() || !info.valid) {
+        if (intersection.bsdf.isDelta() || intersection.bsdf.isAlmostDelta() ||  !info.valid) {
             float3 nextDirectionLocal;
             nextMultiplier = intersection.bsdf.sample(sampler.rand2(myTask.samplingState), nextDirectionLocal, intersection.worldToLocal(exitantDir,tangent0,tangent1), &nextRayProbability);
             nextRay.direction = intersection.localToWorld(nextDirectionLocal);
@@ -253,7 +253,7 @@ namespace ReinforcementLearningPathTracing {
                 *result += prim->areaLight->get<DiffuseAreaLight>()->DiffuseAreaLight::evaluateRay(thisRay,intersection) * multiplier;
             }
             else {
-                if (depth > 0 && false) {
+                if (depth > 0) {
                     float surfacePDF = myTask.surfacePDF;
                     float lightPDF = prim->areaLight->get<DiffuseAreaLight>()->DiffuseAreaLight::sampleRayToPointPdf(thisRay, intersection);
                     float misWeight = misPowerHeuristic(surfacePDF, lightPDF);
@@ -356,7 +356,7 @@ namespace ReinforcementLearningPathTracing {
 
         // compute MIS
         int rayToLightCellIndex = QEntry::dirToCellIndex(incidentDir);
-        float surfacePDF;
+        float surfacePDF = 0;
 
         float3 incidentLocal = intersection.worldToLocal(incidentDir, tangent0, tangent1);
         float materialPDF = intersection.bsdf.pdf(incidentLocal, exitantLocal);
@@ -368,8 +368,9 @@ namespace ReinforcementLearningPathTracing {
             }
             surfacePDF = (QEntry::NUM_XY * surfacePDF / (4 * M_PI)); // Solid angle probability
         }
-        if(sumWeightedQ==0 || surfacePDF == 0){
-            // then we shouldn't trust surfacePDF, probably because we haven't done enough learning
+        if(sumWeightedQ==0 || surfacePDF == 0 || intersection.bsdf.isDelta() || intersection.bsdf.isAlmostDelta()){
+            // then we shouldn't trust surfacePDF
+            // either ecause we haven't done enough learning
             surfacePDF = materialPDF;
         }
         float lightPDF = lightingResults.data[index].lightPDF;

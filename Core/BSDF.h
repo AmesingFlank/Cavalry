@@ -18,6 +18,11 @@ public:
 
     __device__
     virtual bool isDelta() const { return false; };
+
+
+    // for RL path tracing, we would like to sample from BSDF (instead of weightedQ) if the BSDF is almost delta
+    __device__
+    virtual bool isAlmostDelta() const { return false; };
 };
 
 

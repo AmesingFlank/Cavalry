@@ -208,6 +208,11 @@ public:
         }
     }
 
+    __device__
+    virtual bool isAlmostDelta() const override {
+        return distribution.isAlmostDelta();
+    };
+
 };
 
 
