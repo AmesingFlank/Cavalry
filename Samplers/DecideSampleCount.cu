@@ -6,9 +6,9 @@
 
 
 
-int decideSamplesPerPixel(FilmObject& film, int totalSPP,int bytesNeededPerSample,int maxSamplesPerRound){
-    int sppLeftToDo = totalSPP - film.getCompletedSamplesPerPixel();
-    int resolution = film.getWidth() * film.getHeight();
+int decideSamplesPerPixel(Film& film, int totalSPP,int bytesNeededPerSample,int maxSamplesPerRound){
+    int sppLeftToDo = totalSPP - film.completedSamplesPerPixel;
+    int resolution = film.width * film.height;
 
     
     size_t freeMemory, totalMemory;
@@ -21,8 +21,8 @@ int decideSamplesPerPixel(FilmObject& film, int totalSPP,int bytesNeededPerSampl
         thisSPP = min(thisSPP, maxSamplesPerRound);
     }
     
-    printf("SPP left:%d,  SPP this round:%d,   SPP completed: %d \n", sppLeftToDo, thisSPP, film.getCompletedSamplesPerPixel());
+    printf("SPP left:%d,  SPP this round:%d,   SPP completed: %d \n", sppLeftToDo, thisSPP, film.completedSamplesPerPixel);
 
-    film.setCompletedSamplesPerPixel(film.getCompletedSamplesPerPixel() + thisSPP);
+    film.completedSamplesPerPixel += thisSPP;
     return thisSPP;
 }

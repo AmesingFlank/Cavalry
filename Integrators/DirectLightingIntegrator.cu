@@ -104,7 +104,7 @@ namespace DirectLighting {
     
     
     __global__
-    void addSamplesToFilm(FilmObject film, Spectrum* result,CameraSample* samples, int count) {
+    void addSamplesToFilm(Film film, Spectrum* result,CameraSample* samples, int count) {
         int index = blockIdx.x * blockDim.x + threadIdx.x;
         if (index >= count) {
             return;
@@ -114,7 +114,7 @@ namespace DirectLighting {
 
 
 
-    void DirectLightingIntegrator::render(const Scene& scene, const CameraObject& camera, FilmObject& film) {
+    void DirectLightingIntegrator::render(const Scene& scene, const CameraObject& camera, Film& film) {
 
         int bytesNeededPerThread = sizeof(Spectrum) + sizeof(DirectLighting::MaterialEvalTask) + sizeof(CameraSample) + sampler->bytesNeededPerThread();
         std::cout<<"Running Direct Lighting Integrator. Bytes needed per thread: "<<bytesNeededPerThread<<std::endl;

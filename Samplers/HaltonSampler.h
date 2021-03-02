@@ -83,7 +83,7 @@ public:
         return make_float4(HaltonSampler::rand1(samplingState), HaltonSampler::rand1(samplingState), HaltonSampler::rand1(samplingState), HaltonSampler::rand1(samplingState));
     };
 
-    virtual GpuArray<CameraSample> genAllCameraSamples(const CameraObject& camera, FilmObject& film, int bytesNeededPerSample,int maxSamplesPerRound = -1)  override;
+    virtual GpuArray<CameraSample> genAllCameraSamples(const CameraObject& camera, Film& film, int bytesNeededPerSample,int maxSamplesPerRound = -1)  override;
 
     virtual int bytesNeededPerThread() override {
         return 0;

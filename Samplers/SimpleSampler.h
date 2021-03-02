@@ -61,7 +61,7 @@ public:
     };
 
 
-    virtual GpuArray<CameraSample> genAllCameraSamples(const CameraObject& camera, FilmObject& film, int bytesNeededPerSample,int maxSamplesPerRound = -1)  override;
+    virtual GpuArray<CameraSample> genAllCameraSamples(const CameraObject& camera, Film& film, int bytesNeededPerSample,int maxSamplesPerRound = -1)  override;
 
     virtual int bytesNeededPerThread() override {
         return sizeof(curandState);

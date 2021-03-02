@@ -153,7 +153,7 @@ namespace ReinforcementLearningPathTracing {
         int maxDepth;
         RLPTIntegrator(int maxDepth_);
 
-        virtual void render(const Scene& scene, const CameraObject& camera, FilmObject& film) override;
+        virtual void render(const Scene& scene, const CameraObject& camera, Film& film) override;
 
         GpuArray<QEntry> QTable;
 

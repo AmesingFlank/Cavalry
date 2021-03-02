@@ -2,7 +2,6 @@
 #include "CameraSample.h"
 #include "Camera.h"
 #include "../Cameras/CameraObject.h"
-#include "../Films/FilmObject.h"
 #include "Film.h"
 #include <vector>
 #include "../Utils/Array.h"
@@ -36,7 +35,7 @@ public:
 	__device__
 	virtual float4 rand4(SamplingState& samplingState) = 0;
 
-	virtual GpuArray<CameraSample> genAllCameraSamples(const CameraObject& camera, FilmObject& film, int bytesNeededPerSample, int maxSamplesPerRound = -1) = 0;
+	virtual GpuArray<CameraSample> genAllCameraSamples(const CameraObject& camera, Film& film, int bytesNeededPerSample, int maxSamplesPerRound = -1) = 0;
 
 
 	virtual int bytesNeededPerThread() = 0;

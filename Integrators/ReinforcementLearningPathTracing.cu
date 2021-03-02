@@ -416,7 +416,7 @@ namespace ReinforcementLearningPathTracing {
 
 
     __global__
-    void addSamplesToFilm(FilmObject film, Spectrum* result, CameraSample* samples, int count) {
+    void addSamplesToFilm(Film film, Spectrum* result, CameraSample* samples, int count) {
         int index = blockIdx.x * blockDim.x + threadIdx.x;
         if (index >= count) {
             return;
@@ -521,7 +521,7 @@ namespace ReinforcementLearningPathTracing {
 
 
 
-    void RLPTIntegrator::render(const Scene& scene, const CameraObject& camera, FilmObject& film) {
+    void RLPTIntegrator::render(const Scene& scene, const CameraObject& camera, Film& film) {
 
         int bytesNeededPerThread = sizeof(CameraSample) + sampler->bytesNeededPerThread() + sizeof(Spectrum) + sizeof(RayTask)*2 + sizeof(LightingTask)*2 + sizeof(LightingResult)+sizeof(NextRayInfo)+4*sizeof(int) ;
         std::cout<<"Running RL Path Tracing Integrator. Bytes needed per thread: "<<bytesNeededPerThread<<std::endl;

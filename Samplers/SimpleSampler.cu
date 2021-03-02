@@ -42,9 +42,9 @@ void genNaiveSample(CameraSample* resultPointer, int samplesCount, int width, in
 }
 
 
-GpuArray<CameraSample> SimpleSampler::genAllCameraSamples(const CameraObject& camera, FilmObject& film, int bytesNeededPerSample,int maxSamplesPerRound ) {
-    int width = film.getWidth();
-    int height = film.getHeight();
+GpuArray<CameraSample> SimpleSampler::genAllCameraSamples(const CameraObject& camera, Film& film, int bytesNeededPerSample,int maxSamplesPerRound ) {
+    int width = film.width;
+    int height = film.height;
 
     int thisSPP = decideSamplesPerPixel(film,samplesPerPixel,bytesNeededPerSample,maxSamplesPerRound);
 

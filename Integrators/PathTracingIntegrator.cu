@@ -272,7 +272,7 @@ namespace PathTracing {
 
 
     __global__
-    void addSamplesToFilm(FilmObject film, Spectrum* result, CameraSample* samples, int count) {
+    void addSamplesToFilm(Film film, Spectrum* result, CameraSample* samples, int count) {
         int index = blockIdx.x * blockDim.x + threadIdx.x;
         if (index >= count) {
             return;
@@ -318,7 +318,7 @@ namespace PathTracing {
     }
 
 
-    void PathTracingIntegrator::render(const Scene& scene, const CameraObject& camera, FilmObject& film) {
+    void PathTracingIntegrator::render(const Scene& scene, const CameraObject& camera, Film& film) {
         int bytesNeededPerThread = sizeof(CameraSample) + sampler->bytesNeededPerThread() + sizeof(Spectrum) + sizeof(RayTask)*2 + sizeof(LightingTask)*2 + sizeof(MaterialEvalTask) ;
         std::cout<<"Running Path Tracing Integrator. Bytes needed per thread: "<<bytesNeededPerThread<<std::endl;
 

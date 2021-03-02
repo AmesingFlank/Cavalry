@@ -11,7 +11,7 @@ namespace DirectLighting {
 
         DirectLightingIntegrator();
 
-        virtual void render(const Scene& scene, const CameraObject& camera, FilmObject& film) override;
+        virtual void render(const Scene& scene, const CameraObject& camera, Film& film) override;
 
     };
 }

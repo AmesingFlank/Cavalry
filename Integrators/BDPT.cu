@@ -470,7 +470,7 @@ namespace BDPT{
         return cameraSubPaths;
     }
 
-    void BDPTIntegrator::render(const Scene& scene, const CameraObject& camera, FilmObject& film){
+    void BDPTIntegrator::render(const Scene& scene, const CameraObject& camera, Film& film){
         int round = 0;
 
         while(!isFinished( scene, camera,  film)){

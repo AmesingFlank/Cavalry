@@ -123,10 +123,10 @@ void genHaltonCameraSample(CameraSample* resultPointer, int samplesCount, int wi
 }
 
 
-GpuArray<CameraSample> HaltonSampler::genAllCameraSamples(const CameraObject& camera, FilmObject& film, int bytesNeededPerSample,int maxSamplesPerRound) {
-    int width = film.getWidth();
-    int height = film.getHeight();
-    unsigned long long lastSampleIndex = film.getCompletedSamplesPerPixel() * width * height - 1;
+GpuArray<CameraSample> HaltonSampler::genAllCameraSamples(const CameraObject& camera, Film& film, int bytesNeededPerSample,int maxSamplesPerRound) {
+    int width = film.width;
+    int height = film.height;
+    unsigned long long lastSampleIndex = film.completedSamplesPerPixel * width * height - 1;
 
     int thisSPP = decideSamplesPerPixel(film,samplesPerPixel,bytesNeededPerSample,maxSamplesPerRound);
 

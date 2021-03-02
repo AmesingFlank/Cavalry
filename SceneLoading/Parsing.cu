@@ -244,9 +244,9 @@ void parseSceneWideOptions(TokenBuf& buf,RenderSetup& result, const Parameters& 
 	integrator->sampler = std::make_unique<SamplerObject>(SamplerObject::createFromObjectDefinition(samplerDef));
 
 	result.renderer.integrator = std::move(integrator);
-	result.renderer.film = std::make_unique<FilmObject>(FilmObject::createFromObjectDefinition(filmDef));
-	int width = result.renderer.film->getWidth();
-	int height = result.renderer.film->getHeight();
+	result.renderer.film = std::make_unique<Film>(Film::createFromParams(filmDef.params));
+	int width = result.renderer.film->width;
+	int height = result.renderer.film->height;
 	result.renderer.camera = std::make_unique<CameraObject>(CameraObject::createFromObjectDefinition(cameraDef,glm::inverse(transform),width,height));
 
 	if (filmDef.params.hasString("filename")) {
