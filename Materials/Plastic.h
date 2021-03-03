@@ -4,7 +4,6 @@
 #include "../BSDFs/BSDFObject.h"
 #include <vector>
 #include <memory>
-#include "Ray.h"
 #include "IntersectionResult.h"
 #include "../Core/Material.h"
 #include "../Core/Texture.h"
