@@ -7,8 +7,6 @@
 #include "Specular.h"
 #include "PlasticBSDF.h"
 
-
-#include "Color.h"
 #include "../Utils/GpuCommons.h"
 #include "../Utils/Variant.h"
 

@@ -5,7 +5,6 @@
 #include <vector>
 #include <memory>
 #include "Ray.h"
-#include "Color.h"
 #include "IntersectionResult.h"
 #include "../Core/Material.h"
 #include "../Core/Texture.h"

@@ -7,7 +7,6 @@
 #include "Glass.h"
 #include "Plastic.h"
 
-#include "Color.h"
 #include "../Utils/GpuCommons.h"
 #include "../Utils/Variant.h"
 #include "../Core/Parameters.h"
