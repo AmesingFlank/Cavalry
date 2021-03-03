@@ -1,6 +1,5 @@
 #include <iostream>
 #include <cxxopts.hpp>
-#include <variant>
 
 #include "Core/Renderer.h"
 #include "Core/Parameters.h"
