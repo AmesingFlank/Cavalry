@@ -158,3 +158,8 @@ Equation \ref{reflection plus C} shows that, given the incident radiances and th
     \caption{Shapes of example BRDFs. Image credit\cite{akenine2019real}}
 \end{figure}
 
+In order to fully model $L_o(p,\omega_o)$, it remains to describe the term $C$ in equation \ref{reflection plus C}. Surfaces in the real world sends outgoing radiances for two reasons only: they might emit light actively, and they reflect incoming light. Equation \ref{reflection plus C} already includes the reflected radiances, and thus it only remains to include actively emitted light. Writing $L_e(p,\omega_o)$ for the emitted radiance from $p$ towards the direction $\omega_o$, the following equation completely describes $L_o$:
+\begin{align}
+    L_o(p,\omega_o) = L_e(p,\omega_o) + \int_\Omega f_r(p,\omega_o,\omega_i)L_i(p,\omega_i)\cos\theta_id\omega_i
+\end{align}
+This is indeed the famous rendering equation, originally proposed by Kaijiya\cite{rendering_equation}. Finding solutions to this equation is the ultimate goal of rendering, because the job of any renderer is to compute the amount of radiance received by a hypothetical camera placed in the scene. In other words, for each point $p$ that is visible from the camera, the rendering algorithm must compute $L_o(p,\omega_o)$, where $\omega_o$ points from $p$ towards the camera. 
