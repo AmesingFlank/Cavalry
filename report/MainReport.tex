@@ -1,0 +1,126 @@
+\documentclass[12pt]{ociamthesis}  % default square logo 
+%\documentclass[12pt,beltcrest]{ociamthesis} % use old belt crest logo
+%\documentclass[12pt,shieldcrest]{ociamthesis} % use older shield crest logo
+
+%load any additional packages
+
+\usepackage{bm}
+
+\usepackage{graphicx}
+\graphicspath{ {./images/} }
+
+\usepackage[font=small]{caption}
+
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{physics}
+\usepackage{titlesec}
+\usepackage{lipsum}
+
+\usepackage[bottom]{footmisc}
+
+%\usepackage{newtxtext,newtxmath}
+
+% \usepackage{lmodern}     % set math font to Latin modern math
+% \usepackage[T1]{fontenc}
+% \renewcommand\rmdefault{ptm}
+
+\usepackage[svgnames]{xcolor}
+
+\usepackage{pgfplots}
+
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta}
+\usepackage{tikz-3dplot}
+\usepackage{tkz-euclide}
+\usepackage[ruled,vlined,linesnumbered]{algorithm2e}
+\usepackage[margin=25pt]{subcaption}
+\usepackage{float}
+\usepackage{hyperref}
+
+
+\newenvironment{changemargin}{%
+\begin{list}{}{%
+\setlength{\topsep}{0pt}%
+\setlength{\topmargin}{1cm}%
+\setlength{\listparindent}{\parindent}%
+\setlength{\itemindent}{\parindent}%
+\setlength{\parsep}{\parskip}%
+}%
+\item[]}{\end{list}}
+
+
+
+\titleformat{\chapter}[block]
+  {\normalfont\bfseries}{\LARGE{\thechapter}}{15pt}{\LARGE}[]
+
+  
+
+\titleformat{\section}[block]
+{\normalfont\bfseries}{\Large{\thesection}}{15pt}{\Large}[]
+
+%input macros (i.e. write your own macros file called mymacros.tex 
+%and uncomment the next line)
+%\include{mymacros}
+
+\title{
+        Efficient Photorealistic Rendering via Ray-Tracing on GPUs}   %note \\[1ex] is a line break in the title
+
+
+
+
+        
+\newcommand{\gapM}
+{
+        \vspace{5mm}
+}
+
+\newcommand{\gapS}
+{
+        \vspace{2mm}
+}
+
+\renewcommand{\u}
+{
+        \textbf{u}
+}
+    
+        
+
+
+%end the preamble and start the document
+\begin{document}
+
+%this baselineskip gives sufficient line spacing for an examiner to easily
+%markup the thesis with comments
+\baselineskip=18pt plus1pt
+
+%set the number of sectioning levels that get number and appear in the contents
+\setcounter{secnumdepth}{3}
+\setcounter{tocdepth}{3}
+
+
+\maketitle                  % create a title page from the preamble info
+% \include{dedication}        % include a dedication.tex file
+% \include{acknowlegements}   % include an acknowledgements.tex file
+\include{abstract}          % include the abstract
+
+
+\begin{romanpages}          % start roman page numbering
+\tableofcontents            % generate and include a table of contents
+%\listoffigures              % generate and include a list of figures
+\end{romanpages}            % end roman page numbering
+
+%now include the files of latex for each of the chapters etc
+\include{Chapter_1_Introduction}
+\include{Chapter_2_PBR}
+
+%next line adds the Bibliography to the contents page
+\addcontentsline{toc}{chapter}{Bibliography}
+%uncomment next line to change bibliography name to references
+%\renewcommand{\bibname}{References}
+\bibliography{refs}        %use a bibtex bibliography file refs.bib
+\bibliographystyle{plain}  %use the plain bibliography style
+
+\end{document}
+

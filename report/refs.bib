@@ -1,0 +1,205 @@
+@article{hyperion,
+author = {Burley, Brent and Adler, David and Chiang, Matt Jen-Yuan and Driskill, Hank and Habel, Ralf and Kelly, Patrick and Kutz, Peter and Li, Yining Karl and Teece, Daniel},
+title = {The Design and Evolution of Disney’s Hyperion Renderer},
+year = {2018},
+issue_date = {August 2018},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {37},
+number = {3},
+issn = {0730-0301},
+url = {https://doi.org/10.1145/3182159},
+doi = {10.1145/3182159},
+abstract = {Walt Disney Animation Studios has transitioned to path-traced global illumination as part of a progression of brute-force physically based rendering in the name of artist efficiency. To achieve this without compromising our geometric or shading complexity, we built our Hyperion renderer based on a novel architecture that extracts traversal and shading coherence from large, sorted ray batches. In this article, we describe our architecture and discuss our design decisions. We also explain how we are able to provide artistic control in a physically based renderer, and we demonstrate through case studies how we have benefited from having a proprietary renderer that can evolve with production needs.},
+journal = {ACM Trans. Graph.},
+month = jul,
+articleno = {33},
+numpages = {22},
+keywords = {path tracing, Production rendering, physically based rendering}
+}
+
+
+@inproceedings{rendering_equation,
+author = {Kajiya, James T.},
+title = {The Rendering Equation},
+year = {1986},
+isbn = {0897911962},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/15922.15902},
+doi = {10.1145/15922.15902},
+abstract = {We present an integral equation which generalizes a variety of known rendering algorithms. In the course of discussing a monte carlo solution we also present a new form of variance reduction, called Hierarchical sampling and give a number of elaborations shows that it may be an efficient new technique for a wide variety of monte carlo procedures. The resulting rendering algorithm extends the range of optical phenomena which can be effectively simulated.},
+booktitle = {Proceedings of the 13th Annual Conference on Computer Graphics and Interactive Techniques},
+pages = {143–150},
+numpages = {8},
+series = {SIGGRAPH '86}
+}
+
+@article{whitted,
+author = {Whitted, Turner},
+title = {An Improved Illumination Model for Shaded Display},
+year = {1980},
+issue_date = {June 1980},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {23},
+number = {6},
+issn = {0001-0782},
+url = {https://doi.org/10.1145/358876.358882},
+doi = {10.1145/358876.358882},
+abstract = {To accurately render a two-dimensional image of a three-dimensional scene, global illumination information that affects the intensity of each pixel of the image must be known at the time the intensity is calculated. In a simplified form, this information is stored in a tree of “rays” extending from the viewer to the first surface encountered and from there to other surfaces and to the light sources. A visible surface algorithm creates this tree for each pixel of the display and passes it to the shader. The shader then traverses the tree to determine the intensity of the light received by the viewer. Consideration of all of these factors allows the shader to accurately simulate true reflection, shadows, and refraction, as well as the effects simulated by conventional shaders. Anti-aliasing is included as an integral part of the visibility calculations. Surfaces displayed include curved as well as polygonal surfaces.},
+journal = {Commun. ACM},
+month = jun,
+pages = {343–349},
+numpages = {7},
+keywords = {shading, computer graphics, visible surface algorithms, raster displays, computer animation}
+}
+
+@incollection{fernando2005percentage,
+  title={Percentage-closer soft shadows},
+  author={Fernando, Randima},
+  booktitle={ACM SIGGRAPH 2005 Sketches},
+  pages={35--es},
+  year={2005}
+}
+
+@inproceedings{sloan2002precomputed,
+  title={Precomputed radiance transfer for real-time rendering in dynamic, low-frequency lighting environments},
+  author={Sloan, Peter-Pike and Kautz, Jan and Snyder, John},
+  booktitle={Proceedings of the 29th annual conference on Computer graphics and interactive techniques},
+  pages={527--536},
+  year={2002}
+}
+
+@inproceedings{hanrahan1991rapid,
+  title={A rapid hierarchical radiosity algorithm},
+  author={Hanrahan, Pat and Salzman, David and Aupperle, Larry},
+  booktitle={Proceedings of the 18th annual conference on Computer graphics and interactive techniques},
+  pages={197--206},
+  year={1991}
+}
+
+@book{veach1997robust,
+  title={Robust Monte Carlo methods for light transport simulation},
+  author={Veach, Eric},
+  volume={1610},
+  year={1997},
+  publisher={Stanford University PhD thesis}
+}
+
+@inproceedings{kelemen2002simple,
+  title={A simple and robust mutation strategy for the metropolis light transport algorithm},
+  author={Kelemen, Csaba and Szirmay-Kalos, L{\'a}szl{\'o} and Antal, Gy{\"o}rgy and Csonka, Ferenc},
+  booktitle={Computer Graphics Forum},
+  volume={21},
+  number={3},
+  pages={531--540},
+  year={2002},
+  organization={Wiley Online Library}
+}
+
+@article{cline2005energy,
+  title={Energy redistribution path tracing},
+  author={Cline, David and Talbot, Justin and Egbert, Parris},
+  journal={ACM Transactions on Graphics (TOG)},
+  volume={24},
+  number={3},
+  pages={1186--1195},
+  year={2005},
+  publisher={ACM New York, NY, USA}
+}
+
+@article{kettunen2015gradient,
+  title={Gradient-domain path tracing},
+  author={Kettunen, Markus and Manzi, Marco and Aittala, Miika and Lehtinen, Jaakko and Durand, Fr{\'e}do and Zwicker, Matthias},
+  journal={ACM Transactions on Graphics (TOG)},
+  volume={34},
+  number={4},
+  pages={1--13},
+  year={2015},
+  publisher={ACM New York, NY, USA}
+}
+
+@article{RLPT,
+  author    = {Ken Dahm and
+               Alexander Keller},
+  title     = {Learning Light Transport the Reinforced Way},
+  journal   = {CoRR},
+  volume    = {abs/1701.07403},
+  year      = {2017},
+  url       = {http://arxiv.org/abs/1701.07403},
+  archivePrefix = {arXiv},
+  eprint    = {1701.07403},
+  timestamp = {Tue, 20 Aug 2019 14:59:24 +0200},
+  biburl    = {https://dblp.org/rec/journals/corr/DahmK17.bib},
+  bibsource = {dblp computer science bibliography, https://dblp.org}
+}
+
+@book{pharr2016physically,
+  title={Physically based rendering: From theory to implementation},
+  author={Pharr, Matt and Jakob, Wenzel and Humphreys, Greg},
+  year={2016},
+  publisher={Morgan Kaufmann}
+}
+
+@article{parker2010optix,
+  title={Optix: a general purpose ray tracing engine},
+  author={Parker, Steven G and Bigler, James and Dietrich, Andreas and Friedrich, Heiko and Hoberock, Jared and Luebke, David and McAllister, David and McGuire, Morgan and Morley, Keith and Robison, Austin and others},
+  journal={Acm transactions on graphics (tog)},
+  volume={29},
+  number={4},
+  pages={1--13},
+  year={2010},
+  publisher={ACM New York, NY, USA}
+}
+
+@inproceedings{bvh_build,
+author = {Karras, Tero},
+title = {Maximizing Parallelism in the Construction of BVHs, Octrees, and <i>k</i>-d Trees},
+year = {2012},
+isbn = {9783905674415},
+publisher = {Eurographics Association},
+address = {Goslar, DEU},
+abstract = {A number of methods for constructing bounding volume hierarchies and point-based octrees on the GPU are based on the idea of ordering primitives along a space-filling curve. A major shortcoming with these methods is that they construct levels of the tree sequentially, which limits the amount of parallelism that they can achieve. We present a novel approach that improves scalability by constructing the entire tree in parallel. Our main contribution is an in-place algorithm for constructing binary radix trees, which we use as a building block for other types of trees.},
+booktitle = {Proceedings of the Fourth ACM SIGGRAPH / Eurographics Conference on High-Performance Graphics},
+pages = {33–37},
+numpages = {5},
+location = {Paris, France},
+series = {EGGH-HPG'12}
+}
+
+@inproceedings{bvh_optimize,
+author = {Karras, Tero and Aila, Timo},
+title = {Fast Parallel Construction of High-Quality Bounding Volume Hierarchies},
+year = {2013},
+isbn = {9781450321358},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/2492045.2492055},
+doi = {10.1145/2492045.2492055},
+abstract = {We propose a new massively parallel algorithm for constructing high-quality bounding volume hierarchies (BVHs) for ray tracing. The algorithm is based on modifying an existing BVH to improve its quality, and executes in linear time at a rate of almost 40M triangles/sec on NVIDIA GTX Titan. We also propose an improved approach for parallel splitting of triangles prior to tree construction. Averaged over 20 test scenes, the resulting trees offer over 90% of the ray tracing performance of the best offline construction method (SBVH), while previous fast GPU algorithms offer only about 50%. Compared to state-of-the-art, our method offers a significant improvement in the majority of practical workloads that need to construct the BVH for each frame. On the average, it gives the best overall performance when tracing between 7 million and 60 billion rays per frame. This covers most interactive applications, product and architectural design, and even movie rendering.},
+booktitle = {Proceedings of the 5th High-Performance Graphics Conference},
+pages = {89–99},
+numpages = {11},
+keywords = {ray tracing, bounding volume hierarchies},
+location = {Anaheim, California},
+series = {HPG '13}
+}
+
+@inproceedings{bvh_traversal,
+author = {Aila, Timo and Laine, Samuli},
+title = {Understanding the Efficiency of Ray Traversal on GPUs},
+year = {2009},
+isbn = {9781605586038},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/1572769.1572792},
+doi = {10.1145/1572769.1572792},
+abstract = {We discuss the mapping of elementary ray tracing operations---acceleration structure traversal and primitive intersection---onto wide SIMD/SIMT machines. Our focus is on NVIDIA GPUs, but some of the observations should be valid for other wide machines as well. While several fast GPU tracing methods have been published, very little is actually understood about their performance. Nobody knows whether the methods are anywhere near the theoretically obtainable limits, and if not, what might be causing the discrepancy. We study this question by comparing the measurements against a simulator that tells the upper bound of performance for a given kernel. We observe that previously known methods are a factor of 1.5--2.5X off from theoretical optimum, and most of the gap is not explained by memory bandwidth, but rather by previously unidentified inefficiencies in hardware work distribution. We then propose a simple solution that significantly narrows the gap between simulation and measurement. This results in the fastest GPU ray tracer to date. We provide results for primary, ambient occlusion and diffuse interreflection rays.},
+booktitle = {Proceedings of the Conference on High Performance Graphics 2009},
+pages = {145–149},
+numpages = {5},
+keywords = {SIMT, ray tracing, SIMD},
+location = {New Orleans, Louisiana},
+series = {HPG '09}
+}

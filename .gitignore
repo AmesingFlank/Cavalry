@@ -1,5 +1,6 @@
 .vs/
 .vscode/
+.VSCodeCounter/
 x64/
 out/
 build_tmp/

@@ -1,0 +1,66 @@
+\chapter{Physically Based Rendering}
+
+In order to generate photorealistic images, renderers must find accurate solutions to the \textit{rendering equation}. This chapter explains the meaning and intuition behind the equation, and describes how it can be solved by the path-tracing algorithm.
+
+\section{The Rendering Equation}
+
+The rendering equation describes the strength of light at each point in space and in each direction. Formally, for each point $p$ and each direction vector $\omega$, the quantity $L(p,\omega)$ is defined to be the density of the electromagnetic flux with respect to both area and solid angle, and it measures the strength of all light rays in the direction $\omega$ that passes through $p$. In physics, this quantity is given the name \textit{radiance}, and it is measured in power per unit solid angle per unit area ($\text{W}\cdot \text{sr}^{-1}\cdot\text{m}^{-2}$).
+
+In rendering, radiance often appears in the form $L_o(p,\omega)$ or $L_i(p,\omega)$, which mean radiance going out from the point $p$ or entering into it, respectively. More precisely, $L_o(p,\omega)$ represents the radiance that travels from $p$ and outwards in the direction $\omega$, and $L_i(p,\omega)$ represents the incoming radiance that travels towards to $p$ in the direction $-\omega$. The convention $L_i(p,\omega)$ might appear slightly counter-intuitive, since $\omega$ points in the opposite direction as the propagation of energy. However, the convenience of this notation will become apparent when the ray-tracing algorithm is formulated. 
+
+
+\begin{figure}[H]
+\centering
+
+
+
+
+\tikzset{every picture/.style={line width=0.75pt}} %set default line width to 0.75pt        
+
+\begin{tikzpicture}[x=0.75pt,y=0.75pt,yscale=-1,xscale=1]
+%uncomment if require: \path (0,300); %set diagram left start at 0, and has height of 300
+
+%Straight Lines [id:da6428603089338014] 
+\draw    (70,220) -- (251,220) ;
+\draw [shift={(160.5,220)}, rotate = 0] [color={rgb, 255:red, 0; green, 0; blue, 0 }  ][fill={rgb, 255:red, 0; green, 0; blue, 0 }  ][line width=0.75]      (0, 0) circle [x radius= 3.35, y radius= 3.35]   ;
+%Straight Lines [id:da0998330538982608] 
+\draw    (160.5,220) -- (218.58,162.41) ;
+\draw [shift={(220,161)}, rotate = 495.24] [color={rgb, 255:red, 0; green, 0; blue, 0 }  ][line width=0.75]    (10.93,-3.29) .. controls (6.95,-1.4) and (3.31,-0.3) .. (0,0) .. controls (3.31,0.3) and (6.95,1.4) .. (10.93,3.29)   ;
+%Straight Lines [id:da7334390340946089] 
+\draw    (325,221) -- (506,221) ;
+\draw [shift={(415.5,221)}, rotate = 0] [color={rgb, 255:red, 0; green, 0; blue, 0 }  ][fill={rgb, 255:red, 0; green, 0; blue, 0 }  ][line width=0.75]      (0, 0) circle [x radius= 3.35, y radius= 3.35]   ;
+%Straight Lines [id:da024849495612862427] 
+\draw    (480,160) -- (416.95,219.63) ;
+\draw [shift={(415.5,221)}, rotate = 316.6] [color={rgb, 255:red, 0; green, 0; blue, 0 }  ][line width=0.75]    (10.93,-3.29) .. controls (6.95,-1.4) and (3.31,-0.3) .. (0,0) .. controls (3.31,0.3) and (6.95,1.4) .. (10.93,3.29)   ;
+%Image [id:dp8436986937138125] 
+\draw (161,245) node  {\includegraphics[width=27pt,height=30pt]{lightbulb.png}};
+%Image [id:dp5859653893638117] 
+\draw (498,154) node  {\includegraphics[width=27pt,height=30pt]{lightbulb.png}};
+
+% Text Node
+\draw (181,232) node [anchor=north west][inner sep=0.75pt]   [align=left] {$\displaystyle p$};
+% Text Node
+\draw (224,143) node [anchor=north west][inner sep=0.75pt]   [align=left] {$\displaystyle q$};
+% Text Node
+\draw (436,233) node [anchor=north west][inner sep=0.75pt]   [align=left] {$\displaystyle p$};
+% Text Node
+\draw (519,141) node [anchor=north west][inner sep=0.75pt]   [align=left] {$\displaystyle q$};
+
+
+\end{tikzpicture}
+
+
+\caption{As an example, consider two points $p$ and $q$, and direction vector $\omega=\frac{q-p}{|q-p|}$. In the left diagram, the radiance sent from $p$ to $q$ is $L_o(p,\omega)$, and in the right diagram, the radiance received by $p$ from $q$ is $L_i(p,\omega)$ }
+\end{figure}
+
+
+In rendering, one type of radiance that are especially important are outgoing radiances $L_o(p,\omega_o)$ where $p$ is a point on the surface of geometry. These radiances determine the appearances of surfaces as seen from the camera, and accounts for how different geometries illuminate each other. 
+
+Surfaces in the real world reflects incoming radiances. That is, for any direction $\omega_i$, the incoming radiance $L_i(p,\omega_i)$ can contribute to the outgoing radiance $L_i(p,\omega_o)$ of another direction $\omega_o$. For each surface point, this relationship is captured by the bi-directional reflectance distribution function (BRDF), written as $f_r(p,\omega_o,\omega_i)$. Intuitively, 
+
+
+For most surface, the outgoing radiance is the sum of the the radiance emitted by the surface itself and the radiance caused by surface scattering. 
+
+For geometries that do not emit light actively, the outgoing radiances $L_o(p,\omega_o)$ are often caused by the reflection, which means part of the radiances incident 
+
+In physically based rendering, the goal to compute the amount of radiance received by a hypothetical camera placed in the scene. In other words, for each point $p$ that is visible from the camera, the rendering algorithm computes $L_o(p,\omega_o)$, where $\omega_o$ points from $p$ towards the camera. 
