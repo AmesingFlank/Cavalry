@@ -319,14 +319,16 @@ The input of the path-tracing algorithm is a scene, defined by its geometries an
 
 For each pixel on the image, the path-tracing algorithm samples $spp$ random points on the pixel. For each of these random points, the algorithm generates $1+MaxDepth*2$ paths of increasing length, and accumulates the radiance carried by these paths. Finally, the radiances for all sample points in each pixel are combined by a Monte Carlo estimator, which decides the final value of the pixel.
 
-The path tracing algorithm generates paths incrementally, where previous reflection points are reused. More precisely, after generating $n$ reflection points $p_1,...,p_n$ , the algorithm does the following:
+The path tracing algorithm generates paths incrementally, where previous reflection points are reused. More precisely, after generating $n$ reflection points $p_1,...,p_n$ , whose throughput is $T_n$, the algorithm does the following:
 
 
 \begin{algorithm}[H]
     \label{Path construction}
     \SetKwProg{Fn}{Function}{:}{end}
     
-    Samples a point $p_{light}$ from a light source, and connect it to $p_n$. This generates a path of $n$ reflections, whose radiance is to be accumulated\;
+    Samples a point $p_{light}$ from a light source.\;
+
+    Test whether the ray $p_{light}\to p_n$ is occluded by some geometry. If not, then this generates a path of $n$ reflections, whose radiance is to be accumulated\;
 
     Sample a direction $\omega_i$ from a distribution that matches the BRDF at $p_n$\;
 
@@ -337,12 +339,14 @@ The path tracing algorithm generates paths incrementally, where previous reflect
 
     Let $p_{n+1}$ be the next reflection point\;
 
+    Let $T_{n+1}$ be $T_n  f_r(p_{n+1}\to p_n\to p_{n-1})G(p_{n+1},p_n)$\;
+
     \caption{Incremental Path Construction}
 \end{algorithm}
 
 ~
 
-Notice that, step 1 and 4 are two different ways a light emitter can illuminate the pont $p_n$, and these two different paths exactly correspond to Multiple Importance Sampling, described in subsection \ref{subsection MIS}. Thus, when accumulating their radiances, the MIS weight should be applied.
+Notice that, step 2 and 5 are two different ways a light emitter can illuminate the pont $p_n$, and these two different paths exactly correspond to Multiple Importance Sampling, described in subsection \ref{subsection MIS}. Thus, when accumulating their radiances, the MIS weight should be applied.
 
 To summarize, the path-tracing algorithm works as follows:
 
@@ -350,14 +354,14 @@ To summarize, the path-tracing algorithm works as follows:
 \begin{algorithm}[H]
     \label{Path Tracing}
     \SetKwProg{Fn}{Function}{:}{end}
-    \ForEach{pixel in the image}{
-        \For{$i$ from 1 to $spp$}{
+    \ForEach{\upshape pixel in the image}{
+        \For{\upshape $i$ from 1 to $spp$}{
             Let $p_0$ be the location of the camera\;
             Randomly select a location inside the pixel, and generate a ray $r$ corresponding to this location\;
             Compute the first intersection point $p_1$ between $r$ and the scene\;
             Accumulate $L_e(p_1\to p_0)$\;
-            \For{$n$ from $1$ to $MaxDepth$}{
-                Incrementally construct two further paths\;
+            \For{\upshape $n$ from $1$ to $MaxDepth$}{
+                Incrementally construct two further paths, using algorithm \ref{Path construction}\;
                 Accumulate the radiances from the newly generated paths, weighted by MIS\;
             }
         }
