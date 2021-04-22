@@ -1,6 +1,7 @@
 #include "../Utils/GpuCommons.h"
 #include "../Utils/MathsCommons.h"
 #include "../Utils/Utils.h"
+#include "../Utils/Timer.h"
 #include "Optimization.h"
 
 #include "BVH.h"
@@ -317,6 +318,8 @@ BVH BVH::build(Triangle* primitivesDevice, int primitivesCount,const AABB& scene
     std::cout << "started building bvh" << std::endl;
     BVH bvh(primitivesCount);
 
+    Timer::getInstance().start("LBVH Construction");
+
     GpuArray<BVHLeafNode> leaves(primitivesCount);
 
     
@@ -347,12 +350,21 @@ BVH BVH::build(Triangle* primitivesDevice, int primitivesCount,const AABB& scene
     mergeNodesArray <<< numBlocksInternals, numThreadsInternals >>> (primitivesCount,leaves.data,internals.data, restructureNodes.data);
     CHECK_IF_CUDA_ERROR("merge nodes array");  
     
+    Timer::getInstance().stop("LBVH Construction");
+    Timer::getInstance().start("BVH Optimization");
+
     optimizeBVH(primitivesCount, restructureNodes);
+
+    Timer::getInstance().stop("BVH Optimization");
 
     int numBlocksAllNodes, numThreadsAllNodes;
     setNumBlocksThreads(bvh.nodes.N, numBlocksAllNodes, numThreadsAllNodes);
     copyToBVH <<< numBlocksAllNodes, numThreadsAllNodes >> > (bvh.nodes.N, restructureNodes.data,bvh.nodes.data);
     CHECK_CUDA_ERROR("final copy");
+
+
+    Timer::getInstance().printStatistics("LBVH Construction");
+    Timer::getInstance().printStatistics("BVH Optimization");
 
     return bvh;
 }
