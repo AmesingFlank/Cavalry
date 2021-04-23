@@ -158,7 +158,7 @@ Given a collection of primitives, finding the optimal BVH tree according to the 
 
 \begin{enumerate}
     \item Firstly, construct a BVH using a relatively naive heuristic: at each node, divide the geometries into two groups by splitting them at the mid-point of the AABB in one of the coordinate axises. This is known as a Linear BVH or LBVH, which can be constructed very efficiently on GPUs using the method of \cite{bvh_build}, but the tree created is of poor quality.
-    \item Secondly, optimize the previously created BVH tree, using the method of \cite{bvh_optimize}. This step repeatedly brute-force the NP-hard optimization problem for very small \textit{treelets}, which can still significantly improve the quality of the entire tree.
+    \item Secondly, optimize the previously created BVH tree, using the method of \cite{bvh_optimize}. This step repeatedly solve the NP-hard optimization problem for very small \textit{treelets}, which can still significantly improve the quality of the entire tree.
 \end{enumerate}
 Details for each of the two steps are described below.
 
@@ -524,4 +524,56 @@ Having constructed the binary radix tree, it only remains to convert it into a B
 
 %\enlargethispage{3\baselineskip}
 
-This project implemented this BVH construction on GPUs using CUDA. Thanks to the massively parallel nature of this algorithm, the project observed that the running time of this BVH construction algorithm is almost negligible compare to the cost of the actual path-tracing phase.
+This project implemented this BVH construction on GPUs using CUDA. Thanks to the massively parallel nature of this algorithm, the project observed that the running time of this BVH construction algorithm is almost negligible ($\sim$50ms for 1 million primitives) compare to the cost of the actual path-tracing phase.
+
+
+\section{BVH Optimization}
+The BVH trees constructed by the algorithm from the previous section can immensely accelerate intersection detections and thus rendering. However, the quality of these trees are still quite poor compared to trees that are generated with the guidance of the SAH heuristic. To address this issue, this project implements the algorithm described int \cite{bvh_optimize}, which optimize existing BVH trees. With little running time cost, this optimization step boosts the rendering efficiency by about $300\%$.
+
+It is believed that finding the optimal tree under the SAH heuristic is NP-hard\cite{bvh_optimize}, however, the algorithm follows the intuition that if the tree is optimal in every local \textit{treelet}, the entire tree would be somewhat optimal. Formally, a \textit{treelet} of size $n$ rooted at some node is defined to be a collection of immediate descendants of the root, consisting of $n-1$ internal nodes and $n$ leaf nodes (which can still be internal nodes in the complete tree). The algorithm solves the SAH optimization problem using dynamic programming for each treelet of size 7, in hopes that these local transformations improve the structure of the entire tree. 
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[height=5cm]{treelet.png}
+    \caption{A treelet of size 7 and how it can be transformed. Image credit \cite{bvh_optimize}}
+\end{figure}
+For each internal node $n$, the algorithm defines its cost to be 
+\begin{align*}
+    C(n) = 
+    \begin{cases}
+        C_i A(n) + C(n_l) + C(n_r) &\text{if $n$ is an interior node in the full BVH}\\
+        C_l A(n) &\text{if $n$ is a leaf node in the full BVH}\\
+    \end{cases}
+\end{align*}
+where $n_l$ and $n_r$ are the left and right child. The cost defined this way is exactly the SAH cost multiplied by a constant factor of $A(root)$. For each internal node $n$ that is the root of a treelet of size 7, the algorithm optimizes $C(n)$ by finding the optimal structure of a local treelet. If more than one treelet of size 7 is rooted at $n$, the algorithm operates on the one where the leaves have the greatest surface area, which maximizes the potential for improvements. 
+
+The algorithm optimizes treelets using dynamic programing. More specifically, it optimizes subsets of the leaves of increasing size, and memoize intermediate results. When working a subset of size $n$, it suffices to enumerate all possible binary partitions of this subset, and use memoized results to obtain optimal tree structure for each partition. Then, when the entire set of leaves is optimized, the treelet itself is also optimized. The procedure for optimizing each treelet is given in the following pseudo-code:
+
+\begin{algorithm}[H]
+    \label{algo optimize treelet}
+    \SetKwProg{Fn}{Function}{:}{end}
+    Create memoization array $C_{opt}$ of size $2^7$, indexed by subsets of the leaves (empirically represented as bitmaps by a 7-bit integers)\;
+    \ForEach{leaf node $n$ of the treelet}{
+        $C_{opt}[\{n\}] := C(n)$\;
+    }
+    \For{$k$ from $2$ to $7$}{
+        \ForEach{subset $S$ of the leaves of size $k$}{
+            $C_{opt}[S] := \infty$\;
+            $A(S) :=$ surface area of the AABB that encloses all primitives in $S$\;
+            \ForEach{pair of disjoint nonempty subsets $U,V$, where $U\cup V=S$}{
+                $thisCost := A(S)C_i + C_{opt}[U] + C_{opt}[V]$\;
+                \If{$thisCost<C_{opt}[S]$}{
+                    $C_{opt}[S] := thisCost$\;
+                    Record $(U,V)$ as current best partition for $S$\; 
+                }
+            }
+        }
+    }
+    Restructure the treelet using the best partitions found\;
+    \caption{Treelet Optimization}
+\end{algorithm} 
+~
+For treelets rooted at the same level in the BVH, this optimization step can be parallelized because the treelets do not overlap. Thus, this project implemented the algorithm in GPU, where nodes across each level of the tree are processed in parallel. Again, this step is extremely efficient, which only takes around 200ms for a scene with 1 million triangle. This cost is extremely compared to the actual running time of path tracing.
+
+Interestingly, this optimization step does not reach a fixed point after optimizing each treelet once. The following image plots how the SAH cost (and thus rendering efficiency) changes when the BVH for a scene is optimized repeatedly. 
+
