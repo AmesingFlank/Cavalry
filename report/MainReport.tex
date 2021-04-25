@@ -37,6 +37,8 @@
 \usepackage[margin=25pt]{subcaption}
 \usepackage{float}
 \usepackage{hyperref}
+\usepackage{listings}
+
 
 
 \newenvironment{changemargin}{%
@@ -87,6 +89,25 @@
     
 \newcommand{\Var}{\mathbb{V}\text{ar}}
 
+\lstdefinestyle{cppStyle}{
+    language=C++,
+    basicstyle={\small\ttfamily},
+    belowskip=3mm,
+    breakatwhitespace=true,
+    breaklines=true,
+    classoffset=0,
+    columns=flexible,
+    commentstyle=\color{dkgreen},
+    frameshape={}{}{}{}, %To remove to vertical lines on left, set `frameshape={}{}{}{}`
+    keywordstyle=\color{blue},
+    numbers=none, %If you want line numbers, set `numbers=left`
+    numberstyle=\tiny\color{gray},
+    showstringspaces=false,
+    stringstyle=\color{mauve},
+    tabsize=3,
+    morekeywords={WITH},
+}
+
 
 %end the preamble and start the document
 \begin{document}
@@ -115,6 +136,7 @@
 \include{Chapter_1_Introduction}
 \include{Chapter_2_PBR}
 \include{Chapter_3_Impl}
+\include{Chapter_4_RL}
 
 %next line adds the Bibliography to the contents page
 \addcontentsline{toc}{chapter}{Bibliography}

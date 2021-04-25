@@ -155,7 +155,7 @@ keywords = {shading, computer graphics, visible surface algorithms, raster displ
 
 @inproceedings{bvh_build,
 author = {Karras, Tero},
-title = {Maximizing Parallelism in the Construction of BVHs, Octrees, and <i>k</i>-d Trees},
+title = {Maximizing Parallelism in the Construction of BVHs, Octrees, and k-d Trees},
 year = {2012},
 isbn = {9783905674415},
 publisher = {Eurographics Association},
@@ -221,3 +221,41 @@ series = {HPG '09}
   year={1987},
   publisher={IEEE}
 }
+
+@inproceedings{megakernel,
+author = {Laine, Samuli and Karras, Tero and Aila, Timo},
+title = {Megakernels Considered Harmful: Wavefront Path Tracing on GPUs},
+year = {2013},
+isbn = {9781450321358},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/2492045.2492060},
+doi = {10.1145/2492045.2492060},
+abstract = {When programming for GPUs, simply porting a large CPU program into an equally large GPU kernel is generally not a good approach. Due to SIMT execution model on GPUs, divergence in control flow carries substantial performance penalties, as does high register us-age that lessens the latency-hiding capability that is essential for the high-latency, high-bandwidth memory system of a GPU. In this paper, we implement a path tracer on a GPU using a wavefront formulation, avoiding these pitfalls that can be especially prominent when using materials that are expensive to evaluate. We compare our performance against the traditional megakernel approach, and demonstrate that the wavefront formulation is much better suited for real-world use cases where multiple complex materials are present in the scene.},
+booktitle = {Proceedings of the 5th High-Performance Graphics Conference},
+pages = {137–143},
+numpages = {7},
+keywords = {complex materials, path tracing, GPU},
+location = {Anaheim, California},
+series = {HPG '13}
+}
+
+@misc{variant,
+  title = {\texttt{std::variant}},
+  howpublished = {\url{https://en.cppreference.com/w/cpp/utility/variant}},
+  note = {Accessed: 2021-04-25}
+}
+
+@misc{gp106,
+  title = {Nvidia GTX 1050 Ti review},
+  howpublished = {\url{https://www.pcgamesn.com/nvidia-gtx-1050-ti-review-benchmarks}},
+  note = {Accessed: 2021-04-25}
+}
+
+@misc{pascal,
+  title = {Pascal Architecture Whitepaper},
+  howpublished = {\url{https://images.nvidia.com/content/pdf/tesla/whitepaper/pascal-architecture-whitepaper.pdf}},
+  note = {Accessed: 2021-04-25}
+}
+
+

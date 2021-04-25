@@ -1,28 +1,91 @@
 \chapter{Implementing Path-Tracing}
 \label{chapter implementation}
 
-Path-Tracing algorithm is an extremely costly algorithm. In a common rendering task, there're around one million pixels, each of which requires roughly one thousand samples to eliminate noise. More over, each ray generated in the algorithm needs to tested for intersection with the entire scene, which often consists of millions of geometric primitives. In order to cope with this humongous amount of computation, this projects implements path-tracing with parallelization on GPUs, and utilizes a data structure known as Bounding Volume Hierarchy (BVH) for accelerating intersection tests. 
+Path-Tracing is an extremely costly algorithm. In a common rendering task, there're around one million pixels, each of which requires roughly one thousand samples to eliminate noise. More over, each ray generated in the algorithm needs to tested for intersection with the entire scene, which often consists of millions of geometric primitives. In order to cope with this humongous amount of computation, this projects implements path-tracing with parallelization on GPUs, and utilizes a data structure known as Bounding Volume Hierarchy (BVH) for accelerating intersection tests. 
 
-This chapter begins by giving a short introduction to GPU computing, and then describes state-of-the-art BVH construction algorithms implemented in this project. This chapter also explains the GPU parallelization of the path-tracing algorithm, as well as some of the highly impactful GPU optimization techniques employed.
+This chapter begins by giving a short introduction to GPU computing, and then explains the GPU parallelization of the path-tracing algorithm. Some of the highly impactful GPU optimization techniques employed are then described. Finally, the chapter discusses the state-of-the-art BVH construction algorithms implemented in this project.
 
 \section{The CUDA Programming Model}
 
-Originally built for graphics applications, GPUs are designed to handle a massive amount of geometries and pixels in parallel, because in graphics applications the computations for different geometries and pixels are largely independent. The ability to do massively parallel computation motivated GPGPU (General-Purpose GPU) programming models to arise, which became significantly useful for scientific computing purposes. The software in this project is written using the CUDA programming model, developed by the NVIDIA Corporation.
+Originally built for real time rendering, GPUs are designed to handle a massive amount of geometries and pixels in parallel. The ability to do massively parallel computation motivated GPGPU (General-Purpose GPU) programming models to arise, which became significantly useful for scientific computing purposes. The software in this project is written using the CUDA programming model, developed by the NVIDIA Corporation.
 
-CUDA employs the execution model known as SIMT (Single Instruction Multiple Threads). In this model, a large amount of GPU threads can be spawned simultaneously, each running the same sequence of code on different sets of data. GPU threads in CUDA are organized in groups of 32, known as \textit{warps}, and the instructions running on threads of the same warp must be synchronized. However, different warps do not need to remain in sync. When the threads within a warp access the memory, the entire warp can be paused and swapped out, so that a different warp can start executing before the memory access finishes. Using this mechanism, the GPU hides memory access latencies by allowing very fast context switching. As a result, each physical core in the GPU (known as a CUDA core) can simultaneously handle multiple logical threads.
+CUDA employs the execution model known as SIMT (Single Instruction Multiple Threads). In this model, a large amount of GPU threads can be spawned simultaneously, each running the same sequence of code on different sets of data. GPU threads in CUDA are organized in groups of 32, known as \textit{warps}. Each thread must execute the same instructions as the others in the same warp, or remain idle. However, different warps do not need to remain in sync. When the threads within a warp access the memory, the entire warp can be paused and swapped out, so that a different warp can start executing before the memory access finishes. Using this mechanism, the GPU hides memory access latencies by allowing very fast context switching. As a result, each physical core in the GPU (known as a CUDA core) can simultaneously handle multiple logical threads.
 
 As an example, the GPU used for development of this project is an NVIDIA GTX1060 Mobile, which contains 10 \textit{Streaming Multiprocessors}, each of which consists of 128 CUDA cores. Each streaming multiprocessors can have up to 2048 resident threads, giving a total of 20480 threads that can be simultaneously handled. Even though each GPU thread is not as fast as a CPU thread, the aggregated performance of the CUDA cores can still be many times faster than the CPU.
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=11cm]{gp106}
-    \caption{Architecture of a GTX 1060 (GP106), showing its 10 streaming multiprocessors, each containing 128 CUDA cores. Image courtesy to NVIDIA Corporation.}
-    \label{figure GTX1060}
-\end{figure}
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=11cm]{gp106}
+%     \caption{Architecture of a GTX 1060 (GP106), showing its 10 streaming multiprocessors, each containing 128 CUDA cores. Image credit \cite{pascal}}
+%     \label{figure GTX1060}
+% \end{figure}
 %https://images.nvidia.com/content/pdf/tesla/whitepaper/pascal-architecture-whitepaper.pdf
 
+
+
+\section{Wavefront Path-Tracing}
+In GPU programming, a parallel GPU function that is invoked by the CPU is often referred to as a GPU \textit{kernel}. When implementing algorithm \ref{Path Tracing} on GPUs, the most straightforward method would be to implement the loop body (lines 3 to 9) as a GPU kernel, and invoke it for all pixel samples in parallel. This pattern of programming, where the entire CPU computation is embodied in a single GPU kernel, is called the \textit{Megakernel}\cite{megakernel} approach.
+
+In contrast to megakernels, the \textit{Wavefront} programming divides the computation into many smaller GPU kernels, where intermediate results are explicitly stored in memory. The CPU then invokes these kernels one after another. On GPUs, regions of code that uses a large amount of registers or has a high control flow divergence can significantly hurt the parallelization of the entire kernel, and thus the wavefront pattern can effectively contain these regions of code into separate single kernel, so that the performance of the other kernels remain unaffected. However, the wavefront pattern incurs additional overhead by requiring more CPU-GPU communication, and memory IOs.
+
+The project carried out numerous experiments to find an optimal way of dividing the rendering work into wavefronts. In the end, the program implemented is structured as indicated by the following pseudo-code:
+
+\begin{algorithm}[H]
+    \label{algo wavefront Path Tracing}
+    \SetKwProg{Fn}{Function}{:}{end}
+    \ForEach{\upshape pixel sample \textbf{in a parallel kernel}}{
+        generate the initial ray going out of the camera position $p_0$\;
+    }
+    \For{\upshape $n$ from 1 to $MaxDepth$}{
+        \ForEach{\upshape previously generated ray $r$ \textbf{in a parallel kernel}}{
+            Find $p_n$ by computing the intersection between $r$ and the scene\;
+        }
+        \ForEach{\upshape newly found $p_n$ \textbf{in a parallel kernel}}{
+            Sample a point $p_{light}$ on a light source\;
+            Test whether the ray $p_{light}\to p_n$ occluded by some geometry\;
+        }
+        \ForEach{\upshape unoccluded $p_{light}\to p_{n}$ \textbf{in a parallel kernel}}{
+            Evaluate the BRDF at $p_n$, and accumulate the radiance of this path\;
+        }
+        \ForEach{\upshape $p_n$ \textbf{in a parallel kernel}}{
+            Sample a direction $\omega_i$ from a distribution matching the BRDF at $p_n$\;
+            Generate a new ray, originated at $p_n$ and travels in the direction of $\omega_i$\;
+        }
+    }
+    \caption{Wavefront Path Tracing}
+\end{algorithm}
+
+~
+
+It was found that compared to a naive Megakernel implementation, this wavefront implementation is almost twice as fast.
+
+\section{Polymorphism}
+When implementing a GPU path-tracer, an unexpected source of performance degradation is the need for dynamic-dispatch polymorphism. In CPU programming, dynamic-dispatch is easily implemented via virtual functions, but this can be costly for GPUs for the following reasons
+\begin{enumerate}
+    \item In the GPU, each thread in a warp must execute the same instructions as the others, or remain in idle. Thus, when different threads are dynamically dispatched to different code regions, the GPU becomes under-utilized.
+    
+    \item Virtual functions make use of virtual tables and virtual pointers. During dynamic dispatch, the value of the program counter needs to fetched by reading the correct entry from the virtual table. This adds an additional level of indirection, which is costly on the GPU where memory IOs are more expensive.
+    
+    \item The virtual tables for GPU code and CPU code are stored at different addresses. Thus, extra care needs to be taken when objects are copied from CPU to GPU, or vice versa.
+\end{enumerate}
+The need for polymorphism in path tracing mainly comes from two components. Firstly, the scene is often defined from a range of different geometric primitives (triangles, spheres, disks, etc.), and each primitives requires a different intersection detection procedure. Secondly, there is a material system, where each object could be associated with a certain surface material, and each material requires its own implementation of BRDFs. This project handles the polymorphism for these two components in different strategies.
+
+For geometric primitives, this project chooses to completely eliminate the need for any primitive other than triangles. Before rendering begins, this project uses a pre-processing phase, where a triangle mesh is generated to represent each non-triangle primitive. This slightly increases rendering cost, because often a few thousands of triangles are needed to give a good approximation for shapes such as spheres. However, this overhead is outweighed by the benefit of reduced control flow divergences and memory IOs.
+
+Unfortunately, polymorphism for materials cannot be handled in this manner, and its impossible to avoid polymorphism all together. This project implements polymorphism not by virtual functions, but by using a templated \texttt{variant} class\footnote{\url{https://en.cppreference.com/w/cpp/utility/variant}}, where all polymorphic types are included as type arguments. As a pseudo-code example, the following type declaration could be used to define a general material type can could in fact be plastic, metal, or glass:
+\begin{lstlisting}[style=cppStyle]
+using Material = std::variant<Plastic, Metal, Glass>;
+\end{lstlisting}
+
+Implementation wise, a \texttt{variant} class is implemented by \textit{tagged union}, which is in essence the same technique used to implement sum types in languages such as Haskell. Dynamic dispatch can be provided not via virtual functions, but by switching on an integer labelled attached to the object. This avoids the extra memory operation incurred by dereferencing virtual pointers, and removes the problem of inconsistent virtual table locations across the CPU and the GPU.
+
+Although the usage \texttt{variant} solves problem 2 and 3, problem 1 still remains, because control flow divergence still exists whenever threads in the same warp are processing surfaces of different materials. To solve this problem, this project employs the method of \cite{megakernel}, which sorts the material evaluation tasks before they're executed. More precisely, in algorithm \ref{algo wavefront Path Tracing}, before the kernel at line 9 is executed, this project inserts an extra phase where all tasks are sorted according to the material at their respective $p_n$. This guarantees that threads that work on the same material are grouped together, and there will only be a few warps that experience any divergences. Even though the sorting incurs a small extra cost, it was observed that material sorting considerably improves the overall rendering performance.
+
+\newpage
+
+
 \section{Bounding Volume Hierarchy}
-In path-tracing, the most expensive step is almost always ray-scene intersection detection. This is very frequent operation, as it appears in line 2 and 4 of algorithm \ref{Path construction}, which is called in the inner most loop of algorithm \ref{Path Tracing}. Thus, any performance gain in the intersection detection routine could prove to be significantly beneficial to the entire rendering procedure. 
+In path-tracing, the most expensive step is almost always ray-scene intersection detection. This is very frequent operation, appearing in line 5 and 8 of algorithm \ref{algo wavefront Path Tracing}. Thus, any performance gain in the intersection detection routine could prove to be significantly beneficial to the entire rendering procedure. 
 
 In a naive implementation, intersection detection would be performed by iterating through all geometries, and testing for intersection against each. With $N$ being the amount of geometric primitives in the scenes, this is an $O(N)$ algorithm. Since $N$ is often in the order of millions, this linear time algorithm is unacceptably slow. For this reason, this projects implements a data structure known as Bounding Volume Hierarchy (BVH), which reduces the complexity down to $O(\log N)$.
 
@@ -527,7 +590,7 @@ Having constructed the binary radix tree, it only remains to convert it into a B
 This project implemented this BVH construction on GPUs using CUDA. Thanks to the massively parallel nature of this algorithm, the project observed that the running time of this BVH construction algorithm is almost negligible ($\sim$50ms for 1 million primitives) compare to the cost of the actual path-tracing phase.
 
 
-\section{BVH Optimization}
+\subsection{BVH Optimization}
 The BVH trees constructed by the algorithm from the previous section can immensely accelerate intersection detections and thus rendering. However, the quality of these trees are still quite poor compared to trees that are generated with the guidance of the SAH heuristic. To address this issue, this project implements the algorithm described int \cite{bvh_optimize}, which optimize existing BVH trees. With little running time cost, this optimization step boosts the rendering efficiency by about $300\%$.
 
 It is believed that finding the optimal tree under the SAH heuristic is NP-hard\cite{bvh_optimize}, however, the algorithm follows the intuition that if the tree is optimal in every local \textit{treelet}, the entire tree would be somewhat optimal. Formally, a \textit{treelet} of size $n$ rooted at some node is defined to be a collection of immediate descendants of the root, consisting of $n-1$ internal nodes and $n$ leaf nodes (which can still be internal nodes in the complete tree). The algorithm solves the SAH optimization problem using dynamic programming for each treelet of size 7, in hopes that these local transformations improve the structure of the entire tree. 
@@ -547,7 +610,7 @@ For each internal node $n$, the algorithm defines its cost to be
 \end{align*}
 where $n_l$ and $n_r$ are the left and right child. The cost defined this way is exactly the SAH cost multiplied by a constant factor of $A(root)$. For each internal node $n$ that is the root of a treelet of size 7, the algorithm optimizes $C(n)$ by finding the optimal structure of a local treelet. If more than one treelet of size 7 is rooted at $n$, the algorithm operates on the one where the leaves have the greatest surface area, which maximizes the potential for improvements. 
 
-The algorithm optimizes treelets using dynamic programing. More specifically, it optimizes subsets of the leaves of increasing size, and memoize intermediate results. When working a subset of size $n$, it suffices to enumerate all possible binary partitions of this subset, and use memoized results to obtain optimal tree structure for each partition. Then, when the entire set of leaves is optimized, the treelet itself is also optimized. The procedure for optimizing each treelet is given in the following pseudo-code:
+The algorithm optimizes treelets using dynamic programing. Specifically, it optimizes subsets of the leaves of increasing size, and memoize intermediate results. When working a subset of size $n$, it suffices to enumerate all possible binary partitions of this subset, and use memoized results to obtain optimal tree structure for each partition. Then, when the entire set of leaves is optimized, the treelet itself is also optimized. The procedure for optimizing each treelet is given in the following pseudo-code:
 
 \begin{algorithm}[H]
     \label{algo optimize treelet}
@@ -572,8 +635,18 @@ The algorithm optimizes treelets using dynamic programing. More specifically, it
     Restructure the treelet using the best partitions found\;
     \caption{Treelet Optimization}
 \end{algorithm} 
-~
-For treelets rooted at the same level in the BVH, this optimization step can be parallelized because the treelets do not overlap. Thus, this project implemented the algorithm in GPU, where nodes across each level of the tree are processed in parallel. Again, this step is extremely efficient, which only takes around 200ms for a scene with 1 million triangle. This cost is extremely compared to the actual running time of path tracing.
 
-Interestingly, this optimization step does not reach a fixed point after optimizing each treelet once. The following image plots how the SAH cost (and thus rendering efficiency) changes when the BVH for a scene is optimized repeatedly. 
+~
+
+For treelets rooted at the same level in the BVH, this optimization step can be parallelized because the treelets do not overlap. Thus, this project implemented the algorithm in GPU, where nodes across each level are processed in parallel. Again, this step is extremely efficient, taking around 200ms for a scene with 1 million triangle. This cost is extremely low compared to the actual rendering time.
+
+\thispagestyle{empty}
+\enlargethispage{5\baselineskip}
+
+Interestingly, this optimization step does not reach a fixed point after optimizing each treelet once. The following image plots how the SAH cost (and thus rendering cost) changes when the BVH for a scene is optimized repeatedly. This project runs the optimization for 3 rounds for each scene, which almost always reduces SAH cost to one third of the origin value.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[height=5cm]{opt_rounds}
+\end{figure}
 
