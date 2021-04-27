@@ -46,14 +46,7 @@ public:
     HaltonSampler getCopyForKernel();
 
     virtual void prepare(int threadsCount) override;
-
-    __device__
-    virtual void startPixel(SamplingState& samplingState, unsigned long long lastIndex) override{
-        int index = blockIdx.x * blockDim.x + threadIdx.x;
-        samplingState.dimension = 2;
-        samplingState.index = lastIndex + 1 + index ;
-    }
-
+    
     __device__
     virtual int randInt(int N, SamplingState& samplingState) override{
         float f = HaltonSampler::rand1(samplingState);

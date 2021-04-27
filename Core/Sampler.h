@@ -7,11 +7,7 @@
 #include "../Utils/Array.h"
 #include <thrust/copy.h>
 #include <thrust/device_vector.h>
-
-struct SamplingState {
-	unsigned long long index;
-	int dimension;
-};
+#include "SamplingState.h"
 
 class Sampler{
 public:
@@ -19,9 +15,6 @@ public:
 	int samplesPerPixel;
 
 	virtual void prepare(int threadsCount) {};
-
-	__device__
-	virtual void startPixel(SamplingState& samplingState, unsigned long long lastIndex) {};
 
 	__device__
 	virtual int randInt(int N,SamplingState& samplingState) = 0;

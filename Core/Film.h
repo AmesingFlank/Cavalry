@@ -19,8 +19,7 @@ public:
 
 	int width;
 	int height;
-	int completedSamplesPerPixel = 0;
-
+	int completedPixels = 0;
 
 	__device__
 	virtual void addSample(const CameraSample& sample, const Spectrum& spectrum) {

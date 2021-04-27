@@ -20,7 +20,7 @@ namespace DirectLighting {
     };
     
     __device__
-    static void renderRay(const SceneHandle& scene, const Ray& ray, SamplerObject& sampler, Spectrum* result, TaskQueue<MaterialEvalTask>& materialEvalQueue,unsigned long long lastSampleIndex) {
+    static void renderRay(const SceneHandle& scene, const Ray& ray, SamplerObject& sampler, Spectrum* result, TaskQueue<MaterialEvalTask>& materialEvalQueue,SamplingState& samplingState) {
         int index = blockIdx.x * blockDim.x + threadIdx.x;
 
         IntersectionResult intersection;
@@ -28,33 +28,22 @@ namespace DirectLighting {
     
         *result = make_float3(0, 0, 0);
 
-        SamplingState samplingState; 
-        sampler.startPixel(samplingState,lastSampleIndex);
-
-
         if (!intersection.intersected) {
             if (scene.hasEnvironmentMap()) {
                 *result = scene.getEnvironmentMap()->EnvironmentMap::evaluateRay(ray);
             }
             return;
         }
-        
-    
     
         const Primitive* prim = intersection.primitive;
-    
-        
     
         if (prim->areaLight) {
             *result += prim->areaLight->get<DiffuseAreaLight>()->DiffuseAreaLight::evaluateRay(ray,intersection);
         }
-    
         
-    
         Ray exitantRay = { intersection.position,ray.direction * -1 };
     
         int lightIndex = sampler.randInt(scene.lightsCount,samplingState);
-    
     
         const LightObject& light = scene.lights[lightIndex];
         Ray rayToLight;
@@ -63,10 +52,8 @@ namespace DirectLighting {
     
         VisibilityTest visibilityTest;
         visibilityTest.sourceMeshIndex = intersection.primitive->shape.meshIndex;
-    
 
         Spectrum incident = light.sampleRayToPoint(intersection.position, sampler, samplingState, probability, rayToLight, visibilityTest,nullptr);
-
 
         if (scene.testVisibility(visibilityTest)) {
             if (probability == 0) {
@@ -81,7 +68,7 @@ namespace DirectLighting {
     
     
     __global__
-    void renderAllSamples(CameraSample* samples, int samplesCount, SceneHandle scene, CameraObject camera, SamplerObject sampler, Spectrum* results,TaskQueue<MaterialEvalTask> materialEvalQueue,unsigned long long lastSampleIndex) {
+    void renderAllSamples(CameraSample* samples, int samplesCount, SceneHandle scene, CameraObject camera, SamplerObject sampler, Spectrum* results,TaskQueue<MaterialEvalTask> materialEvalQueue) {
         int index = blockIdx.x * blockDim.x + threadIdx.x;
         if (index >= samplesCount) {
             return;
@@ -90,8 +77,7 @@ namespace DirectLighting {
         Ray ray = camera.genRay(samples[index]);
         Spectrum* result = &results[index];
     
-        renderRay(scene, ray, sampler,result,materialEvalQueue,lastSampleIndex);
-    
+        renderRay(scene, ray, sampler,result,materialEvalQueue,samples[index].samplingState);
     }
     
     
@@ -119,8 +105,6 @@ namespace DirectLighting {
         int bytesNeededPerThread = sizeof(Spectrum) + sizeof(DirectLighting::MaterialEvalTask) + sizeof(CameraSample) + sampler->bytesNeededPerThread();
         std::cout<<"Running Direct Lighting Integrator. Bytes needed per thread: "<<bytesNeededPerThread<<std::endl;
 
-        unsigned long long lastSampleIndex = -1;
-
         while(!isFinished(scene,camera,film)){
             GpuArray<CameraSample> allSamples = sampler->genAllCameraSamples(camera, film,bytesNeededPerThread);
 
@@ -140,9 +124,8 @@ namespace DirectLighting {
 
             CHECK_IF_CUDA_ERROR("before render all samples");
             DirectLighting::renderAllSamples << <numBlocks, numThreads >> >
-                (allSamples.data, samplesCount, sceneHandle, camera, samplerObject.getCopyForKernel(), result.data, materialEvalQueue.getCopyForKernel(),lastSampleIndex);
+                (allSamples.data, samplesCount, sceneHandle, camera, samplerObject.getCopyForKernel(), result.data, materialEvalQueue.getCopyForKernel());
             CHECK_IF_CUDA_ERROR("render all samples");
-            lastSampleIndex += allSamples.N;
 
             materialEvalQueue.forAll(
                 [] __device__

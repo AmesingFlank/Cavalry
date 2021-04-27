@@ -140,20 +140,6 @@ public:
 	}
 
 
-	__device__
-	void startPixel(SamplingState& samplingState, unsigned long long lastIndex){
-		auto visitor = [&](auto& arg){
-			using T = typename std::remove_reference<decltype(arg)>::type;
-			if constexpr (std::is_base_of<Sampler,typename T>::value) {
-				arg.T::startPixel(samplingState,lastIndex);
-			}
-			else {
-				SIGNAL_VARIANT_ERROR;
-			}
-		};
-		visit(visitor);
-	}
-
 	void prepare(int threadsCount) {
 		auto visitor = [&](auto& arg) {
 			using T = typename std::remove_reference<decltype(arg)>::type;

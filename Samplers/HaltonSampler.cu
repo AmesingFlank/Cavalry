@@ -99,23 +99,22 @@ HaltonSampler HaltonSampler::getCopyForKernel(){
 
 
 __global__
-void genHaltonCameraSample(CameraSample* resultPointer, int samplesCount, int width, int height,int samplesPerPixel,HaltonSampler sampler,unsigned long long lastIndex){
+void genHaltonCameraSample(CameraSample* resultPointer, int samplesCount, int width, int height,int samplesPerPixel,HaltonSampler sampler,int pixelIndexStart){
     int index = blockIdx.x * blockDim.x + threadIdx.x;
     if(index >= samplesCount){
         return;
     }
 
     SamplingState state;
-    sampler.HaltonSampler::startPixel(state,lastIndex);
-
     state.dimension = 0;
+    state.index = index + pixelIndexStart * samplesPerPixel;
 
-    int pixelIndex = index / samplesPerPixel;
+    int pixelIndex = pixelIndexStart + index / samplesPerPixel;
 
     int x = pixelIndex % width;
     int y = pixelIndex / width;
 
-    CameraSample sample{ x , y };
+    CameraSample sample{ x , y, state };
     sample.x += sampler.HaltonSampler::rand1(state);
     sample.y += sampler.HaltonSampler::rand1(state);
 
@@ -126,22 +125,22 @@ void genHaltonCameraSample(CameraSample* resultPointer, int samplesCount, int wi
 GpuArray<CameraSample> HaltonSampler::genAllCameraSamples(const CameraObject& camera, Film& film, int bytesNeededPerSample,int maxSamplesPerRound) {
     int width = film.width;
     int height = film.height;
-    unsigned long long lastSampleIndex = film.completedSamplesPerPixel * width * height - 1;
 
-    int thisSPP = decideSamplesPerPixel(film,samplesPerPixel,bytesNeededPerSample,maxSamplesPerRound);
+    unsigned long long sampleCount = decideSampleCount(film, samplesPerPixel, bytesNeededPerSample);
 
-    int count = width*height * thisSPP;
+    unsigned long long pixelsCount = sampleCount / samplesPerPixel;
 
-    prepare(count);
+    prepare(sampleCount);
 
-    std::cout << "about to alloc cam samples " << thisSPP << std::endl;
-
-    GpuArray<CameraSample> result(count);
+    GpuArray<CameraSample> result(sampleCount);
 
     int numBlocks, numThreads;
-    setNumBlocksThreads(count, numBlocks, numThreads);
+    setNumBlocksThreads(sampleCount, numBlocks, numThreads);
 
-    genHaltonCameraSample <<<numBlocks,numThreads>>> (result.data,count,width,height,thisSPP,getCopyForKernel(),lastSampleIndex);
+    genHaltonCameraSample <<<numBlocks,numThreads>>> (result.data,sampleCount,width,height, samplesPerPixel,getCopyForKernel(),film.completedPixels);
     CHECK_IF_CUDA_ERROR("gen halton camera samples");
+
+    film.completedPixels += pixelsCount;
+
     return result;
 }

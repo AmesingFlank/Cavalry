@@ -250,7 +250,7 @@ namespace PathTracing {
 
 
     __global__
-    void genInitialRays(CameraSample* samples, int samplesCount, CameraObject camera, Spectrum* results, TaskQueue<RayTask> rayQueue,SamplerObject sampler,unsigned long long lastSampleIndex) {
+    void genInitialRays(CameraSample* samples, int samplesCount, CameraObject camera, Spectrum* results, TaskQueue<RayTask> rayQueue,SamplerObject sampler) {
         int index = blockIdx.x * blockDim.x + threadIdx.x;
         if (index >= samplesCount) {
             return;
@@ -261,10 +261,7 @@ namespace PathTracing {
         *result = make_float3(0, 0, 0);
         Spectrum multiplier = make_float3(1, 1, 1);
 
-        SamplingState samplingState;
-        sampler.startPixel(samplingState, lastSampleIndex);
-
-        RayTask task = { samplingState, ray,multiplier,result,1,true };
+        RayTask task = {samples[index].samplingState, ray,multiplier,result,1,true };
         rayQueue.push(task);
     }
 
@@ -324,7 +321,6 @@ namespace PathTracing {
 
         int round = 0;
 
-        unsigned long long lastSampleIndex=-1;
         GpuArray<int> maxDimension(1);
 
         while(!isFinished( scene, camera,  film)){
@@ -357,12 +353,10 @@ namespace PathTracing {
 
 
             std::cout << numBlocks << "   " << numThreads << std::endl;
-            genInitialRays << <numBlocks, numThreads >> > (allSamples.data,samplesCount,camera,result.data,thisRoundRayQueue->getCopyForKernel(), samplerObject.getCopyForKernel(),lastSampleIndex);
+            genInitialRays << <numBlocks, numThreads >> > (allSamples.data,samplesCount,camera,result.data,thisRoundRayQueue->getCopyForKernel(), samplerObject.getCopyForKernel());
             CHECK_CUDA_ERROR("gen initial rays");
 
             int depth = 0;
-
-            lastSampleIndex += samplesCount;
 
             while (thisRoundRayQueue->count() > 0 && depth < maxDepth) {
                 //std::cout << "\ndoing depth " << depth << std::endl;

@@ -2,6 +2,7 @@
 #include "../Utils/GpuCommons.h"
 #include "DecideSampleCount.h"
 #include "../Utils/RandomUtils.h"
+#include "../Utils/Utils.h"
 #include <iostream>
 
 
@@ -21,43 +22,48 @@ SimpleSampler SimpleSampler::getCopyForKernel(){
 
 
 __global__
-void genNaiveSample(CameraSample* resultPointer, int samplesCount, int width, int height,int samplesPerPixel,SimpleSampler sampler){
+void genNaiveSample(CameraSample* resultPointer, int samplesCount, int width, int height, int samplesPerPixel, SimpleSampler sampler, int pixelIndexStart) {
     int index = blockIdx.x * blockDim.x + threadIdx.x;
-    if(index >= samplesCount){
+    if (index >= samplesCount) {
         return;
     }
 
-    int pixelIndex = index / samplesPerPixel;
+    SamplingState state;
+    state.dimension = 0;
+    state.index = index + pixelIndexStart * samplesPerPixel;
+
+    int pixelIndex = pixelIndexStart + index / samplesPerPixel;
 
     int x = pixelIndex % width;
     int y = pixelIndex / width;
 
-    SamplingState unused{ 0,0 };
-
-    CameraSample sample{x,y };
-    sample.x += sampler.rand1(unused) ;
-    sample.y += sampler.rand1(unused) ;
+    CameraSample sample{ x , y, state };
+    sample.x += sampler.SimpleSampler::rand1(state);
+    sample.y += sampler.SimpleSampler::rand1(state);
 
     resultPointer[index] = sample;
 }
 
-
 GpuArray<CameraSample> SimpleSampler::genAllCameraSamples(const CameraObject& camera, Film& film, int bytesNeededPerSample,int maxSamplesPerRound ) {
+
     int width = film.width;
     int height = film.height;
 
-    int thisSPP = decideSamplesPerPixel(film,samplesPerPixel,bytesNeededPerSample,maxSamplesPerRound);
+    unsigned long long sampleCount = decideSampleCount(film, samplesPerPixel, bytesNeededPerSample);
 
-    int count = width*height * thisSPP;
+    unsigned long long pixelsCount = sampleCount / samplesPerPixel;
 
-    std::cout << "about to alloc cam samples " << thisSPP << std::endl;
+    prepare(sampleCount);
 
-    GpuArray<CameraSample> result(count);
+    GpuArray<CameraSample> result(sampleCount);
 
-    int numThreads = min(count,MAX_THREADS_PER_BLOCK);
-    int numBlocks = divUp(count,numThreads);
+    int numBlocks, numThreads;
+    setNumBlocksThreads(sampleCount, numBlocks, numThreads);
 
-    genNaiveSample <<<numBlocks,numThreads>>> (result.data,count,width,height,thisSPP,getCopyForKernel());
-    CHECK_IF_CUDA_ERROR("gen naive samples");
+    genNaiveSample << <numBlocks, numThreads >> > (result.data, sampleCount, width, height, samplesPerPixel, getCopyForKernel(), film.completedPixels);
+    CHECK_IF_CUDA_ERROR("gen simple camera samples");
+
+    film.completedPixels += pixelsCount;
+
     return result;
 }

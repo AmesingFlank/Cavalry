@@ -16,7 +16,7 @@ public:
 
     // a single call to render might not finish the entire rendering task.
     virtual bool isFinished(const Scene& scene, const CameraObject& camera, Film& film) {
-        return film.completedSamplesPerPixel == sampler->getSamplesPerPixel();
+        return film.completedPixels == film.width * film.height;
     }    
 };
 
