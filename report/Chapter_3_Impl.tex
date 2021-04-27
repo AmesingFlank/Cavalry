@@ -91,11 +91,9 @@ In a naive implementation, intersection detection would be performed by iteratin
 
 The idea of BVH is to partition the geometric primitives into a hierarchy of disjoint sets. The sets are organized into a binary tree, so that the root node is the set containing all primitives, and the leaves are singleton sets. Each interior node has two disjoint children sets, and the union of the children sets is equal to the interior node. In BVH, each set of primitives is represented by an Axis-Aligned Bounding Box (AABB), which is a box where each edge is parallel to a coordinate axis. Each AABB represents the set of all primitives that are completely enclosed by the box. The following image shows an example 2D BVH:
 
-
 \begin{figure}[H]
-    \centering
     
-
+\centering
 
 \tikzset{every picture/.style={line width=0.75pt}} %set default line width to 0.75pt        
 
@@ -121,11 +119,11 @@ The idea of BVH is to partition the geometric primitives into a hierarchy of dis
 %Shape: Rectangle [id:dp22604103897488237] 
 \draw   (347.28,166.81) -- (420.44,166.81) -- (420.44,239.28) -- (347.28,239.28) -- cycle ;
 %Straight Lines [id:da25863657063944623] 
-\draw    (93.63,125) -- (60.18,189.81) ;
+\draw    (93.63,125) -- (56,189.81) ;
 %Straight Lines [id:da9449132853969702] 
 \draw    (93.63,125) -- (135.44,148.69) ;
 %Straight Lines [id:da7107974477103463] 
-\draw    (135.44,148.69) -- (60.18,189.81) ;
+\draw    (135.44,148.69) -- (56,189.81) ;
 %Shape: Diamond [id:dp8408879189498177] 
 \draw   (383.86,166.81) -- (419.75,202.7) -- (383.86,238.58) -- (347.97,202.7) -- cycle ;
 
@@ -134,7 +132,6 @@ The idea of BVH is to partition the geometric primitives into a hierarchy of dis
 
 \end{tikzpicture}
 
-    
 \end{figure}
 
 In this example, there are 4 primitives, each occupying an AABB as a leaf node. One AABB groups together the triangle and the circle, and another groups the ellipse and the rombus. These two AABBs are then grouped together by the root AABB.

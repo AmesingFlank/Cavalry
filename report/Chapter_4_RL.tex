@@ -1,1 +1,5 @@
 \chapter{Reinforcement Learning Path Tracing}
+The traditional path-tracing algorithm struggles to converge to a noiseless image for a type of scenes with difficult lighting scenarios. To alleviate this problem, this project implements a variant of path-tracing described at \cite{RLPT}, where reinforcement learning is used to guide the generation of new rays.
+
+\section{Motivation}
+The path tracing algorithm uses Multiple Importance Sampling to generate rays at each surface point. As described in section \ref{subsection MIS}, the algorithm samples from two distributions: $p_{ref}$ which matches the local BRDF, and $p_{rad}$ which only samples points on light sources. The efficiency of this method relies on the assumption that $p_{rad}$, which only assigns non-zero weight to points on light sources, is a good match for the incoming radiance $L_i$. This is often true, because directly light sources are often much brighter than reflected light.  
