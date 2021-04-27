@@ -1,15 +1,13 @@
 \chapter{Implementing Path-Tracing}
 \label{chapter implementation}
 
-Path-Tracing is an extremely costly algorithm. In a common rendering task, there're around one million pixels, each of which requires roughly one thousand samples to eliminate noise. More over, each ray generated in the algorithm needs to tested for intersection with the entire scene, which often consists of millions of geometric primitives. In order to cope with this humongous amount of computation, this projects implements path-tracing with parallelization on GPUs, and utilizes a data structure known as Bounding Volume Hierarchy (BVH) for accelerating intersection tests. 
-
-This chapter begins by giving a short introduction to GPU computing, and then explains the GPU parallelization of the path-tracing algorithm. Some of the highly impactful GPU optimization techniques employed are then described. Finally, the chapter discusses the state-of-the-art BVH construction algorithms implemented in this project.
+To maximize rendering efficiency, this projects implements path-tracing with parallelization on GPUs. This chapter begins with an introduction to GPU computing, and then discusses some of the most impactful performance optimizations employed by this project. These include careful structuring of GPU kernels, avoidance of performance degradation caused by polymorphism, and most importantly, usage of Bounding Volume Hierarchies to accelerate intersection detections.
 
 \section{The CUDA Programming Model}
 
-Originally built for real time rendering, GPUs are designed to handle a massive amount of geometries and pixels in parallel. The ability to do massively parallel computation motivated GPGPU (General-Purpose GPU) programming models to arise, which became significantly useful for scientific computing purposes. The software in this project is written using the CUDA programming model, developed by the NVIDIA Corporation.
+Originally built for real-time rendering, GPUs can handle a massive amount of geometries and pixels in parallel. The ability to do massively parallel computation motivated GPGPU (General-Purpose GPU) programming models, which became significantly useful for high performance computing. The software in this project is written using the CUDA programming model, developed by the NVIDIA Corporation.
 
-CUDA employs the execution model known as SIMT (Single Instruction Multiple Threads). In this model, a large amount of GPU threads can be spawned simultaneously, each running the same sequence of code on different sets of data. GPU threads in CUDA are organized in groups of 32, known as \textit{warps}. Each thread must execute the same instructions as the others in the same warp, or remain idle. However, different warps do not need to remain in sync. When the threads within a warp access the memory, the entire warp can be paused and swapped out, so that a different warp can start executing before the memory access finishes. Using this mechanism, the GPU hides memory access latencies by allowing very fast context switching. As a result, each physical core in the GPU (known as a CUDA core) can simultaneously handle multiple logical threads.
+CUDA employs the execution model known as SIMT (Single Instruction Multiple Threads). In this model, a large amount of threads are spawned simultaneously, each running the same code on different data. CUDA threads are organized in groups of 32, known as \textit{warps}. Each thread must execute the same instructions as the others in the same warp, or remain idle. When the threads within a warp access the memory, the entire warp can be paused and swapped out, so that a different warp can execute before the memory access finishes. Using this mechanism, the GPU hides memory access latencies by allowing very fast context switching. As a result, each physical core in the GPU can simultaneously handle multiple logical threads.
 
 As an example, the GPU used for development of this project is an NVIDIA GTX1060 Mobile, which contains 10 \textit{Streaming Multiprocessors}, each of which consists of 128 CUDA cores. Each streaming multiprocessors can have up to 2048 resident threads, giving a total of 20480 threads that can be simultaneously handled. Even though each GPU thread is not as fast as a CPU thread, the aggregated performance of the CUDA cores can still be many times faster than the CPU.
 
@@ -24,9 +22,9 @@ As an example, the GPU used for development of this project is an NVIDIA GTX1060
 
 
 \section{Wavefront Path-Tracing}
-In GPU programming, a parallel GPU function that is invoked by the CPU is often referred to as a GPU \textit{kernel}. When implementing algorithm \ref{Path Tracing} on GPUs, the most straightforward method would be to implement the loop body (lines 3 to 9) as a GPU kernel, and invoke it for all pixel samples in parallel. This pattern of programming, where the entire CPU computation is embodied in a single GPU kernel, is called the \textit{Megakernel}\cite{megakernel} approach.
+In CUDA, a parallel GPU function that is invoked by the CPU is called a GPU \textit{kernel}. When implementing algorithm \ref{Path Tracing} on GPUs, the most straightforward method is to implement the loop body (lines 3 to 12) as a GPU kernel, and invoke it for all pixel samples in parallel. This pattern of programming, where the entire computation is embodied in a single GPU kernel, is called the \textit{Megakernel}\cite{megakernel} approach.
 
-In contrast to megakernels, the \textit{Wavefront} programming divides the computation into many smaller GPU kernels, where intermediate results are explicitly stored in memory. The CPU then invokes these kernels one after another. On GPUs, regions of code that uses a large amount of registers or has a high control flow divergence can significantly hurt the parallelization of the entire kernel, and thus the wavefront pattern can effectively contain these regions of code into separate single kernel, so that the performance of the other kernels remain unaffected. However, the wavefront pattern incurs additional overhead by requiring more CPU-GPU communication, and memory IOs.
+In contrast to megakernels, the \textit{Wavefront} programming divides the computation into many small kernels, where intermediate results are explicitly stored in memory. The CPU invokes these kernels one after another. On GPUs, regions of code that uses a large amount of registers or has a high control flow divergence can significantly hurt the parallelization of the entire kernel, and thus the wavefront pattern can effectively contain these regions of code into separate kernels, so that the performance of the other kernels remain unaffected. However, the wavefront pattern incurs additional overhead by requiring more CPU-GPU communication, and memory IOs.
 
 The project carried out numerous experiments to find an optimal way of dividing the rendering work into wavefronts. In the end, the program implemented is structured as indicated by the following pseudo-code:
 
@@ -34,18 +32,21 @@ The project carried out numerous experiments to find an optimal way of dividing 
     \label{algo wavefront Path Tracing}
     \SetKwProg{Fn}{Function}{:}{end}
     \ForEach{\upshape pixel sample \textbf{in a parallel kernel}}{
-        generate the initial ray going out of the camera position $p_0$\;
+        generate the initial ray $r_0$ going out of the camera position $p_0$\;
     }
     \For{\upshape $n$ from 1 to $MaxDepth$}{
         \ForEach{\upshape previously generated ray $r$ \textbf{in a parallel kernel}}{
             Find $p_n$ by computing the intersection between $r$ and the scene\;
+            \If{\upshape $p_n$ is on a light source}{
+                Accumulate the radiance of the path $p_n\to p_{n-1}\to ... \to p_0$\;
+            }
         }
         \ForEach{\upshape newly found $p_n$ \textbf{in a parallel kernel}}{
             Sample a point $p_{light}$ on a light source\;
             Test whether the ray $p_{light}\to p_n$ occluded by some geometry\;
         }
         \ForEach{\upshape unoccluded $p_{light}\to p_{n}$ \textbf{in a parallel kernel}}{
-            Evaluate the BRDF at $p_n$, and accumulate the radiance of this path\;
+            Accumulate the radiance of the path $p_{light}\to p_n\to ... \to p_0$\;
         }
         \ForEach{\upshape $p_n$ \textbf{in a parallel kernel}}{
             Sample a direction $\omega_i$ from a distribution matching the BRDF at $p_n$\;
@@ -60,15 +61,14 @@ The project carried out numerous experiments to find an optimal way of dividing 
 It was found that compared to a naive Megakernel implementation, this wavefront implementation is almost twice as fast.
 
 \section{Polymorphism}
-When implementing a GPU path-tracer, an unexpected source of performance degradation is the need for dynamic-dispatch polymorphism. In CPU programming, dynamic-dispatch is easily implemented via virtual functions, but this can be costly for GPUs for the following reasons
+In GPU programming, a common source of performance degradation is dynamic-dispatch polymorphisms. On CPUs, dynamic-dispatch is easily implemented via virtual functions, but this can be costly for GPUs for two main reasons:
 \begin{enumerate}
-    \item In the GPU, each thread in a warp must execute the same instructions as the others, or remain in idle. Thus, when different threads are dynamically dispatched to different code regions, the GPU becomes under-utilized.
+    \item In the GPU, each thread in a warp must execute the same instructions as the others, or remain in idle. Thus, when different threads are dynamically dispatched to different code regions, control flow divergences occur, and the GPU becomes under-utilized.
     
     \item Virtual functions make use of virtual tables and virtual pointers. During dynamic dispatch, the value of the program counter needs to fetched by reading the correct entry from the virtual table. This adds an additional level of indirection, which is costly on the GPU where memory IOs are more expensive.
     
-    \item The virtual tables for GPU code and CPU code are stored at different addresses. Thus, extra care needs to be taken when objects are copied from CPU to GPU, or vice versa.
 \end{enumerate}
-The need for polymorphism in path tracing mainly comes from two components. Firstly, the scene is often defined from a range of different geometric primitives (triangles, spheres, disks, etc.), and each primitives requires a different intersection detection procedure. Secondly, there is a material system, where each object could be associated with a certain surface material, and each material requires its own implementation of BRDFs. This project handles the polymorphism for these two components in different strategies.
+The need for polymorphism in path tracing mainly comes from two components. Firstly, the scene is often defined from various different geometric primitives (triangles, spheres, disks, etc.), and each primitive requires its own intersection detection code. Secondly, each object in the scene is associated with a certain surface material, and each material requires its own implementation of BRDFs. This project handles the polymorphism for these two components in different strategies.
 
 For geometric primitives, this project chooses to completely eliminate the need for any primitive other than triangles. Before rendering begins, this project uses a pre-processing phase, where a triangle mesh is generated to represent each non-triangle primitive. This slightly increases rendering cost, because often a few thousands of triangles are needed to give a good approximation for shapes such as spheres. However, this overhead is outweighed by the benefit of reduced control flow divergences and memory IOs.
 
@@ -79,9 +79,9 @@ using Material = std::variant<Plastic, Metal, Glass>;
 
 Implementation wise, a \texttt{variant} class is implemented by \textit{tagged union}, which is in essence the same technique used to implement sum types in languages such as Haskell. Dynamic dispatch can be provided not via virtual functions, but by switching on an integer labelled attached to the object. This avoids the extra memory operation incurred by dereferencing virtual pointers, and removes the problem of inconsistent virtual table locations across the CPU and the GPU.
 
-Although the usage \texttt{variant} solves problem 2 and 3, problem 1 still remains, because control flow divergence still exists whenever threads in the same warp are processing surfaces of different materials. To solve this problem, this project employs the method of \cite{megakernel}, which sorts the material evaluation tasks before they're executed. More precisely, in algorithm \ref{algo wavefront Path Tracing}, before the kernel at line 9 is executed, this project inserts an extra phase where all tasks are sorted according to the material at their respective $p_n$. This guarantees that threads that work on the same material are grouped together, and there will only be a few warps that experience any divergences. Even though the sorting incurs a small extra cost, it was observed that material sorting considerably improves the overall rendering performance.
+The usage \texttt{variant} solves problem 2, but problem 1 still remains because control flow divergence still exists whenever threads in the same warp process different materials. To solve this problem, this project employs the method of \cite{megakernel}, which sorts the material evaluation tasks before they're executed. More precisely, in algorithm \ref{algo wavefront Path Tracing}, before the kernel at line 9 is executed, this project inserts an extra phase where all tasks are sorted according to the material at their respective $p_n$. This step groups together threads that work on the same material, and there will only be a few warps that experience any divergences. Even though the sorting incurs a small extra cost, it was observed that it considerably improves the overall rendering performance.
 
-\newpage
+%\newpage
 
 
 \section{Bounding Volume Hierarchy}
@@ -90,6 +90,8 @@ In path-tracing, the most expensive step is almost always ray-scene intersection
 In a naive implementation, intersection detection would be performed by iterating through all geometries, and testing for intersection against each. With $N$ being the amount of geometric primitives in the scenes, this is an $O(N)$ algorithm. Since $N$ is often in the order of millions, this linear time algorithm is unacceptably slow. For this reason, this projects implements a data structure known as Bounding Volume Hierarchy (BVH), which reduces the complexity down to $O(\log N)$.
 
 The idea of BVH is to partition the geometric primitives into a hierarchy of disjoint sets. The sets are organized into a binary tree, so that the root node is the set containing all primitives, and the leaves are singleton sets. Each interior node has two disjoint children sets, and the union of the children sets is equal to the interior node. In BVH, each set of primitives is represented by an Axis-Aligned Bounding Box (AABB), which is a box where each edge is parallel to a coordinate axis. Each AABB represents the set of all primitives that are completely enclosed by the box. The following image shows an example 2D BVH:
+
+
 \begin{figure}[H]
     \centering
     
@@ -101,39 +103,45 @@ The idea of BVH is to partition the geometric primitives into a hierarchy of dis
 %uncomment if require: \path (0,300); %set diagram left start at 0, and has height of 300
 
 %Shape: Rectangle [id:dp08780760692685319] 
-\draw   (56,58) -- (579,58) -- (579,279) -- (56,279) -- cycle ;
+\draw   (56,125) -- (420.44,125) -- (420.44,279) -- (56,279) -- cycle ;
 %Shape: Rectangle [id:dp019517612425453468] 
-\draw   (57,59) -- (259,59) -- (259,186) -- (57,186) -- cycle ;
+\draw   (56,125) -- (196.76,125) -- (196.76,213.5) -- (56,213.5) -- cycle ;
 %Shape: Rectangle [id:dp38178644543359463] 
-\draw   (282,117) -- (579,117) -- (579,278) -- (282,278) -- cycle ;
-%Shape: Triangle [id:dp4552562220349705] 
-\draw   (100.36,61.55) -- (170.73,74.9) -- (59.45,151.21) -- cycle ;
+\draw   (213.48,166.81) -- (420.44,166.81) -- (420.44,279) -- (213.48,279) -- cycle ;
 %Shape: Rectangle [id:dp1975350888977112] 
-\draw   (58,60) -- (172,60) -- (172,153) -- (58,153) -- cycle ;
-%Shape: Circle [id:dp9801060884620203] 
-\draw   (184,146.5) .. controls (184,126.34) and (200.34,110) .. (220.5,110) .. controls (240.66,110) and (257,126.34) .. (257,146.5) .. controls (257,166.66) and (240.66,183) .. (220.5,183) .. controls (200.34,183) and (184,166.66) .. (184,146.5) -- cycle ;
+\draw   (56,125) -- (135.44,125) -- (135.44,189.81) -- (56,189.81) -- cycle ;
+%Shape: Ellipse [id:dp9801060884620203] 
+\draw   (142.93,186.84) .. controls (142.93,172.12) and (154.86,160.19) .. (169.58,160.19) .. controls (184.3,160.19) and (196.24,172.12) .. (196.24,186.84) .. controls (196.24,201.56) and (184.3,213.5) .. (169.58,213.5) .. controls (154.86,213.5) and (142.93,201.56) .. (142.93,186.84) -- cycle ;
 %Shape: Rectangle [id:dp6016074200382464] 
-\draw   (181.5,108.25) -- (259.5,108.25) -- (259.5,184.75) -- (181.5,184.75) -- cycle ;
+\draw   (142.41,160.19) -- (196.76,160.19) -- (196.76,213.5) -- (142.41,213.5) -- cycle ;
 %Shape: Ellipse [id:dp7626275411333683] 
-\draw   (283,239) .. controls (283,218.01) and (323.07,201) .. (372.5,201) .. controls (421.93,201) and (462,218.01) .. (462,239) .. controls (462,259.99) and (421.93,277) .. (372.5,277) .. controls (323.07,277) and (283,259.99) .. (283,239) -- cycle ;
+\draw   (213.83,252.17) .. controls (213.83,237.55) and (241.76,225.69) .. (276.2,225.69) .. controls (310.64,225.69) and (338.57,237.55) .. (338.57,252.17) .. controls (338.57,266.8) and (310.64,278.65) .. (276.2,278.65) .. controls (241.76,278.65) and (213.83,266.8) .. (213.83,252.17) -- cycle ;
 %Shape: Rectangle [id:dp22500799968373997] 
-\draw   (282.5,200.5) -- (462.5,200.5) -- (462.5,277.5) -- (282.5,277.5) -- cycle ;
-%Shape: Regular Polygon [id:dp3036198167131199] 
-\draw   (576.35,163.06) -- (547.76,220.88) -- (483.94,211.55) -- (473.09,147.98) -- (530.2,118.01) -- cycle ;
+\draw   (213.48,225.34) -- (338.91,225.34) -- (338.91,279) -- (213.48,279) -- cycle ;
 %Shape: Rectangle [id:dp22604103897488237] 
-\draw   (473,118.01) -- (578,118.01) -- (578,222) -- (473,222) -- cycle ;
+\draw   (347.28,166.81) -- (420.44,166.81) -- (420.44,239.28) -- (347.28,239.28) -- cycle ;
+%Straight Lines [id:da25863657063944623] 
+\draw    (93.63,125) -- (60.18,189.81) ;
+%Straight Lines [id:da9449132853969702] 
+\draw    (93.63,125) -- (135.44,148.69) ;
+%Straight Lines [id:da7107974477103463] 
+\draw    (135.44,148.69) -- (60.18,189.81) ;
+%Shape: Diamond [id:dp8408879189498177] 
+\draw   (383.86,166.81) -- (419.75,202.7) -- (383.86,238.58) -- (347.97,202.7) -- cycle ;
 
 
 
 
 \end{tikzpicture}
+
+    
 \end{figure}
 
-In this example, there are a total of 4 geometric primitives, each of which occupies a single box as a leaf node. One AABB groups together the triangle and the circle, and another AABB groups the ellipse and the pentagon. These two AABBs are then grouped together by the root AABB, which encloses all primitives.
+In this example, there are 4 primitives, each occupying an AABB as a leaf node. One AABB groups together the triangle and the circle, and another groups the ellipse and the rombus. These two AABBs are then grouped together by the root AABB.
 
 
 \subsection{BVH Traversal}
-BVHs can significantly accelerate ray-scene intersection tests, because once it is known that an AABB doesn't intersect the ray, all descendent boxes and geometries can be pruned from the search. This motivates the following algorithm, which finds the first intersection point between a ray and a scene by traversing the BVH tree in a recursive top-down manner:
+In a BVH, if one AABB doesn't intersect the ray, all descendent boxes can be pruned from the search. This motivates the following algorithm, which finds the first intersection point between a ray and a BVH node by traversing recursively :
 
 \begin{algorithm}[H]
     \label{algo bvh traversal recursive}
@@ -147,7 +155,6 @@ BVHs can significantly accelerate ray-scene intersection tests, because once it 
                 \Return{\upshape ``No Intersections"}\; 
             }
         }
-        Test for intersection between the ray and the AABB of $node$\;
         \If{\upshape $ray$ does not intersect the AABB of $node$}{
             \Return{\upshape ``No Intersections"}\; 
         }
@@ -164,11 +171,10 @@ BVHs can significantly accelerate ray-scene intersection tests, because once it 
 
 ~
 
-Despite its simplicity, this recursive traversal algorithm is unsuitable for a GPU implementation. Firstly, GPUs have a very restrictive recursion depth limit (for CUDA, this is 24), and thus might not be able to complete the traversal. More importantly, due to the massive amount of parallel threads, maintaining a recursion stack for each thread is significantly costly in terms of memory and register usage. For these reasons, this projects explicitly maintains a stack of nodes to be traversed, and operates on this stack iteratively.
+Unfortunately, this recursive traversal is unsuitable for implementation on GPUs. Firstly, GPUs have very restrictive recursion depth limits (for CUDA, this is 24), and thus might fail to complete the traversal. Secondly, due to the massive amount of parallel threads, maintaining a recursion stack for each thread is significantly costly in terms of memory and register usage. For these reasons, this projects explicitly maintains a stack of nodes to be traversed, and operates on this stack iteratively.
 
-In addition to the elimination the recursion, this project also makes two important observations that leads to a fruitful optimization. Firstly, the project notices that it is unnecessary to push a node onto the stack, if it is known that this node can only produce an intersection that is further than the current shortest intersection found. Secondly, the project notices that the intersection distance between the ray and an AABB serves as a lower-bound estimation of the shortest intersection distance between the ray and any geometry in the AABB. Motivated by these observations, the BVH implementation of this project makes the following optimizations:
+In addition to eliminating recursion, this project also makes two important observations that leads to a fruitful optimization. Firstly, the project notices that if it is known that a node can only produce intersections further than the current shortest intersection found, then it is useless to push it onto the stack. Secondly, the project notices that the intersection distance between the ray and an AABB is a lower-bound of the shortest intersection distance between the ray and any geometry in the AABB. Motivated by these observations, this project keeps track of the distance of the shortest intersection found, and then makes the following optimizations:
 \begin{itemize}
-    \item The distance of the shortest intersection found so far is recorded.
     \item If a child node intersects the ray, but the ray-AABB intersection distance is further than the shortest intersection, then the node is discarded, because it cannot produce a shorter intersection.
     \item If both children nodes intersect the ray and are not discarded, then the node with the shorter intersection distance should be traversed first, because it has a higher chance of finding a better intersection.
 \end{itemize}
@@ -204,15 +210,14 @@ Through experimentation, this project found that these techniques roughly double
 \end{algorithm} 
 
 \subsection{BVH Quality Measure}
-The previous subsection have focused on how a BVH is utilized to accelerate rendering, but the more difficult problem remains: how to construct high-quality BVHs efficiently. 
 
-BVHs differ in quality, and these differences are hugely impactful for performance. Firstly, a BVH is binary tree, so the balance of the tree is related to the cost of the traversal. However, the structure of the tree is hardly the only concern. Notice that in algorithm \ref{algo bvh traversal}, its possible that for a ray $r$ and a node $n$, $r$ intersects with both children of $n$, and thus need to traversal both subtrees. A ``good'' BVH must reduce the likelihood of this type of situation. 
+BVHs differ in quality, and these differences hugely impacts performance. Firstly, a BVH is binary tree, so the balance of the tree is related to the cost of the traversal. More importantly, notice that in algorithm \ref{algo bvh traversal}, it's possible that for a ray $r$ and a node $n$, $r$ intersects with both children of $n$, and thus need to traverse both subtrees. A ``good'' BVH must reduce the likelihood of this type of situation. 
 
-To formally quantify the quality of BVHs, this project employs the Surface Area Heuristic (SAH), first introduced by Goldsmith and Salmon in \cite{goldsmith1987automatic}. The SAH heuristic is an estimation for the expected cost of single BVH traversal of a random ray, and it is compute by
+To formally quantify the quality of BVHs, this project employs the Surface Area Heuristic (SAH), first introduced in\cite{goldsmith1987automatic}. The SAH heuristic is an estimation for the expected cost of single BVH traversal of a random ray, and it is compute by
 \begin{align*}
     C_i \sum_{n\in I} \Pr(\mathcal{X}_n) + C_l \sum_{n\in L} \Pr(\mathcal{X}_n)
 \end{align*}
-where $I$ is the set of interior nodes, $L$ the set of leaves, $C_i$ the cost for intersection testing a single interior node, $C_l$ the cost for intersecting testing a leaf node, and $\mathcal{X}_n$ the event that a random ray intersects $n$. SAH uses the observation that, for a convex shape $S_1$ enclosed within another convex shape $S_2$, the conditional probability $\Pr(\mathcal{X}_{S_1} | \mathcal{X}_{S_2})$ is exactly equal to $\frac{A(S_1)}{A(S_2)}$, where $A$ is the function that computes surface area\cite{goldsmith1987automatic}. Thus, the SAH heuristic becomes
+where $I$ is the set of interior nodes, $L$ the set of leaves, $C_i$ the cost for intersection testing a single interior node, $C_l$ the cost for intersecting testing a leaf node, and $\mathcal{X}_n$ the event that a random ray intersects $n$. SAH uses the observation that, for a convex shape $S_1$ enclosed within another convex shape $S_2$, the conditional probability $\Pr(\mathcal{X}_{S_1} | \mathcal{X}_{S_2})$ is exactly equal to $\frac{A(S_1)}{A(S_2)}$, where $A$ is the function that computes surface area. Thus, the SAH heuristic becomes
 \begin{align*}
     C_i \sum_{n\in I} \frac{A(n)}{A(root)} + C_l \sum_{n\in L} \frac{A(n)}{A(root)}
 \end{align*}
@@ -220,13 +225,13 @@ where $I$ is the set of interior nodes, $L$ the set of leaves, $C_i$ the cost fo
 Given a collection of primitives, finding the optimal BVH tree according to the SAH heuristic is an NP-hard problem\cite{bvh_optimize}. This is not entirely surprising, considering the fact given any node with $N$ geometries, there're $2^N-2$ ways of constructing the two children nodes. However, not all hope is lost if the goal is to simply to construct a BVH that's not necessarily optimal, but still reasonably good. This project implements a two-step system to approach BVH construction:
 
 \begin{enumerate}
-    \item Firstly, construct a BVH using a relatively naive heuristic: at each node, divide the geometries into two groups by splitting them at the mid-point of the AABB in one of the coordinate axises. This is known as a Linear BVH or LBVH, which can be constructed very efficiently on GPUs using the method of \cite{bvh_build}, but the tree created is of poor quality.
+    \item Firstly, construct a BVH using a relatively naive heuristic: at each node, divide the geometries into two groups by splitting them at the mid-point of the AABB in one of the coordinate axises. This is known as a Linear BVH, which can be constructed very efficiently on GPUs using the method of \cite{bvh_build}, but the tree created is of poor quality.
     \item Secondly, optimize the previously created BVH tree, using the method of \cite{bvh_optimize}. This step repeatedly solve the NP-hard optimization problem for very small \textit{treelets}, which can still significantly improve the quality of the entire tree.
 \end{enumerate}
 Details for each of the two steps are described below.
 
 \subsection{Linear BVH Construction}
-In LBVH, the geometries in each AABB are divided into two groups by splitting at the mid-point of the AABB in one of the coordinated axises. In three dimensions, the X, Y, and Z axises are used for splitting in a round-robin fashion, as the depth of the tree increases. A naive implementation of this splitting method would start at the root of the tree, and recursively divides each node using this heuristic. Unsurprisingly, this recursive algorithm parallelizes poorly. This motivates this project to employ a more sophisticated method described at \cite{bvh_build}, which uses a spatial encoding called \textit{morton code} and a data structure known as \textit{binary radix tree}.
+In Linear BVH, the geometries in each AABB are divided into two groups by splitting at the mid-point of the AABB in one of the coordinated axises. In three dimensions, the X, Y, and Z axises are used for splitting in a round-robin fashion, as the depth of the tree increases. A naive implementation of this splitting method would start at the root of the tree, and recursively divides each node using this heuristic. Unsurprisingly, this recursive algorithm parallelizes poorly. This motivates this project to employ a more sophisticated method described at \cite{bvh_build}, which uses a spatial encoding called \textit{morton code} and a data structure known as \textit{binary radix tree}.
 
 The algorithm begins by taking the centroid of each geometric primitive. The algorithm scales and rounds each component of the centroid, so that it is represented by a 21-bit integer. Then, using the integer tuple $(x,y,z)$ which represents the position of the centroid, the algorithm computes its \textit{morton code}, which is a 63-bit integer defined as
 $$ M=x_0~y_0~z_0~x_1~y_1~z_1~...~x_{20}~y_{20}~z_{20} $$

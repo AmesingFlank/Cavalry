@@ -129,12 +129,12 @@ Here, the support $\Omega$ is often a sphere or hemisphere of possible incoming 
 
 \subsection{The BRDF}
 
-In order to accurately model the incoming and outgoing radiances at each point, it is essential to take into account the fact that surfaces can reflect incoming light. That is, for any direction $\omega_i$, the incoming radiance $L_i(p,\omega_i)$ can contribute to the outgoing radiance $L_o(p,\omega_o)$ of another direction $\omega_o$. For each surface point, this relationship is captured by the bi-directional reflectance distribution function (BRDF), written as $f_r(p,\omega_o,\omega_i)$. Formally, the BRDF is defined as 
+In order to model the outgoing radiances at each point, it is essential to account for the fact that surfaces reflect incoming light: for any direction $\omega_i$, the incoming radiance $L_i(p,\omega_i)$ contributes to the outgoing radiance $L_o(p,\omega_o)$ of another direction $\omega_o$. This relationship is captured by the bi-directional reflectance distribution function (BRDF), written as $f_r(p,\omega_o,\omega_i)$. Formally, the BRDF is defined as 
 \begin{align}
     f_r(p,\omega_o,\omega_i) = \frac{dL_o(p,\omega_o)}{dE(p,\omega_i)}
     \label{BRDF def 1}
 \end{align}
-where $dE(p,\omega_i)$ represents the differential incoming irradiance in the direction $\omega_i$.
+where $dE(p,\omega_i)$ represents the differential incoming irradiance at the direction $\omega_i$.
 
 Using equation \ref{radiance integral}, it can be derived that 
 \begin{align}
@@ -144,19 +144,14 @@ which allows equation \ref{BRDF def 1} to be re-written as
 \begin{align}
     f_r(p,\omega_o,\omega_i) = \frac{dL_o(p,\omega_o)}{L_i(p,\omega_i)\cos\theta_id\omega_i}
 \end{align}
-From this, it's straightforward to show that
+From this, it's straightforward to show that, for some $C$,
 \begin{align}
     L_o(p,\omega_o) = \int_\Omega L_i(p,\omega_i)f_r(p,\omega_o,\omega_i)\cos\theta_id\omega_i + C
     \label{reflection plus C}
 \end{align}
-for some $C$.
 
-Equation \ref{reflection plus C} shows that, given the incident radiances and the BRDF, the portion of outgoing radiances caused by reflections can be computed. As a result, the BRDF of a surface completely decides how the surface reflects light, which is a crucial factor of its appearances when viewed by a camera. Different materials in the real world have drastically different BRDFs, and it's vital for a physically based renderer to accurately implement these functions, if photorealistic images are to be rendered. A family of BRDFs known for their physical accuracy are the Microfacet BRDFs, which are well implemented by this project. Unfortunately, due to the complexity of these models, details of these BRDFs could not be described here. 
-\begin{figure}[H]
-    \centering
-    \includegraphics[scale = 0.6]{brdfs}
-    \caption{Shapes of example BRDFs. Image credit\cite{akenine2019real}}
-\end{figure}
+The BRDF of a surface completely decides how it reflects light, which is a crucial factor of its appearances. Different materials in the real world have drastically different BRDFs, and it's vital for a physically based renderer to accurately implement these functions. A family of BRDFs known for their physical accuracy are the Microfacet BRDFs\cite{cook1982reflectance}, which are well implemented by this project. Unfortunately, due to their complexity, details of these BRDFs could not be described here. 
+
 
 In order to fully model $L_o(p,\omega_o)$, it remains to describe the term $C$ in equation \ref{reflection plus C}. Surfaces in the real world sends outgoing radiances for two reasons only: they might emit light actively, and they reflect incoming light. Equation \ref{reflection plus C} already includes the reflected radiances, and thus it only remains to include actively emitted light. Writing $L_e(p,\omega_o)$ for the actively emitted radiance from $p$ towards the direction $\omega_o$, the following equation completely describes $L_o$:
 \begin{align}
@@ -204,12 +199,13 @@ Under the assumption that radiance is constant along each ray, the incoming radi
 \end{tikzpicture}
 
 \end{figure} 
-Thus, defining the ray-tracing function $t(p,\omega_i)$ as a function that computes the first surface point $q$ intersected by a ray from $p$ in the direction $\omega_i$, the rendering equation is re-written in a new form:
+Thus, defining the ray-tracing function $t(p,\omega_i)$ that computes the first surface point $q$ intersected by a ray originated from $p$ and travels in the direction $\omega_i$, the rendering equation is re-written as:
 \begin{align}
     L_o(p,\omega_o) = L_e(p,\omega_o) + \int_\Omega L_o(t(p,\omega_i),-\omega_i)f_r(p,\omega_o,\omega_i)\cos\theta_id\omega_i
     \label{rendering equation with cast}
 \end{align}
-Finding solutions to this equation is the ultimate goal of rendering, because the job of any renderer is to compute the amount of radiance received by a hypothetical camera placed in the scene. In other words, for each point $p$ that is visible from the camera, the rendering algorithm must compute $L_o(p,\omega_o)$, where $\omega_o$ points from $p$ towards the camera. The following section will begin the discussion of how this equation is solved in practice.
+
+Finding solutions to this equation is the ultimate goal of rendering, because the job of any renderer is to compute the amount of radiance received by a hypothetical camera placed in the scene. For each point $p$ visible from the camera, the rendering algorithm must compute $L_o(p,\omega_o)$, where $\omega_o$ points from $p$ towards the camera. 
 
 \section{Monte Carlo Integration}
 
@@ -261,13 +257,13 @@ where the weights $w_f$ and $w_g$ are defined by
 \end{align*}
 A full recount of why this weighting scheme reduces variance can be found in \cite{pharr2016physically}. 
 
-In order to apply MIS to solving the rendering equation, the renderer need to sample from a PDF $p_{rad}$ which matches to the incoming radiance $L_o(t(p,\omega_i),-\omega_i)$, and another PDF $p_{ref}$ which matches the reflection term $f_r(p,\omega_o,\omega_i)\cos\theta_i$. In the path-tracing algorithm implemented by this project, $p_{rad}$ is a distribution which only samples $\omega_i$ that points to a light source, which is often much brighter than surfaces that indirectly reflects light. For $p_{ref}$, which corresponds to surface reflection and is thus material dependent, the project implemented specific sampling routings for each individual material, thereby maximizing the similarity between the PDF and the BRDF of the materials. 
+To apply MIS when solving the rendering equation, the renderer samples from a PDF $p_{rad}$ that matches to the incoming radiance $L_o(t(p,\omega_i),-\omega_i)$, and another PDF $p_{ref}$ that matches the reflection term $f_r(p,\omega_o,\omega_i)\cos\theta_i$. In the implementation of this project, $p_{rad}$ is a distribution which only samples $\omega_i$ that points to a light source, which is often much brighter than surfaces that indirectly reflects light. For $p_{ref}$, the project implemented specific sampling routings for each individual BRDF, thereby maximizing the similarity between the PDF and the BRDF of each sample point.
 
 
 \section{The Path Space Formulation}
 The rendering equation as written in equation \ref{rendering equation with cast} is inconvenient for deriving algorithms, because the relationship between geometries in the scene is implicit in the ray-tracing function $t(p,\omega_i)$. This section rewrites the equation into a from that makes this relationship more explicit.
 
-Firstly, equation \ref{rendering equation with cast} is to be transformed from an integral over directions into an integral over area. More precisely, the variable of integration $\omega_i$, which represents an incoming direction, is to be replaced by a point $p_{src}$, which represents the source of the incoming ray. To achieve this change of variable, for any two points $p,p'$ that are mutually visible, define 
+Firstly, equation \ref{rendering equation with cast} is to be transformed from an integral over directions into an integral over area. Specifically, the variable of integration $\omega_i$, which represents an incoming direction, is to be replaced by a point $p_{src}$, which represents the source of the incoming ray. To achieve this, for any pair of mutually visible points $p,p'$, define 
 \begin{align*}
     L_o(p'\to p) = L_o(p',\omega)\\
     L_e(p'\to p) = L_e(p',\omega)
@@ -297,58 +293,66 @@ The equation above is referred to as the surface form light transport equation, 
     &+ \int_A \int_A L_e(p_3\to p_2)f_r(p_3\to p_2\to p_1) G(p_3,p_2)f(p_2\to p_1\to p_0)G(p_2,p_1) ~ dp_3dp_2\\
     &+~...
 \end{align*}
-Here, each term represents the radiance contributed by paths of increasing length. For example, the first term in the sum represents the radiance directly emitted at $p_1$; the second term represents the radiance emitted at some point $p_2$ and reflected at $p_1$; the third term represents the radiance emitted at $p_3$ and reflected at $p_2$ and then again at $p_1$, and so on. For a path with $n$ reflection points, the source emission is $L_e(p_{n+1}\to p_{n})$, and it is weighted by a throughput term $T_n$, which is the product of the $f_r$ and $G$ at each reflection point:
+Here, each term represents the radiance contributed by paths of increasing length. For a path with $n$ reflection points, the source emission is $L_e(p_{n+1}\to p_{n})$, and it is weighted by a throughput term $T_n$, which is the product of the $f_r$ and $G$ at each reflection point:
 \begin{align*}
     T_n = \prod_{i=1}^{n} f_r(p_{n+1}\to p_n\to p_{n-1})G(p_{n+1},p_n)
 \end{align*}
-which allows the previous equation to be written as
+Substituting this into the previous equation gives
 \begin{align*}
     L_o(p_1\to p_0) = \sum_{n=0}^{\infty} \underbrace{\int_A \int_A...\int_A}_{n} L_e(p_{n+1}\to p_{n})T_n dp_{n}dp_{n-1}...dp_1
 \end{align*}
 
-Notice that, the throughput term $T_n$ computes the portion of radiance that remains after $n$ reflections, which tends to decrease exponentially as $n$ increases. For this reason, it is natural to only consider the first few terms of this infinite sum. More precisely, given a maximum amount of reflections $MaxDepth$, the radiance $L_o(p_1\to p_0)$ can be estimated by 
+
+Notice that, the throughput term $T_n$ computes the portion of radiance that remains after $n$ reflections, which tends to decrease exponentially as $n$ increases. For this reason, it is natural to only consider the first few terms of this infinite sum (see figure \ref{fig maxdepth}). More precisely, given a maximum amount of reflections $MaxDepth$, the radiance $L_o(p_1\to p_0)$ can be estimated by 
 \begin{align}
     L_o(p_1\to p_0) = \sum_{n=0}^{MaxDepth} \underbrace{\int_A \int_A...\int_A}_{n} L_e(p_{n+1}\to p_{n})T_n dp_{n}dp_{n-1}...dp_1
     \label{rendering equation path tracing}
 \end{align}
 
-If a Monte Carlo estimator is used to approximate the value for each integral, the above formula becomes a recipe for a practical algorithm for computing radiances. This leads to the famous algorithm known as path-tracing, which is described in the next section.
+If a Monte Carlo estimator is used to approximate the integrals, the above formula becomes a recipe for a practical algorithm for computing radiances. This leads to the famous algorithm known as path-tracing, which is described in the next section.
+
+\begin{figure}[H]
+    \centering
+    
+    \begin{minipage}[t]{.45\textwidth}
+        \centering
+        \vspace{0pt}
+        \includegraphics[width=.96\textwidth]{cornell_d1.png}
+        \subcaption{$MaxDepth=1$}
+    \end{minipage}
+    \begin{minipage}[t]{.45\textwidth}
+        \centering
+        \vspace{0pt}
+        \includegraphics[width=.96\textwidth]{cornell_d2.png}
+        \subcaption{$MaxDepth=2$}
+    \end{minipage}
+
+    \vspace{0.3cm}
+
+    \begin{minipage}[t]{.45\textwidth}
+        \centering
+        \vspace{0pt}
+        \includegraphics[width=.96\textwidth]{cornell_d3.png}
+        \subcaption{$MaxDepth=3$}
+    \end{minipage}
+    \begin{minipage}[t]{.45\textwidth}
+        \centering
+        \vspace{0pt}
+        \includegraphics[width=.96\textwidth]{cornell_d4.png}
+        \subcaption{$MaxDepth=4$}
+    \end{minipage}
+    \caption{Effect of increasing $MaxDepth$}
+    \label{fig maxdepth}
+\end{figure}
 
 \section{The Path-Tracing Algorithm}
-The input of the path-tracing algorithm is a scene, defined by its geometries and materials, together with a camera, defined by its position, orientation, image resolution, and field of view (FOV) angle. Additionally, the algorithm is also parameterized by an integer $spp$, which stands for samples per pixel.
 
-For each pixel on the image, the path-tracing algorithm samples $spp$ random points on the pixel. For each of these random points, the algorithm generates $1+MaxDepth*2$ paths of increasing length, and accumulates the radiance carried by these paths. Finally, the radiances for all sample points in each pixel are combined by a Monte Carlo estimator, which decides the final value of the pixel.
+The path-tracing algorithm is parameterized by an integer, $spp$, which stands for samples per pixel. The algorithm samples $spp$ random points on each pixel to be rendered, and generate an initial ray corresponding to each sample point. Starting from the ray, the algorithm constructs $MaxDepth*2$ paths of increasing length, and accumulates the radiances carried by these paths. These radiances are combined by a MIS Monte Carlo estimator, which decides the final value of the pixel.
 
-The path tracing algorithm generates paths incrementally, where previous reflection points are reused. More precisely, after generating $n$ reflection points $p_1,...,p_n$ , whose throughput is $T_n$, the algorithm does the following:
-
-
-\begin{algorithm}[H]
-    \label{Path construction}
-    \SetKwProg{Fn}{Function}{:}{end}
-    
-    Samples a point $p_{light}$ from a light source.\;
-
-    Test whether the ray $p_{light}\to p_n$ is occluded by some geometry. If not, then this generates a path of $n$ reflections, whose radiance is to be accumulated\;
-
-    Sample a direction $\omega_i$ from a distribution that matches the BRDF at $p_n$\;
-
-    Trace the ray with origin $p_n$ and direction $\omega_i$. Let the intersection with the scene be $p_{n+1}$\;
-
-    If $p_{n+1}$ is on a light source, then again this leads is a path of $n$ reflections, whose radiance is accumulated\;
+The path tracing algorithm generates paths incrementally, starting from the camera location $p_0$. At each surface point $p_n$, the algorithm samples an incoming direction (for $p_{1}\to p_0$, the direction is fixed by the configuration of the camera), and traces the incoming ray to find $p_{n+1}$. If the point $p_{n+1}$ emits light actively, then this constitutes a path of $n$ reflection point. Moreover, $p_{n+1}$ also serves as the next reflection point, so the algorithm samples a point $p_{light}$ that illuminates $p_{n+1}$, and the radiance can be passed back to $p_0$ through a chain of reflections.
 
 
-    Let $p_{n+1}$ be the next reflection point\;
-
-    Let $T_{n+1}$ be $T_n  f_r(p_{n+1}\to p_n\to p_{n-1})G(p_{n+1},p_n)$\;
-
-    \caption{Incremental Path Construction}
-\end{algorithm}
-
-~
-
-Notice that, step 2 and 5 are two different ways a light emitter can illuminate the pont $p_n$, and these two different paths exactly correspond to Multiple Importance Sampling, described in subsection \ref{subsection MIS}. Thus, when accumulating their radiances, the MIS weight should be applied.
-
-To summarize, the path-tracing algorithm works as follows:
+More precisely, the path tracing algorithm works as follows:
 
 
 \begin{algorithm}[H]
@@ -356,18 +360,74 @@ To summarize, the path-tracing algorithm works as follows:
     \SetKwProg{Fn}{Function}{:}{end}
     \ForEach{\upshape pixel in the image}{
         \For{\upshape $i$ from 1 to $spp$}{
-            Let $p_0$ be the location of the camera\;
-            Randomly select a location inside the pixel, and generate a ray $r$ corresponding to this location\;
-            Compute the first intersection point $p_1$ between $r$ and the scene\;
-            Accumulate $L_e(p_1\to p_0)$\;
-            \For{\upshape $n$ from $1$ to $MaxDepth$}{
-                Incrementally construct two further paths, using algorithm \ref{Path construction}\;
-                Accumulate the radiances from the newly generated paths, weighted by MIS\;
+            Generate the initial ray $r_0$ going out of the camera position $p_0$\;
+            \For{\upshape $n$ from 1 to $MaxDepth$}{
+                Find $p_n$ by computing the intersection between $r_{n-1}$ and the scene\;
+
+                \If{\upshape $p_n$ is on a light source}{
+                    Accumulate the radiance of the path $p_n\to p_{n-1}\to ... \to p_0$\;
+                }
+                
+                Sample a point $p_{light}$ on a light source\;
+
+                
+                \If{\upshape the ray $p_{light}\to p_n$ is not occluded}{
+                    Accumulate the radiance of the path $p_{light}\to p_n\to ... \to p_0$\;
+                }
+                
+                Sample a direction $\omega_i$ from a PDF matching the BRDF at $p_n$\;
+
+                Generate the ray $r_{n}$, originated at $p_n$ and points towards $\omega_i$\;
+                
             }
+            
         }
-        Combine radiances computed by each sample to obtain final color of pixel\;
+        Combine radiances computed by all samples to obtain final color of pixel\;
     }
     \caption{Path Tracing}
 \end{algorithm}
 
-This algorithm is now the corner stone of photorealistic rendering. The remainder of this report will discuss the problem of efficiently implementing it on GPUs, and a variant of this algorithm where Reinforcement Learning is used to make smarter choices during importance sampling.
+~
+
+Notice that, line 7 and 10 are two different ways a light emitter can illuminate $p_{n-1}$, and these two paths exactly correspond to the MIS procedure described in section \ref{subsection MIS}. When accumulating their radiances, the MIS weight should be applied.
+
+
+For each pixel, the algorithm estimates its color using a total of $spp*2*MaxDepth$ paths. Thus, as the parameter $spp$ increases, the variance of the Monte Carlo Estimator is reduced, which implies less noise in the rendered image. The following figure illustrates this effect.
+
+
+\begin{figure}[H]
+    \centering
+    
+    \begin{minipage}[t]{.45\textwidth}
+        \centering
+        \vspace{0pt}
+        \includegraphics[width=.96\textwidth]{cornell_spp1.png}
+        \subcaption{$spp=1$}
+    \end{minipage}
+    \begin{minipage}[t]{.45\textwidth}
+        \centering
+        \vspace{0pt}
+        \includegraphics[width=.96\textwidth]{cornell_spp4.png}
+        \subcaption{$spp=4$}
+    \end{minipage}
+
+    \vspace{0.3cm}
+
+    \begin{minipage}[t]{.45\textwidth}
+        \centering
+        \vspace{0pt}
+        \includegraphics[width=.96\textwidth]{cornell_spp16.png}
+        \subcaption{$spp=16$}
+    \end{minipage}
+    \begin{minipage}[t]{.45\textwidth}
+        \centering
+        \vspace{0pt}
+        \includegraphics[width=.96\textwidth]{cornell_spp64.png}
+        \subcaption{$spp=64$}
+    \end{minipage}
+    \caption{Effect of increasing $MaxDepth$}
+    \label{fig maxdepth}
+\end{figure}
+
+For a typical scene, $spp$ is required to be at least 1024 in order to reduce noise down to an inconceivable level. Common images to be rendered consists of around 1 million pixels, thus around 1 billion pixel samples are often needed. Moreover, each ray generated in the algorithm needs to tested for intersection with the entire scene, which often consists of millions of geometric primitives. The next chapter of this report will discuss how this project copes with this humongous amount of computation and implements an efficient path-tracing renderer.
+
