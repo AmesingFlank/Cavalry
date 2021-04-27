@@ -221,7 +221,7 @@ the Monte Carlo estimator randomly samples $N$ points $x_1,...,x_n\in \Omega$ ac
 where $p(x_i)$ is the probability density of sampling $x_i$ according to $D$. It can be proved that this indicator is both unbiased $(E[I_N]=I)$ and consistent $(\lim_{N\to\infty}I_N = I)$. When applied to the rendering equation, the support $\Omega$ is the sphere or hemisphere of directions, and the function $f$ is computed by recursively estimating $L_o$, and then multiplying by the BRDF and the cosine of the direction.
 
 \subsection{Importance Sampling}
-
+\label{subsection IS}
 In rendering, the variance $\Var[I_N]$ of the Monte Carlo estimator manifest in the form of random noise in the resulting image. Thus, variance reduction techniques are vital for rendering high-quantity images efficiently. One of the most important such techniques is importance sampling.
 
 In the monte carlo estimator, the distribution $D$ used can be an arbitrary distribution. However, different distributions can lead to dramatically different variances. Importance sampling uses the fact that, informally, the variance $\Var[I_N]$ is reduced as the shape of the PDF $p(x)$ becomes similar to the shape of the integrand $f(x)$. As an example, consider when the PDF is 
