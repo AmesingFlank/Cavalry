@@ -314,7 +314,7 @@ void copyToBVH(int nodesCount,BVHRestructureNode* tempNodes,BVHNode* nodes) {
     nodes[i].primitiveIndexEnd = tempNodes[i].primitiveIndexEnd;
 }
 
-BVH BVH::build(Triangle* primitivesDevice, int primitivesCount,const AABB& sceneBounds){
+BVH BVH::build(Triangle* primitivesDevice, int primitivesCount,const AABB& sceneBounds,int optimizationRounds){
     std::cout << "started building bvh" << std::endl;
     BVH bvh(primitivesCount);
 
@@ -353,7 +353,7 @@ BVH BVH::build(Triangle* primitivesDevice, int primitivesCount,const AABB& scene
     Timer::getInstance().stop("LBVH Construction");
     Timer::getInstance().start("BVH Optimization");
 
-    optimizeBVH(primitivesCount, restructureNodes);
+    optimizeBVH(primitivesCount, restructureNodes, optimizationRounds);
 
     Timer::getInstance().stop("BVH Optimization");
 

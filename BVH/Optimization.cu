@@ -505,7 +505,7 @@ void optimizeBVHImpl(int nodesCount, BVHRestructureNode* nodes, unsigned int* vi
     
 }
 
-void optimizeBVH(int primitivesCount,GpuArray<BVHRestructureNode>& nodes){
+void optimizeBVH(int primitivesCount,GpuArray<BVHRestructureNode>& nodes, int optimizationRounds){
     int nodesCount = nodes.N;
     int threadsNeeded = nodesCount * 32;
 
@@ -514,8 +514,7 @@ void optimizeBVH(int primitivesCount,GpuArray<BVHRestructureNode>& nodes){
 
     GpuArray<unsigned int> visited(nodesCount,false);
 
-    constexpr int rounds = 3;
-    for (int i = 0; i < rounds; ++i) {
+    for (int i = 0; i < optimizationRounds; ++i) {
         visited.clear();
 
         optimizeBVHImpl << < numBlocks, numThreads, BYTES_NEEDED_PER_WARP* numThreads / 32 >> > (nodesCount, nodes.data, visited.data);

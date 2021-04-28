@@ -77,7 +77,7 @@ public:
 
     SceneHandle getDeviceHandle() const;
 
-    void prepareForRender();
+    void prepareForRender(int spp);
 
     void copyToDevice();
 

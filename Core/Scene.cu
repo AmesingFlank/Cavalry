@@ -114,7 +114,7 @@ void Scene::buildGpuReferences() {
     CHECK_CUDA_ERROR("build triangles gpu refs");
 };
 
-void Scene::prepareForRender() {
+void Scene::prepareForRender(int spp) {
 
     for (auto& light : lightsHost) {
         light.prepareForRender();
@@ -138,7 +138,12 @@ void Scene::prepareForRender() {
     auto temp = sceneBounds;
     std::cout << "scene bounds " << temp.minimum.x << ", " << temp.minimum.y << ", " << temp.minimum.z << ",   to  " << temp.maximum.x << ", " << temp.maximum.y << ", " << temp.maximum.z << std::endl;
 
-    bvh = BVH::build(trianglesDevice.data,trianglesDevice.N,sceneBounds);
+    int bvhOptimizationRounds = 3;
+    if (spp >= 64) {
+        bvhOptimizationRounds = 10;
+    }
+
+    bvh = BVH::build(trianglesDevice.data,trianglesDevice.N,sceneBounds, bvhOptimizationRounds);
 
     std::cout << "done preparations. TrianglesCount: " << trianglesHost.size() << std::endl;
 }

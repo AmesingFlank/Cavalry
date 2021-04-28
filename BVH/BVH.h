@@ -16,7 +16,7 @@ struct BVH{
 
     BVH getCopyForKernel() const;
 
-    static BVH build(Triangle* trianglesDevice, int trianglesCount, const AABB& sceneBounds);
+    static BVH build(Triangle* trianglesDevice, int trianglesCount, const AABB& sceneBounds, int optimizationRounds);
 
     // BVH Traversal Optimisation: go to nearest child first, and don't expand a node if minDist < result.distance
 

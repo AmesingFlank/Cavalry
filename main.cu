@@ -12,7 +12,7 @@ void run(const Parameters& renderParameters) {
 
     Timer::getInstance().start("Rendering");
     Timer::getInstance().start("Preparation");
-    setup.scene.prepareForRender();
+    setup.prepareForRender();
     Timer::getInstance().stop("Preparation");
     auto& result = setup.renderer.render(setup.scene);
     Timer::getInstance().stop("Rendering");

@@ -21,4 +21,9 @@ struct RenderSetup{
         }
         return fileName;
     }
+
+    void prepareForRender() {
+        int spp = renderer.integrator->sampler->getSamplesPerPixel();
+        scene.prepareForRender(spp);
+    }
 };
