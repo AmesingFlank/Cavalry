@@ -5,11 +5,12 @@
 
 
 
-Film::Film():samplesSum(0,true),samplesCount(0,true){}
+Film::Film():samplesSum(0,true), samplesWeightSum(0,true){}
 
-Film::Film(int width_, int height_,bool isCopyForKernel_):
+Film::Film(int width_, int height_, const FilterObject& filter_, bool isCopyForKernel_):
 samplesSum(width_*height_, isCopyForKernel_),
-samplesCount(width_*height_, isCopyForKernel_)
+samplesWeightSum(width_*height_, isCopyForKernel_),
+filter(filter_)
 {
 	width = width_;
     height = height_;
@@ -17,12 +18,12 @@ samplesCount(width_*height_, isCopyForKernel_)
 
 
 __global__
-void apply(int pixelsCount, Spectrum* samplesSum, int* samplesCount, unsigned char* data){
+void apply(int pixelsCount, Spectrum* samplesSum, float* samplesWeightSum, unsigned char* data){
     int index = blockIdx.x * blockDim.x + threadIdx.x;
     if (index >= pixelsCount) {
         return;
     }
-    Spectrum spectrum = samplesSum[index] / (float)samplesCount[index];
+    Spectrum spectrum = samplesSum[index] / samplesWeightSum[index];
     writeColorAt(clampBetween0And1(spectrum),&(data[index*3]));
 }
 
@@ -36,7 +37,7 @@ RenderResult Film::readCurrentResult(){
     int numThreads = min(pixelsCount,MAX_THREADS_PER_BLOCK);
     int numBlocks = divUp(pixelsCount,numThreads);
 
-    apply<<<numBlocks,numThreads>>> (pixelsCount,samplesSum.data,samplesCount.data,data.data);
+    apply<<<numBlocks,numThreads>>> (pixelsCount, samplesSum.data, samplesWeightSum.data,data.data);
     CHECK_CUDA_ERROR("apply box filter");
 
     RenderResult result(width,height);
@@ -46,14 +47,14 @@ RenderResult Film::readCurrentResult(){
 
 
 Film Film::getCopyForKernel() {
-    Film copy(width,height,true);
+    Film copy(width,height,filter,true);
     copy.samplesSum = samplesSum.getCopyForKernel();
-    copy.samplesCount = samplesCount.getCopyForKernel();
+    copy.samplesWeightSum = samplesWeightSum.getCopyForKernel();
     return copy;
 }
 
-Film Film::createFromParams(const Parameters& params){
+Film Film::createFromParams(const Parameters& params, const FilterObject& filter){
 	int width = params.getNum("xresolution");
 	int height = params.getNum("yresolution");
-	return Film(width,height,false);
+	return Film(width,height,filter,false);
 }

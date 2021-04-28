@@ -182,6 +182,7 @@ void parseSceneWideOptions(TokenBuf& buf,RenderSetup& result, const Parameters& 
 	ObjectDefinition filmDef;
 	ObjectDefinition integratorDef;
 	ObjectDefinition samplerDef;
+	ObjectDefinition filterDef;
 
 	// parse scene-wide options
 	while(true){
@@ -224,6 +225,9 @@ void parseSceneWideOptions(TokenBuf& buf,RenderSetup& result, const Parameters& 
 					integratorDef.objectName = overridenParams.getString("integrator");
 				}
 			}
+			else if (keyWord->word == "PixelFilter") {
+				filterDef = readObjectDefinition(buf);
+			}
 			
 			else{
 				std::cout<<"reading unrecognized object from "<<buf.currentIndex;
@@ -236,15 +240,17 @@ void parseSceneWideOptions(TokenBuf& buf,RenderSetup& result, const Parameters& 
 		}
 	}
 
-	if(!(cameraDef.isDefined && filmDef.isDefined && integratorDef.isDefined && samplerDef.isDefined)){
-		SIGNAL_ERROR("incomplete scene-wide options");
+	if(!(cameraDef.isDefined && filmDef.isDefined && integratorDef.isDefined && samplerDef.isDefined && filterDef.isDefined)){
+		SIGNAL_ERROR("incomplete scene-wide options: requires Camera, Film, Integrator, Sampler, PixelFilter");
 	}
 
 	auto integrator = CreateIntegrator::createFromObjectDefinition(integratorDef);
 	integrator->sampler = std::make_unique<SamplerObject>(SamplerObject::createFromObjectDefinition(samplerDef));
 
+	auto filter = FilterObject::createFromObjectDefinition(filterDef);
+
 	result.renderer.integrator = std::move(integrator);
-	result.renderer.film = std::make_unique<Film>(Film::createFromParams(filmDef.params));
+	result.renderer.film = std::make_unique<Film>(Film::createFromParams(filmDef.params,filter));
 	int width = result.renderer.film->width;
 	int height = result.renderer.film->height;
 	result.renderer.camera = std::make_unique<CameraObject>(CameraObject::createFromObjectDefinition(cameraDef,glm::inverse(transform),width,height));
