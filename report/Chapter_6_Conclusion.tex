@@ -1,0 +1,20 @@
+\chapter{Conclusions}
+
+This project explored how to utilize GPUs for photorealistic rendering. The project implemented a parallel version of the path-tracing algorithm, as well as a variant of path-tracing where online Reinforcement Learning guides the generation of new rays. These algorithms are accelerated by a Bounding Volume Hierarchy system, where state-of-the-art BVH construction, optimization, and traversal procedures are implemented. The project demonstrates how these different algorithms can be combined and parallelized together to form an extremely efficient photorealistic rendering system. The software created is named $Cavalry$, and its full source code is available at \url{https://github.com/AmesingFlank/Cavalry}.
+
+\section{Limitations \& Future Work}
+During the development of this project, many ideas emerged that would all bring more significance to this project. Unfortunately, the time permitted did not allow them to be explored. The following are a few valuable features that the program does not yet support, but could be added in future endeavors.
+
+\begin{itemize}
+
+    \item Sub-Surface Scattering
+    
+    For most surfaces, when a light ray hits the surface at a point, the reflected rays start at the exact same point. However, this is not true for all objects in the real world. There're certain materials (e.g., jade) such that light enters the object at one point, and leaves the object at a slightly different point. These materials are described by bi-directional scattering-surface reflectance distribution functions (BSSRDFs), written as $S(p_o,w_o,p_i,w_i)$. The additional argument $p_o$ to this reflectance function brings extra complexity to the renderer, but also enables it to capture a more complete range of real world objects
+
+    \item Volume Rendering
+
+    \item Other variants of path-tracing.
+    
+
+
+\end{itemize}
