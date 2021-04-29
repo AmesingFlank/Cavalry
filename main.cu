@@ -17,7 +17,8 @@ void run(const Parameters& renderParameters) {
     auto& result = setup.renderer.render(setup.scene);
     Timer::getInstance().stop("Rendering");
     result.saveToPNG(setup.getOutputFileName());
-    Timer::getInstance().printStatistics();
+    Timer::getInstance().printStatistics("Preparation");
+    Timer::getInstance().printStatistics("Rendering");
 }
 
 
