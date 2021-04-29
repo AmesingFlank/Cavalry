@@ -9,10 +9,21 @@
 #include <thrust/device_vector.h>
 #include "SamplingState.h"
 
+enum class CameraSamplingOrder {
+	PixelByPixel,
+	sppBySpp
+};
+
+class SamplerObject;
+
 class Sampler{
 public:
 
 	int samplesPerPixel;
+
+	int completedPixels = 0;
+	int completedSPPs = 0;
+	CameraSamplingOrder cameraSamplingOrder = CameraSamplingOrder::sppBySpp;
 
 	virtual void prepare(int threadsCount) {};
 
@@ -28,8 +39,9 @@ public:
 	__device__
 	virtual float4 rand4(SamplingState& samplingState) = 0;
 
-	virtual GpuArray<CameraSample> genAllCameraSamples(const CameraObject& camera, Film& film, int bytesNeededPerSample, int maxSamplesPerRound = -1) = 0;
+	virtual GpuArray<CameraSample> genAllCameraSamples(const CameraObject& camera, Film& film, int bytesNeededPerSample, int maxSamplesPerRound = -1);
 
+	virtual SamplerObject getObjectFromThis() = 0;
 
 	virtual int bytesNeededPerThread() = 0;
 };

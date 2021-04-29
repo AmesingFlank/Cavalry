@@ -27,7 +27,6 @@ inline float runHalton(unsigned int base, unsigned long long i,unsigned short* p
 class HaltonSampler: public Sampler{
 public:
 
-    int samplesPerPixel;
     int threadsCount;
 
     GpuArray<unsigned int> primes  ;
@@ -76,7 +75,8 @@ public:
         return make_float4(HaltonSampler::rand1(samplingState), HaltonSampler::rand1(samplingState), HaltonSampler::rand1(samplingState), HaltonSampler::rand1(samplingState));
     };
 
-    virtual GpuArray<CameraSample> genAllCameraSamples(const CameraObject& camera, Film& film, int bytesNeededPerSample,int maxSamplesPerRound = -1)  override;
+    //virtual GpuArray<CameraSample> genAllCameraSamples(const CameraObject& camera, Film& film, int bytesNeededPerSample,int maxSamplesPerRound = -1)  override;
+    virtual SamplerObject getObjectFromThis() override ;
 
     virtual int bytesNeededPerThread() override {
         return 0;

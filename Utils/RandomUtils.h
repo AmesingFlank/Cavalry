@@ -157,6 +157,22 @@ struct Distribution1D {
         }
         return result;
     }
+
+    __device__
+    int mode(float& outputProbability) {
+        int maxElement = 0;
+        float maxPDF = cdf[0];
+        for (int i = 1; i < N; ++i) {
+            float thisPDF = cdf[i] - cdf[i - 1];
+            if (thisPDF > maxPDF) {
+                //printf("heyy %f %f %d %d\n", thisPDF, maxPDF, i, maxElement);
+                maxElement = i;
+                maxPDF = thisPDF;
+            }
+        }
+        outputProbability = maxPDF;
+        return maxElement;
+    }
 };
 
 template <int size>

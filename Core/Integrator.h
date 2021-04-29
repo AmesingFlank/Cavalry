@@ -14,9 +14,9 @@ public:
     virtual void render(const Scene& scene, const CameraObject& camera, Film& film) = 0;
     std::unique_ptr<SamplerObject> sampler;
 
-    // a single call to render might not finish the entire rendering task.
     virtual bool isFinished(const Scene& scene, const CameraObject& camera, Film& film) {
-        return film.completedPixels == film.width * film.height;
+        return sampler->getCompletedPixels() == film.width * film.height 
+            || sampler->getCompletedSPPs() == sampler->getSamplesPerPixel() ;
     }    
 };
 

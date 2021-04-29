@@ -7,7 +7,7 @@
 
 namespace ReinforcementLearningPathTracing {
 
-#define Q_TABLE_SIZE 64
+#define Q_TABLE_SIZE 32
 
     using QDistribution = FixedSizeDistribution1D<QEntry::NUM_XY>;
 
@@ -55,8 +55,9 @@ namespace ReinforcementLearningPathTracing {
 
     struct LightingResult {
         Spectrum indirectLightingContrib;
-        Spectrum directLightingContrib;
         float3 rayToLightDirection;
+        float directLightingContrib;
+        float directLightingImmediate;
         float lightPDF;
     };
 
@@ -265,7 +266,6 @@ namespace ReinforcementLearningPathTracing {
                 }
             }
         }
-        results.data[index].directLightingContrib = directLightingContrib;
 
         Ray exitantRay = { intersection.position,thisRay.direction * -1 };
 
@@ -291,7 +291,9 @@ namespace ReinforcementLearningPathTracing {
 
         results.data[index].indirectLightingContrib = indirectLightingContrib;
         results.data[index].lightPDF = probability;
+        results.data[index].directLightingContrib = luminance(directLightingContrib);
         results.data[index].rayToLightDirection = rayToLight.direction;
+        results.data[index].directLightingImmediate = luminance(incident) * scene.lightsCount / probability;
 
     }
 
@@ -335,13 +337,11 @@ namespace ReinforcementLearningPathTracing {
             float scattering = luminance(intersection.bsdf.eval(incidentLocal, exitantLocal));
             float thisDirQ = abs(dot(dir, intersection.normal)) * scattering * thisEntry.Q[cellIndex];
             sumWeightedQ += thisDirQ;
-            dist.cdf[cellIndex] = thisDirQ;
+            dist.cdf[cellIndex] = sumWeightedQ;
         }
-        float accumulatedDensity = 0;
+
         for (int cellIndex = 0; cellIndex < QEntry::NUM_XY; ++cellIndex) {
-            float density = dist.cdf[cellIndex] / sumWeightedQ;
-            accumulatedDensity += density;
-            dist.cdf[cellIndex] = accumulatedDensity;
+            dist.cdf[cellIndex] /= sumWeightedQ;
         }
 
         sumWeightedQ *= (4.f * M_PI / (float)QEntry::NUM_XY);
@@ -350,8 +350,11 @@ namespace ReinforcementLearningPathTracing {
         if (previousQEntry.entryIndex != -1) {
             // update q table
             auto& lightingRes = lightingResults.data[index];
-            float proposal = sumWeightedQ + luminance(lightingRes.indirectLightingContrib + lightingRes.directLightingContrib);
+            float proposal =  sumWeightedQ + lightingRes.directLightingContrib + luminance(lightingRes.indirectLightingContrib);
             QTable.data[previousQEntry.entryIndex].proposeNextQ(proposal, previousQEntry.cellIndex);
+            if ( lightingRes.directLightingContrib > sumWeightedQ) {
+                //printf("contribs  %f, %f,  %f\n", luminance(lightingRes.directLightingContrib), luminance(lightingRes.indirectLightingContrib), sumWeightedQ);
+            }
         }
 
         // compute MIS
@@ -378,10 +381,21 @@ namespace ReinforcementLearningPathTracing {
 
         *result += lightingResults.data[index].indirectLightingContrib * multiplier * misWeight;
 
+        // update this entry as well, using direct lighting sampled.
+        if ( lightingResults.data[index].directLightingImmediate > 0) {
+            thisEntry.proposeNextQ(lightingResults.data[index].directLightingImmediate, rayToLightCellIndex);
+            //printf("proposing %f %f \n", luminance(lightingResults.data[index].directLightingHere), thisEntry.Q[rayToLightCellIndex]);
+        }
+
         // sample next ray Dir
         float& nextRayProbability = nextRayInfos.data[index].surfacePDF;
         if (sumWeightedQ != 0) {
             nextRayInfos.data[index].cellIndex = dist.sample(sampler.rand1(myTask.samplingState), nextRayProbability);
+            //nextRayInfos.data[index].cellIndex = dist.mode(nextRayProbability);
+
+            if (index == 100) {
+                //printf("prob %f   \n", nextRayProbability);
+            }
             nextRayProbability = (QEntry::NUM_XY * nextRayProbability / (4 * M_PI)); // Solid angle probability
             nextRayInfos.data[index].dir = thisEntry.sampleDirectionInCell(positionInCell, nextRayInfos.data[index].cellIndex);
             nextRayInfos.data[index].valid = true;
@@ -504,11 +518,24 @@ namespace ReinforcementLearningPathTracing {
         std::vector<QEntry> table = QTable.toVector();
         for (int i = 0; i <size; ++i) {
             QEntry entry = QTable.get(i);
+            bool hasAnyProposals = false;
+            for (int j = 0; j < QEntry::NUM_XY; ++j) {
+                if (entry.totalProposalCount[j] > 0) {
+                    hasAnyProposals = true;
+                    break;
+                }
+            }
+            if (!hasAnyProposals) {
+                std::cout << "Entry: " << i << "  no info"<<std::endl;
+                continue;
+            }
             std::cout << "Entry: " << i << std::endl;
             for (int y = 0; y < QEntry::NUM_Y; y++){
                 std::cout << "y=" << y << "   ";
                 for (int x = 0; x < QEntry::NUM_X; x++){
-                    std::cout << entry.Q[x + y * QEntry::NUM_X] << "  ";
+                    int thisIndex = x + y * QEntry::NUM_X;
+                    printf("%f(%d)\t", entry.Q[thisIndex],(int)entry.totalProposalCount[thisIndex]);
+                    //std::cout << entry.Q[x + y * QEntry::NUM_X] << "  ";
                 }
                 std::cout << std::endl;
             }

@@ -19,7 +19,6 @@ public:
 
 	int width;
 	int height;
-	int completedPixels = 0;
 
 	FilterObject filter;
 
