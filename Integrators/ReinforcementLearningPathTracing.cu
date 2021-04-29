@@ -7,6 +7,148 @@
 
 namespace ReinforcementLearningPathTracing {
 
+    struct QEntry {
+        static constexpr int NUM_X = 16;
+        static constexpr int NUM_Y = 8;
+        static constexpr int NUM_XY = NUM_X * NUM_Y;
+
+        __host__ __device__
+        static constexpr float INV_NUM_X() {
+            return 1.f / (float)NUM_X;
+        }
+
+        __host__ __device__
+        static constexpr float INV_NUM_Y() {
+            return 1.f / (float)NUM_Y;
+        }
+
+        float Q[NUM_XY];
+
+        float newQ[NUM_XY];
+        float proposalCount[NUM_XY];
+        float totalProposalCount[NUM_XY];
+
+        __device__
+        float defaultQ(int cellIndex)const {
+            return 1;
+        }
+
+        __device__
+        QEntry() {
+            for (int i = 0; i < NUM_XY; ++i) {
+                Q[i] = defaultQ(i);
+                totalProposalCount[i] = 0;
+            }
+        }
+
+        __device__
+        float alpha(int cellIndex) const {
+            //printf("computing alpha[%d]:  %f %f\n", cellIndex,proposalCount[cellIndex],totalProposalCount[cellIndex]);
+            if (proposalCount[cellIndex] == 0) {
+                return 0;
+            }
+            return (proposalCount[cellIndex]) / (totalProposalCount[cellIndex] + proposalCount[cellIndex]);
+        }
+
+        __device__
+        float averageQ() {
+            float sumQ = 0;
+            int count = 0;
+            for (int i = 0; i < NUM_XY; ++i) {
+                if (totalProposalCount[i] > 0) {
+                    sumQ += Q[i];
+                    count += 1;
+                }
+            }
+            if (count == 0) {
+                return defaultQ(0);
+            }
+            float avg = sumQ / (float)count;
+            for (int i = 0; i < NUM_XY; ++i) {
+                if (totalProposalCount[i] == 0) {
+                    Q[i] = avg;
+                    //printf("updaing avg%f\n", avg);
+                }
+            }
+            return avg;
+        }
+
+        __device__
+        float sumQ() {
+            float sumQ = 0;
+            for (int i = 0; i < NUM_XY; ++i) {
+                sumQ += Q[i];
+            }
+            return sumQ;
+        }
+
+
+        // should only be called by one thread for each cellIndex
+        __device__
+        void prepareForUpdateQ(int cellIndex) {
+            newQ[cellIndex] = 0;
+            proposalCount[cellIndex] = 0;
+        }
+
+        __device__
+        void proposeNextQ(float QVal, int cellIndex) {
+            atomicAdd(&(newQ[cellIndex]), QVal);
+            atomicAdd(&(proposalCount[cellIndex]), 1);
+            //printf("proposing %d %f\n", cellIndex, QVal);
+        }
+
+        // should only be called by one thread for each cellIndex
+        __device__
+        void finishUpdateQ(int cellIndex) {
+            float a = alpha(cellIndex);
+            if (a == 0) {
+                return;
+            }
+            float updatedQ = Q[cellIndex] * (1.f - a) + a * newQ[cellIndex] / proposalCount[cellIndex];
+            //printf("Q[%d]:   old:%f  new:%f  alpha:%f \n", cellIndex, Q[cellIndex], updatedQ, a);
+            Q[cellIndex] = updatedQ;
+            totalProposalCount[cellIndex] += proposalCount[cellIndex];
+        }
+
+
+        static __host__ __device__  int dirToCellIndex(float3 dir) {
+            float u = dir.z;
+            float y = (u + 1.f) / 2.f;
+            int thetaIndex = clampF((int)(y * QEntry::NUM_Y), 0, QEntry::NUM_Y - 1);
+
+            dir.x /= sqrt(1.f - u * u);
+            dir.y /= sqrt(1.f - u * u);
+
+            float v = acos(dir.x);
+            if (dir.y < 0) {
+                v = (2.f * M_PI) - v;
+            }
+            v = v / (2.f * M_PI);
+            int phiIndex = clampF((int)(v * QEntry::NUM_X), 0, QEntry::NUM_X - 1);
+            return thetaIndex * NUM_X + phiIndex;
+        }
+
+        __device__
+        float3 sampleDirectionInCell(float2 randomSource, int cellIndex) const
+        {
+            int thetaIdx = cellIndex / NUM_X;
+            int phiIdx = cellIndex % NUM_X;
+            float u = ((float)thetaIdx + randomSource.x) * INV_NUM_Y();
+            u = u * 2 - 1.f;
+            float v = ((float)phiIdx + randomSource.y) * INV_NUM_X();
+
+            float xyScale = sqrt(1.0f - u * u);
+            float phi = 2 * M_PI * v;
+
+            float3 dir = make_float3(
+                xyScale * cos(phi),
+                xyScale * sin(phi),
+                u);
+            return dir;
+        }
+    };
+
+
 #define Q_TABLE_SIZE 32
 
     using QDistribution = FixedSizeDistribution1D<QEntry::NUM_XY>;
@@ -228,9 +370,19 @@ namespace ReinforcementLearningPathTracing {
         nextRoundRayQueue.push(nextTask);
     }
 
+    __global__
+    void prepareLightingTraining(SceneHandle scene, GpuArray<float> lightSamplingNewResults, GpuArray<float> lightSamplingNewCount) {
+        int index = blockIdx.x * blockDim.x + threadIdx.x;
+        if (index >= lightSamplingNewResults.N) {
+            return;
+        }
+        lightSamplingNewResults.data[index] = 0;
+        lightSamplingNewCount.data[index] = 0;
+    }
 
     __global__
-    void computeLighting(SceneHandle scene, SamplerObject sampler, TaskQueue<LightingTask> tasks, int depth,GpuArray<QEntry> QTable,GpuArray<LightingResult> results) {
+    void computeLighting(SceneHandle scene, SamplerObject sampler, TaskQueue<LightingTask> tasks, int depth,GpuArray<QEntry> QTable,GpuArray<LightingResult> results,
+        GpuArray<float> lightSamplingDist, GpuArray<float> lightSamplingNewResults,  GpuArray<float> lightSamplingNewCount) {
         int tasksCount = tasks.count();
         int index = blockIdx.x * blockDim.x + threadIdx.x;
         if (index >= tasksCount) {
@@ -267,34 +419,94 @@ namespace ReinforcementLearningPathTracing {
             }
         }
 
-        Ray exitantRay = { intersection.position,thisRay.direction * -1 };
+        int thisEntryIndex = findQEntry(scene.sceneBounds, intersection.position);
+        Distribution1D lightDist(scene.lightsCount, lightSamplingDist.data + thisEntryIndex * scene.lightsCount);
 
-        int lightIndex = sampler.randInt(scene.lightsCount,myTask.samplingState);
+        float lightSelectionProbability;
+        int lightIndex = lightDist.sample(sampler.rand1(myTask.samplingState), lightSelectionProbability);
 
         const LightObject& light = scene.lights[lightIndex];
         Ray rayToLight;
-        float probability;
         float4 randomSource = sampler.rand4(myTask.samplingState);
 
         VisibilityTest visibilityTest;
         visibilityTest.sourceMeshIndex = intersection.primitive->shape.meshIndex;
 
-        Spectrum incident = light.sampleRayToPoint(intersection.position, sampler,myTask.samplingState, probability, rayToLight, visibilityTest, nullptr);
+        float lightPDF;
+        Spectrum incident = light.sampleRayToPoint(intersection.position, sampler,myTask.samplingState, lightPDF, rayToLight, visibilityTest, nullptr);
 
-        if (!(scene.testVisibility(visibilityTest) && isfinite(probability))) {
+        if (!(scene.testVisibility(visibilityTest) && isfinite(lightPDF))) {
             // then light is occluded. But still call materialEval in order to update Q.
             incident = make_float3(0, 0, 0); 
-            probability = 1;
+            lightPDF = 1;
         }
+        Ray exitantRay = { intersection.position,thisRay.direction * -1 };
         Spectrum indirectLightingContrib = intersection.primitive->material.eval(rayToLight, incident, exitantRay, intersection);
-        indirectLightingContrib *= scene.lightsCount / probability;
+        indirectLightingContrib *= 1.f / (lightPDF * lightSelectionProbability);
+
+        atomicAdd(lightSamplingNewResults.data + thisEntryIndex * scene.lightsCount + lightIndex, luminance(incident));
+        atomicAdd(lightSamplingNewCount.data + thisEntryIndex * scene.lightsCount + lightIndex, 1.f);
+
 
         results.data[index].indirectLightingContrib = indirectLightingContrib;
-        results.data[index].lightPDF = probability;
+        results.data[index].lightPDF = lightPDF;
         results.data[index].directLightingContrib = luminance(directLightingContrib);
         results.data[index].rayToLightDirection = rayToLight.direction;
-        results.data[index].directLightingImmediate = luminance(incident) * scene.lightsCount / probability;
+        results.data[index].directLightingImmediate = luminance(incident) * 1.f / (lightPDF * lightSelectionProbability);
 
+    }
+
+    __global__
+    void finishLightingTraining(SceneHandle scene, GpuArray<float> lightSamplingDist, GpuArray<float> lightSamplingResults, GpuArray<float> lightSamplingCount, GpuArray<float> lightSamplingNewResults, GpuArray<float> lightSamplingNewCount) {
+        int index = blockIdx.x * blockDim.x + threadIdx.x;
+        if (index >= Q_TABLE_SIZE * Q_TABLE_SIZE* Q_TABLE_SIZE) {
+            return;
+        }
+        int lightsCount = scene.lightsCount;
+        float sumResult = 0;
+        float validCount = 0;
+        Distribution1D lightDist(lightsCount, lightSamplingDist.data + index*lightsCount);
+        for (int i = 0; i < lightsCount; ++i) {
+            float& count = lightSamplingCount.data[index * lightsCount + i];
+            float& newCount = lightSamplingNewCount.data[index * lightsCount + i];
+            float& result = lightSamplingResults.data[index * lightsCount + i];
+            float& newResult = lightSamplingNewResults.data[index * lightsCount + i];
+
+            float oldResult = result;
+            
+            if (newCount > 0) {
+                result = (count / (count + newCount)) * result + (newCount / (count + newCount)) * (newResult / newCount);
+                count += newCount;
+                sumResult += result;
+                validCount += 1;
+            }
+
+            newCount = 0;
+            newResult = 0;
+        }
+        if (sumResult > 0) {
+            float avgResult = sumResult / (float)validCount;
+
+            float sumDensity = 0;
+            for (int i = 0; i < lightsCount; ++i) {
+                float& count = lightSamplingCount.data[index * lightsCount + i];
+                float& result = lightSamplingResults.data[index * lightsCount + i];
+                if (result > 0) {
+                    sumDensity += result;
+                    //printf("hey %f %d \n", result,index);
+                }
+                else if (count > 0) {
+                    sumDensity += avgResult / (float) count;
+                }
+                else {
+                    sumDensity += avgResult;
+                }
+                lightDist.cdf[i] = sumDensity;
+            }
+            for (int i = 0; i < lightsCount; ++i) {
+                lightDist.cdf[i] /= sumDensity;
+            }
+        }
     }
 
     __global__
@@ -481,6 +693,20 @@ namespace ReinforcementLearningPathTracing {
     }
 
     __global__
+    void initialiseLightSamplingDist(SceneHandle scene, GpuArray<float> lightSamplingDist) {
+        int index = blockIdx.x * blockDim.x + threadIdx.x;
+        if (index >= Q_TABLE_SIZE * Q_TABLE_SIZE * Q_TABLE_SIZE) {
+            return;
+        }
+        int lightsCount = scene.lightsCount;
+        Distribution1D lightDist(lightsCount, lightSamplingDist.data + index * lightsCount);
+        for (int i = 0; i < lightsCount; ++i) {
+            lightDist.cdf[i] = ((float)i + 1.f) / (float)lightsCount;
+        }
+        
+    }
+
+    __global__
     void prepareForUpdateQ(GpuArray<QEntry> QTable){
         int index = blockIdx.x * blockDim.x + threadIdx.x;
         if (index >= QTable.N*QEntry::NUM_XY) {
@@ -546,7 +772,18 @@ namespace ReinforcementLearningPathTracing {
 
 
     void RLPTIntegrator::render(const Scene& scene, const CameraObject& camera, Film& film) {
+        SceneHandle sceneHandle = scene.getDeviceHandle();
+        SamplerObject& samplerObject = *sampler;
+
+        int lightsCount = scene.lightsHost.size();
         GpuArray<QEntry> QTable(Q_TABLE_SIZE * Q_TABLE_SIZE * Q_TABLE_SIZE, false);
+        GpuArray<float> lightSamplingDist(Q_TABLE_SIZE * Q_TABLE_SIZE * Q_TABLE_SIZE * lightsCount, false);
+
+        GpuArray<float> lightSamplingResults(Q_TABLE_SIZE * Q_TABLE_SIZE * Q_TABLE_SIZE * lightsCount, false);
+        GpuArray<float> lightSamplingNewResults(Q_TABLE_SIZE * Q_TABLE_SIZE * Q_TABLE_SIZE * lightsCount, false);
+        GpuArray<float> lightSamplingCount(Q_TABLE_SIZE * Q_TABLE_SIZE * Q_TABLE_SIZE * lightsCount, false);
+        GpuArray<float> lightSamplingNewCount(Q_TABLE_SIZE * Q_TABLE_SIZE * Q_TABLE_SIZE * lightsCount, false);
+
 
         int bytesNeededPerThread = sizeof(CameraSample) + sampler->bytesNeededPerThread() + sizeof(Spectrum) + sizeof(RayTask)*2 + sizeof(LightingTask)*2 + sizeof(LightingResult)+sizeof(NextRayInfo)+4*sizeof(int) ;
         std::cout<<"Running RL Path Tracing Integrator. Bytes needed per thread: "<<bytesNeededPerThread<<std::endl;
@@ -555,18 +792,16 @@ namespace ReinforcementLearningPathTracing {
         setNumBlocksThreads(QTable.N, numBlocks, numThreads);
         initialiseQTable<<<numBlocks,numThreads>>>(QTable.getCopyForKernel());
 
+        setNumBlocksThreads(QTable.N, numBlocks, numThreads);
+        initialiseLightSamplingDist <<<numBlocks, numThreads >>> (sceneHandle,lightSamplingDist.getCopyForKernel());
+
         int round = 0;
 
         GpuArray<int> maxDimension(1);
 
         while(!isFinished( scene, camera,  film)){
             GpuArray<CameraSample> allSamples = sampler->genAllCameraSamples(camera, film, bytesNeededPerThread);
-
-            SceneHandle sceneHandle = scene.getDeviceHandle();
-    
-            SamplerObject& samplerObject = *sampler;
-    
-    
+        
             int samplesCount = (int)allSamples.N;
             setNumBlocksThreads(samplesCount, numBlocks, numThreads);
 
@@ -623,12 +858,16 @@ namespace ReinforcementLearningPathTracing {
                     prepareForUpdateQ << <numBlocks, numThreads >> > (QTable.getCopyForKernel());
                     CHECK_CUDA_ERROR("prepare update q");
 
+                    setNumBlocksThreads(lightsCount * QTable.N, numBlocks, numThreads);
+                    prepareLightingTraining << <numBlocks, numThreads >> > (sceneHandle, lightSamplingNewResults.getCopyForKernel(), lightSamplingNewCount.getCopyForKernel());
+                    CHECK_CUDA_ERROR("prepare lighting training");
+
                     syncDimension(lightingQueue.tasks.data, lightingQueue.count(), maxDimension);
 
                     lightingQueue.setNumBlocksThreads(numBlocks, numThreads);
                     std::string lightingEvent = std::string("lighting ") + std::to_string(round) + " " + std::to_string(depth);
                     Timer::getInstance().timedRun(lightingEvent, [&]() {
-                        computeLighting << <numBlocks, numThreads >> > (sceneHandle, samplerObject.getCopyForKernel(), lightingQueue.getCopyForKernel(), depth,QTable.getCopyForKernel(), lightingResults.getCopyForKernel());
+                        computeLighting << <numBlocks, numThreads >> > (sceneHandle, samplerObject.getCopyForKernel(), lightingQueue.getCopyForKernel(), depth,QTable.getCopyForKernel(), lightingResults.getCopyForKernel(), lightSamplingDist.getCopyForKernel(), lightSamplingNewResults.getCopyForKernel(), lightSamplingNewCount.getCopyForKernel());
                     });
 
 
@@ -645,6 +884,10 @@ namespace ReinforcementLearningPathTracing {
                     setNumBlocksThreads(QTable.N, numBlocks, numThreads);
                     averageQ << <numBlocks, numThreads >> > (QTable.getCopyForKernel());
                     CHECK_CUDA_ERROR("average q");
+
+                    setNumBlocksThreads(lightsCount * QTable.N, numBlocks, numThreads);
+                    finishLightingTraining << <numBlocks, numThreads >> > (sceneHandle, lightSamplingDist.getCopyForKernel(), lightSamplingResults.getCopyForKernel(), lightSamplingCount.getCopyForKernel(), lightSamplingNewResults.getCopyForKernel(), lightSamplingNewCount.getCopyForKernel());
+                    CHECK_CUDA_ERROR("finish lighting training");
 
                     syncDimension(lightingQueue.tasks.data, lightingQueue.count(), maxDimension);
 
