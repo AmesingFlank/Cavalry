@@ -155,8 +155,6 @@ namespace ReinforcementLearningPathTracing {
 
         virtual void render(const Scene& scene, const CameraObject& camera, Film& film) override;
 
-        GpuArray<QEntry> QTable;
-
     };
 }
 

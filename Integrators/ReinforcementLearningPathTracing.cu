@@ -11,7 +11,7 @@ namespace ReinforcementLearningPathTracing {
 
     using QDistribution = FixedSizeDistribution1D<QEntry::NUM_XY>;
 
-    RLPTIntegrator::RLPTIntegrator(int maxDepth_):maxDepth(maxDepth_),QTable(Q_TABLE_SIZE*Q_TABLE_SIZE*Q_TABLE_SIZE,false) {
+    RLPTIntegrator::RLPTIntegrator(int maxDepth_):maxDepth(maxDepth_) {
 
     }
 
@@ -546,6 +546,7 @@ namespace ReinforcementLearningPathTracing {
 
 
     void RLPTIntegrator::render(const Scene& scene, const CameraObject& camera, Film& film) {
+        GpuArray<QEntry> QTable(Q_TABLE_SIZE * Q_TABLE_SIZE * Q_TABLE_SIZE, false);
 
         int bytesNeededPerThread = sizeof(CameraSample) + sampler->bytesNeededPerThread() + sizeof(Spectrum) + sizeof(RayTask)*2 + sizeof(LightingTask)*2 + sizeof(LightingResult)+sizeof(NextRayInfo)+4*sizeof(int) ;
         std::cout<<"Running RL Path Tracing Integrator. Bytes needed per thread: "<<bytesNeededPerThread<<std::endl;
