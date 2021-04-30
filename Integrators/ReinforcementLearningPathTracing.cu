@@ -198,8 +198,8 @@ namespace ReinforcementLearningPathTracing {
     struct LightingResult {
         Spectrum indirectLightingContrib;
         float3 rayToLightDirection;
-        float directLightingContrib;
-        float directLightingImmediate;
+        float emissionContrib;
+        float sampledDirectLighting;
         float lightPDF;
     };
 
@@ -398,7 +398,7 @@ namespace ReinforcementLearningPathTracing {
 
         const Primitive* prim = intersection.primitive;
 
-        Spectrum directLightingContrib = make_float3(0, 0, 0);
+        Spectrum emissionContrib = make_float3(0, 0, 0);
 
         if (prim->areaLight) {
             if (myTask.sampledFromDeltaBSDF) {
@@ -412,7 +412,7 @@ namespace ReinforcementLearningPathTracing {
                     float misWeight = misPowerHeuristic(surfacePDF, lightPDF);
                     if (isfinite(misWeight)) {
                         Spectrum emmited = prim->areaLight->get<DiffuseAreaLight>()->DiffuseAreaLight::evaluateRay(thisRay, intersection);
-                        directLightingContrib = emmited;
+                        emissionContrib = emmited;
                         *result += emmited * multiplier * misWeight;
                     }
                 }
@@ -450,10 +450,9 @@ namespace ReinforcementLearningPathTracing {
 
         results.data[index].indirectLightingContrib = indirectLightingContrib;
         results.data[index].lightPDF = lightPDF;
-        results.data[index].directLightingContrib = luminance(directLightingContrib);
+        results.data[index].emissionContrib = luminance(emissionContrib);
         results.data[index].rayToLightDirection = rayToLight.direction;
-        results.data[index].directLightingImmediate = luminance(incident);// *1.f / (lightPDF * lightSelectionProbability);
-
+        results.data[index].sampledDirectLighting = luminance(incident);
     }
 
     __global__
@@ -556,17 +555,17 @@ namespace ReinforcementLearningPathTracing {
             dist.cdf[cellIndex] /= sumWeightedQ;
         }
 
-        sumWeightedQ *= (4.f * M_PI / (float)QEntry::NUM_XY);
+        constexpr float cellSolidAngle = (4.f * M_PI / (float)QEntry::NUM_XY); // integral of 1 across all directions in a cell
+
+        sumWeightedQ *= cellSolidAngle;
 
         // updated Q
         if (previousQEntry.entryIndex != -1) {
             // update q table
             auto& lightingRes = lightingResults.data[index];
-            float proposal =  sumWeightedQ + lightingRes.directLightingContrib + luminance(lightingRes.indirectLightingContrib);
+            float proposal =  sumWeightedQ + lightingRes.emissionContrib;
             QTable.data[previousQEntry.entryIndex].proposeNextQ(proposal, previousQEntry.cellIndex);
-            if ( lightingRes.directLightingContrib > sumWeightedQ) {
-                //printf("contribs  %f, %f,  %f\n", luminance(lightingRes.directLightingContrib), luminance(lightingRes.indirectLightingContrib), sumWeightedQ);
-            }
+            
         }
 
         // compute MIS
@@ -581,7 +580,7 @@ namespace ReinforcementLearningPathTracing {
             if (rayToLightCellIndex > 0) {
                 surfacePDF -= dist.cdf[rayToLightCellIndex - 1];
             }
-            surfacePDF = (QEntry::NUM_XY * surfacePDF / (4 * M_PI)); // Solid angle probability
+            surfacePDF /= cellSolidAngle; // Solid angle probability
         }
         if(sumWeightedQ==0 || surfacePDF == 0 || intersection.bsdf.isDelta() || intersection.bsdf.isAlmostDelta()){
             // then we shouldn't trust surfacePDF
@@ -594,9 +593,11 @@ namespace ReinforcementLearningPathTracing {
         *result += lightingResults.data[index].indirectLightingContrib * multiplier * misWeight;
 
         // update this entry as well, using direct lighting sampled.
-        if ( lightingResults.data[index].directLightingImmediate > 0) {
-            thisEntry.proposeNextQ(lightingResults.data[index].directLightingImmediate, rayToLightCellIndex);
-            //printf("proposing %f %f \n", luminance(lightingResults.data[index].directLightingHere), thisEntry.Q[rayToLightCellIndex]);
+        if ( lightingResults.data[index].sampledDirectLighting > 0) {
+            float sampledDirectLightingSolidAngle = 1.f / lightingResults.data[index].lightPDF;
+            float ratioOfLightInSector = min(1.f,  0.5f*sampledDirectLightingSolidAngle / cellSolidAngle);
+            thisEntry.proposeNextQ(lightingResults.data[index].sampledDirectLighting * ratioOfLightInSector, rayToLightCellIndex);
+            //printf("proposing %f %f \n", lightingResults.data[index].directLightingImmediate, thisEntry.Q[rayToLightCellIndex]);
         }
 
         // sample next ray Dir
