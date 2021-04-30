@@ -104,7 +104,7 @@ public:
             SIGNAL_ERROR("event not yet finished. cannot print stats.");
         }
         double milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(event.end - event.start).count();
-        std::cout << name << "\t  took   " << milliseconds << "ms" << std::endl;
+        std::cout << name << " took " << milliseconds << "ms" << std::endl;
     }
     
 
