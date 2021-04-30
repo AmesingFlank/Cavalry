@@ -135,7 +135,7 @@ def render_batch(input_file,scene_name,max_spp):
         with open(time_data_path,"r") as f:
             time_data = json.loads(f.read())
 
-    renderers = [PBRT3(), CavalryPathRenderer(),CavalryRLPathRenderer(),Mitsuba()]
+    renderers = [ CavalryPathRenderer(),CavalryRLPathRenderer() ]
     while spp <= max_spp:
         for renderer in renderers:
             renderer.render(input_file,scene_name,spp,time_data)

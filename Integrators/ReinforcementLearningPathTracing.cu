@@ -452,7 +452,7 @@ namespace ReinforcementLearningPathTracing {
         results.data[index].lightPDF = lightPDF;
         results.data[index].directLightingContrib = luminance(directLightingContrib);
         results.data[index].rayToLightDirection = rayToLight.direction;
-        results.data[index].directLightingImmediate = luminance(incident) * 1.f / (lightPDF * lightSelectionProbability);
+        results.data[index].directLightingImmediate = luminance(incident);// *1.f / (lightPDF * lightSelectionProbability);
 
     }
 
