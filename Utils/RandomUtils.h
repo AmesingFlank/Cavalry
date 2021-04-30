@@ -173,6 +173,14 @@ struct Distribution1D {
         outputProbability = maxPDF;
         return maxElement;
     }
+
+    __device__
+    float pdf(int i) {
+        if (i == 0) {
+            return cdf[0];
+        }
+        return cdf[i] - cdf[i - 1];
+    }
 };
 
 template <int size>
