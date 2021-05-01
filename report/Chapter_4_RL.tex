@@ -1,8 +1,9 @@
 \chapter{Reinforcement Learning Path Tracing}
+\label{chapter RL}
 Traditional path-tracing struggles for scenes where indirect lighting dominates. To alleviate this problem, this project implements a variant of path-tracing described at \cite{RLPT}, where reinforcement learning guides the generation of new rays.
 
 \section{Motivation}
-As described in section \ref{subsection MIS}, the path-tracing algorithm samples from two MIS distributions: $p_{ref}$ which matches the local reflectance, and $p_{rad}$ which only samples points on light sources. The efficiency of this method relies on the assumption that one of $p_{ref}$ and $p_{rad}$ is a good match for the integrand of equation \ref{rendering equation with cast}. However, this is not always true, as exemplified by the scene rendered below.
+As described in section \ref{subsection MIS}, the path-tracing integrator samples from two MIS distributions: $p_{ref}$ which matches the local reflectance, and $p_{rad}$ which only samples points on light sources. The efficiency of this method relies on the assumption that one of $p_{ref}$ and $p_{rad}$ is a good match for the integrand of equation \ref{rendering equation with cast}. However, this is not always true, as exemplified by the scene rendered below.
 
 \begin{figure}[H]
     \centering
@@ -84,7 +85,7 @@ Path-tracing bears many similarities with expected Sarsa. Specifically,
 \end{itemize}
 In \cite{RLPT}, it was proposed that the expected Sarsa algorithm can be used learn the distribution of $Q$ (as thus $L_i$). When weighted (discounted) by the reflectance term $f_r(p,\omega_o,\omega_i)\cos \theta_i$, this distribution becomes a good distribution to sample incoming rays from, according to importance sampling.
 
-Implementation-wise, notice that the domain of states $S$ and actions $A$ are both continuous, which makes a tabulated representation of $Q$ impossible. To work around this, this project divides the entire scene into a 3D grid, typically of size $64\times 64\times 64$. All surface points within the same grid cell are considered to be at the same state $s$. Moreover, at each grid cell, the spherical domain of incoming directions $\omega_i$ is also divided into 128 equally-sized sectors, and the directions in each sector are mapped to the same action $a$. 
+Implementation-wise, notice that the domain of states $S$ and actions $A$ are both continuous, which makes a tabulated representation of $Q$ impossible. To work around this, this project divides the entire scene into a 3D grid, typically of size $32\times 32\times 32$. All surface points within the same grid cell are considered to be at the same state $s$. Moreover, at each grid cell, the spherical domain of incoming directions $\omega_i$ is also divided into 128 equally-sized sectors, and the directions in each sector are mapped to the same action $a$. 
 
 During path-tracing, at each surface point $p_n$, instead of sampling a direction from the reflectance-matching $p_{ref}$, the algorithm uses the following sampling procedure:
 
@@ -108,7 +109,7 @@ After tracing $\omega_i$ from $p_n$ to find the next surface point $p_{n+1}$, th
     Q(s,a) := (1-\alpha) Q(s,a) + \alpha  \left(L_e(p_{n+1}\to p_n)+ \sum_{a'} p_{sec,n+1}(a')  Q'(s_{n+1},a')\right)
 \end{align*}
 
-To illustrate the benefit brought by reinforcement learning, the following image compares the same scene rendered by traditional path tracing and with reinforcement learning guided path tracing. Both images are rendered with 1024 samples per pixel, and the difference between them is blatant. 
+To illustrate the benefit brought by reinforcement learning, the following figure compares the same scene rendered by traditional path tracing and with reinforcement learning guided path tracing. Both images are rendered with 64 samples per pixel, and the difference between them is blatant. 
 
 \begin{figure}[H]
     \centering
@@ -116,7 +117,7 @@ To illustrate the benefit brought by reinforcement learning, the following image
     \begin{minipage}[t]{.99\textwidth}
         \centering
         \vspace{0pt}
-        \includegraphics[width=.68\textwidth]{veach-bidir2_1024spp_path.png}
+        \includegraphics[width=.68\textwidth]{veach-bidir2_64spp_path.png}
         \subcaption{Traditional path tracing}
     \end{minipage}
     
@@ -125,10 +126,10 @@ To illustrate the benefit brought by reinforcement learning, the following image
     \begin{minipage}[t]{.99\textwidth}
         \centering
         \vspace{0pt}
-        \includegraphics[width=.68\textwidth]{veach-bidir2_1024spp_rlpath.png}
+        \includegraphics[width=.68\textwidth]{veach-bidir2_64spp_rlpath.png}
         \subcaption{Reinforcement learning path tracing}
     \end{minipage}
     
-    \caption{Effect of reinforcement learning}
+    \caption{Impacts of reinforcement learning}
     \label{fig RL comparison}
 \end{figure}

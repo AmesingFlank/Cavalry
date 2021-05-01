@@ -222,10 +222,10 @@ where $I$ is the set of interior nodes, $L$ the set of leaves, $C_i$ the cost fo
 Given a collection of primitives, finding the optimal BVH tree according to the SAH heuristic is an NP-hard problem\cite{bvh_optimize}. This is not entirely surprising, considering the fact given any node with $N$ geometries, there're $2^N-2$ ways of constructing the two children nodes. However, not all hope is lost if the goal is to simply to construct a BVH that's not necessarily optimal, but still reasonably good. This project implements a two-step system to approach BVH construction:
 
 \begin{enumerate}
-    \item Firstly, construct a BVH using a relatively naive heuristic: at each node, divide the geometries into two groups by splitting them at the mid-point of the AABB in one of the coordinate axises. This is known as a Linear BVH, which can be constructed very efficiently on GPUs using the method of \cite{bvh_build}, but the tree created is of poor quality.
+    \item Firstly, construct a BVH using a naive heuristic: at each node, split the AABB at the mid-point of a coordinate axis, thereby dividing the geometries into two groups. This is known as a Linear BVH, which can be constructed efficiently on GPUs using the method of \cite{bvh_build}, but the tree created is of poor quality.
     \item Secondly, optimize the previously created BVH tree, using the method of \cite{bvh_optimize}. This step repeatedly solve the NP-hard optimization problem for very small \textit{treelets}, which can still significantly improve the quality of the entire tree.
 \end{enumerate}
-Details for each of the two steps are described below.
+This two-step approach is similar to the BVH construction routine of NVIDIA's Optix library. Details for the two steps are described below.
 
 \subsection{Linear BVH Construction}
 In Linear BVH, the geometries in each AABB are divided into two groups by splitting at the mid-point of the AABB in one of the coordinated axises. In three dimensions, the X, Y, and Z axises are used for splitting in a round-robin fashion, as the depth of the tree increases. A naive implementation of this splitting method would start at the root of the tree, and recursively divides each node using this heuristic. Unsurprisingly, this recursive algorithm parallelizes poorly. This motivates this project to employ a more sophisticated method described at \cite{bvh_build}, which uses a spatial encoding called \textit{morton code} and a data structure known as \textit{binary radix tree}.

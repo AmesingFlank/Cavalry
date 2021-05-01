@@ -12,7 +12,7 @@ In radiometry, there is a hierarchy of quantities that measures the strength of 
 
 In almost all regions in any scene, the radiant flux is not uniformly distributed, and thus one important quantity is the density of radiant flux with respect to area. This quantity is named \textit{irradiance}, which is denoted by $E$, and measured in power per unit area ($W\cdot m^{-2}$). Intuitively, irradiance measures the amount of light received by a single point in space. For this reason, for a region of space $S$, integrating the irradiance of each point in $S$ gives the total flux through $S$:
 \begin{align}
-    \Phi(S) = \int_S E(p) dp 
+    \Phi(S) = \int_S E(p) \d p 
     \label{irradiance integral}
 \end{align}
 
@@ -62,7 +62,7 @@ In rendering, radiance often appears in the form $L_o(p,\omega)$ or $L_i(p,\omeg
 \end{figure}
 Similar to equation \ref{irradiance integral}, which expresses flux as an integral of irradiance, it's also possible to obtain the incoming irradiance $E(p)$ by an integral across the incoming radiance from each direction. More precisely, the following relationship holds:
 \begin{align}
-    E(p) = \int_\Omega L_i(p,\omega_i)\cos\theta_id\omega_i
+    E(p) = \int_\Omega L_i(p,\omega_i)\cos\theta_i\d\omega_i
     \label{radiance integral}
 \end{align}
 Here, the support $\Omega$ is often a sphere or hemisphere of possible incoming direction, and the angle $\theta_i$ represents the angle between $\omega_i$ and the surface normal. The cosine term accounts for the fact that for incoming rays that are not perfectly perpendicular to the surface, the differential area illuminated by the ray is multiplied by a factor $\frac{1}{\cos\theta_i}$, and thus the contribution per unit area should be multiplied by $\cos\theta_i$. 
@@ -131,31 +131,32 @@ Here, the support $\Omega$ is often a sphere or hemisphere of possible incoming 
 
 In order to model the outgoing radiances at each point, it is essential to account for the fact that surfaces reflect incoming light: for any direction $\omega_i$, the incoming radiance $L_i(p,\omega_i)$ contributes to the outgoing radiance $L_o(p,\omega_o)$ of another direction $\omega_o$. This relationship is captured by the bi-directional reflectance distribution function (BRDF), written as $f_r(p,\omega_o,\omega_i)$. Formally, the BRDF is defined as 
 \begin{align}
-    f_r(p,\omega_o,\omega_i) = \frac{dL_o(p,\omega_o)}{dE(p,\omega_i)}
+    f_r(p,\omega_o,\omega_i) = \frac{\d L_o(p,\omega_o)}{\d E(p,\omega_i)}
     \label{BRDF def 1}
 \end{align}
 where $dE(p,\omega_i)$ represents the differential incoming irradiance at the direction $\omega_i$.
 
 Using equation \ref{radiance integral}, it can be derived that 
 \begin{align}
-    dE(p,\omega_i) = L_i(p,\omega_i)\cos\theta_id\omega_i
+    dE(p,\omega_i) = L_i(p,\omega_i)\cos\theta_i\d\omega_i
 \end{align}
 which allows equation \ref{BRDF def 1} to be re-written as
 \begin{align}
-    f_r(p,\omega_o,\omega_i) = \frac{dL_o(p,\omega_o)}{L_i(p,\omega_i)\cos\theta_id\omega_i}
+    f_r(p,\omega_o,\omega_i) = \frac{dL_o(p,\omega_o)}{L_i(p,\omega_i)\cos\theta_i\d\omega_i}
 \end{align}
 From this, it's straightforward to show that, for some $C$,
 \begin{align}
-    L_o(p,\omega_o) = \int_\Omega L_i(p,\omega_i)f_r(p,\omega_o,\omega_i)\cos\theta_id\omega_i + C
+    L_o(p,\omega_o) = \int_\Omega L_i(p,\omega_i)f_r(p,\omega_o,\omega_i)\cos\theta_i\d\omega_i + C
     \label{reflection plus C}
 \end{align}
 
-The BRDF of a surface completely decides how it reflects light, which is a crucial factor of its appearances. Different materials in the real world have drastically different BRDFs, and it's vital for a physically based renderer to accurately implement these functions. A family of BRDFs known for their physical accuracy are the Microfacet BRDFs\cite{cook1982reflectance}, which are well implemented by this project. Unfortunately, due to their complexity, details of these BRDFs could not be described here. 
+Different materials in the real world have drastically different BRDFs. The BRDF of a surface completely decides how it reflects light, which is a crucial factor of its appearances. This project implemented a range of different BRDFs corresponding to many different materials, but unfortunately, due to their complexity, details of these BRDFs could not be described here. 
 
+~
 
 In order to fully model $L_o(p,\omega_o)$, it remains to describe the term $C$ in equation \ref{reflection plus C}. Surfaces in the real world sends outgoing radiances for two reasons only: they might emit light actively, and they reflect incoming light. Equation \ref{reflection plus C} already includes the reflected radiances, and thus it only remains to include actively emitted light. Writing $L_e(p,\omega_o)$ for the actively emitted radiance from $p$ towards the direction $\omega_o$, the following equation completely describes $L_o$:
 \begin{align}
-    L_o(p,\omega_o) = L_e(p,\omega_o) + \int_\Omega L_i(p,\omega_i)f_r(p,\omega_o,\omega_i)\cos\theta_id\omega_i
+    L_o(p,\omega_o) = L_e(p,\omega_o) + \int_\Omega L_i(p,\omega_i)f_r(p,\omega_o,\omega_i)\cos\theta_i\d\omega_i
     \label{rendering equation}
 \end{align}
 which is the famous rendering equation, originally proposed by Kaijiya\cite{rendering_equation}. 
@@ -201,7 +202,7 @@ Under the assumption that radiance is constant along each ray, the incoming radi
 \end{figure} 
 Thus, defining the ray-tracing function $t(p,\omega_i)$ that computes the first surface point $q$ intersected by a ray originated from $p$ and travels in the direction $\omega_i$, the rendering equation is re-written as:
 \begin{align}
-    L_o(p,\omega_o) = L_e(p,\omega_o) + \int_\Omega L_o(t(p,\omega_i),-\omega_i)f_r(p,\omega_o,\omega_i)\cos\theta_id\omega_i
+    L_o(p,\omega_o) = L_e(p,\omega_o) + \int_\Omega L_o(t(p,\omega_i),-\omega_i)f_r(p,\omega_o,\omega_i)\cos\theta_i\d\omega_i
     \label{rendering equation with cast}
 \end{align}
 
@@ -209,11 +210,11 @@ Finding solutions to this equation is the ultimate goal of rendering, because th
 
 \section{Monte Carlo Integration}
 
-Equation \ref{rendering equation with cast} cannot be solved analytically for all but the simplest scenes. Thus, rendering software solve the equation numerically using the method of Monte Carlo integration. Given an integral
+Equation \ref{rendering equation with cast} cannot be solved analytically. Thus, rendering software solve the equation numerically using the method of Monte Carlo integration, and the algorithms used by these software are referred as ``integrators''. Given an integral
 \begin{align*}
-    I = \int_\Omega f(x) dx,
+    I = \int_\Omega f(x) \d x,
 \end{align*}
-the Monte Carlo estimator randomly samples $N$ points $x_1,...,x_n\in \Omega$ according to some distribution $D$, and computes
+a Monte Carlo integrator randomly samples $N$ points $x_1,...,x_n\in \Omega$ according to some distribution $D$, and computes
 \begin{align}
     I_N = \frac{1}{N}\sum_{i=1}^{N} \frac{f(x_i)}{p(x_i)}
     \label{monte carlo estimator}
@@ -226,22 +227,22 @@ In rendering, the variance $\Var[I_N]$ of the Monte Carlo estimator manifest in 
 
 In the monte carlo estimator, the distribution $D$ used can be an arbitrary distribution. However, different distributions can lead to dramatically different variances. Importance sampling uses the fact that, informally, the variance $\Var[I_N]$ is reduced as the shape of the PDF $p(x)$ becomes similar to the shape of the integrand $f(x)$. As an example, consider when the PDF is 
 $$ 
-p(x)=\frac{f(x)}{\int_\Omega f(x') dx'}.
+p(x)=\frac{f(x)}{\int_\Omega f(x') \d x'}.
 $$ 
 In this case, $p$ is always proportional to $f$, and the variance of the estimator is
 \begin{align*}
 \Var[I_N]
 &= \frac{1}{N}\Var_{x\sim D}\left[\frac{f(x)}{p(x)}\right]\\
-&= \frac{1}{N}\Var_{x\sim D}\left[\int_\Omega f(x') dx'\right]\\
+&= \frac{1}{N}\Var_{x\sim D}\left[\int_\Omega f(x') \d x'\right]\\
 &=0
 \end{align*}
-It is of course infeasible to obtain a perfectly proportional PDF, because doing so requires computing the value of $\int_\Omega f(x') dx'$, which is the value to be estimated in the first place. However, even if $p$ is similar in shape to $f$, variance can still be reduced.
+It is of course infeasible to obtain a perfectly proportional PDF, because doing so requires computing the value of $\int_\Omega f(x') \d x'$, which is the value to be estimated in the first place. However, even if $p$ is similar in shape to $f$, variance can still be reduced.
 
 \subsection{Multiple Importance Sampling}
 \label{subsection MIS}
 When solving the rendering equation, the integrand is the product of two factors: the incoming radiance $L_o(t(p,\omega_i),-\omega_i)$, and the reflectance $f_r(p,\omega_o,\omega_i)\cos\theta_i$. More generally, the renderer is solving an integration of the form
 $$
-I = \int_\Omega f(x)g(x)dx
+I = \int_\Omega f(x)g(x)\d x
 $$
 
 In this case, if the renderer were to perform importance sampling to estimate this integral according to distributions based on either $f$ or $g$, one of these two will often perform poorly\cite{pharr2016physically}. This is exactly the issue addressed by the technique of multiple importance sampling, or MIS.
@@ -277,20 +278,20 @@ where $\omega_i = \frac{p''-p'}{|p''-p'|}$ and $\omega_o = \frac{p-p'}{|p-p'|}$.
 Note that, since not all points $p_{src}$ is visible from $p$, the integrand needs to include a visibility term $V(p,p_{src})$, which takes the value 1 if $p_{src}$ is visible from $p$, and 0 otherwise. Furthermore, the change of variable also incurs a Jacobian term, which is $\frac{\cos\theta'}{|p-p_{src}|^2}$, with $\theta'$ being the angle between the incoming ray and the surface normal at $p_{src}$. Use these terms, equation \ref{rendering equation with cast} is rewritten so that for a ray from a point $p$ to the destination $p_{dest}$, the radiance is computed by
 \begin{align*}
     L_o(p\to p_{dest}) =~ &L_e(p\to p_{dest}) \\
-    &+ \int_A f_r(p_{src}\to p\to p_{dest}) L_o(p_{src}\to p)  V(p,p_{src}) \frac{cos\theta\cos\theta'}{|p-p_{src}|^2} d p_{src}
+    &+ \int_A f_r(p_{src}\to p\to p_{dest}) L_o(p_{src}\to p)  V(p,p_{src}) \frac{cos\theta\cos\theta'}{|p-p_{src}|^2} \d p_{src}
 \end{align*} 
 where $A$ is the domain of all surface points in the scene. To simplify notation, write the term $G(p,p_{src})$ as $V(p,p_{src}) \frac{cos\theta\cos\theta'}{|p-p_{src}|^2}$, the equation becomes
 \begin{align*}
     L_o(p\to p_{dest}) =~ &L_e(p\to p_{dest}) \\
-    &+ \int_A f_r(p_{src}\to p\to p_{dest}) L_o(p_{src}\to p)  G(p,p_{src})  d p_{src}
+    &+ \int_A f_r(p_{src}\to p\to p_{dest}) L_o(p_{src}\to p)  G(p,p_{src})  \d p_{src}
 \end{align*} 
 
 The equation above is referred to as the surface form light transport equation, and it can be interpreted as a recursive definition for $L_o$. Naturally, one can expand this recursive definition, and obtain an infinite sum:
 \begin{align*}
     L_o(p_1\to p_0) =
     &L_e(p_1\to p_0)\\
-    &+ \int_A L_e(p_2\to p_1)f_r(p_2\to p_1\to p_0)G(p_2,p_1) dp_2\\
-    &+ \int_A \int_A L_e(p_3\to p_2)f_r(p_3\to p_2\to p_1) G(p_3,p_2)f(p_2\to p_1\to p_0)G(p_2,p_1) ~ dp_3dp_2\\
+    &+ \int_A L_e(p_2\to p_1)f_r(p_2\to p_1\to p_0)G(p_2,p_1) \d p_2\\
+    &+ \int_A \int_A L_e(p_3\to p_2)f_r(p_3\to p_2\to p_1) G(p_3,p_2)f(p_2\to p_1\to p_0)G(p_2,p_1) \d p_3 \d p_2\\
     &+~...
 \end{align*}
 Here, each term represents the radiance contributed by paths of increasing length. For a path with $n$ reflection points, the source emission is $L_e(p_{n+1}\to p_{n})$, and it is weighted by a throughput term $T_n$, which is the product of the $f_r$ and $G$ at each reflection point:
@@ -299,13 +300,13 @@ Here, each term represents the radiance contributed by paths of increasing lengt
 \end{align*}
 Substituting this into the previous equation gives
 \begin{align*}
-    L_o(p_1\to p_0) = \sum_{n=0}^{\infty} \underbrace{\int_A \int_A...\int_A}_{n} L_e(p_{n+1}\to p_{n})T_n dp_{n}dp_{n-1}...dp_1
+    L_o(p_1\to p_0) = \sum_{n=0}^{\infty} \underbrace{\int_A \int_A...\int_A}_{n} L_e(p_{n+1}\to p_{n})T_n \d p_{n}\d p_{n-1}...\d p_1
 \end{align*}
 
 
 Notice that, the throughput term $T_n$ computes the portion of radiance that remains after $n$ reflections, which tends to decrease exponentially as $n$ increases. For this reason, it is natural to only consider the first few terms of this infinite sum (see figure \ref{fig maxdepth}). More precisely, given a maximum amount of reflections $MaxDepth$, the radiance $L_o(p_1\to p_0)$ can be estimated by 
 \begin{align}
-    L_o(p_1\to p_0) = \sum_{n=0}^{MaxDepth} \underbrace{\int_A \int_A...\int_A}_{n} L_e(p_{n+1}\to p_{n})T_n dp_{n}dp_{n-1}...dp_1
+    L_o(p_1\to p_0) = \sum_{n=0}^{MaxDepth} \underbrace{\int_A \int_A...\int_A}_{n} L_e(p_{n+1}\to p_{n})T_n \d p_{n} \d p_{n-1}...\d p_1
     \label{rendering equation path tracing}
 \end{align}
 
@@ -349,7 +350,7 @@ If a Monte Carlo estimator is used to approximate the integrals, the above formu
 
 The path-tracing algorithm is parameterized by an integer, $spp$, which stands for samples per pixel. The algorithm samples $spp$ random points on each pixel to be rendered, and generate an initial ray corresponding to each sample point. Starting from the ray, the algorithm constructs $MaxDepth*2$ paths of increasing length, and accumulates the radiances carried by these paths. These radiances are combined by a MIS Monte Carlo estimator, which decides the final value of the pixel.
 
-The path tracing algorithm generates paths incrementally, starting from the camera location $p_0$. At each surface point $p_n$, the algorithm samples an incoming direction (for $p_{1}\to p_0$, the direction is fixed by the configuration of the camera), and traces the incoming ray to find $p_{n+1}$. If the point $p_{n+1}$ emits light actively, then this constitutes a path of $n$ reflection point. Moreover, $p_{n+1}$ also serves as the next reflection point, so the algorithm samples a point $p_{light}$ that illuminates $p_{n+1}$, and the radiance can be passed back to $p_0$ through a chain of reflections.
+The path tracing integrator generates paths incrementally, starting from the camera location $p_0$. At each surface point $p_n$, the algorithm samples an incoming direction (for $p_{1}\to p_0$, the direction is fixed by the configuration of the camera), and traces the incoming ray to find $p_{n+1}$. If the point $p_{n+1}$ emits light actively, then this constitutes a path of $n$ reflection point. Moreover, $p_{n+1}$ also serves as the next reflection point, so the algorithm samples a point $p_{light}$ that illuminates $p_{n+1}$, and the radiance can be passed back to $p_0$ through a chain of reflections.
 
 
 More precisely, the path tracing algorithm works as follows:
@@ -392,7 +393,7 @@ More precisely, the path tracing algorithm works as follows:
 Notice that, line 7 and 10 are two different ways a light emitter can illuminate $p_{n-1}$, and these two paths exactly correspond to the MIS procedure described in section \ref{subsection MIS}. When accumulating their radiances, the MIS weight should be applied.
 
 
-For each pixel, the algorithm estimates its color using a total of $spp*2*MaxDepth$ paths. Thus, as the parameter $spp$ increases, the variance of the Monte Carlo Estimator is reduced, which implies less noise in the rendered image. The following figure illustrates this effect.
+For each pixel, the integrator estimates its color using a total of $spp*2*MaxDepth$ paths. Thus, as the parameter $spp$ increases, the variance of the Monte Carlo Estimator is reduced, which implies less noise in the rendered image. The following figure illustrates this effect.
 
 
 \begin{figure}[H]

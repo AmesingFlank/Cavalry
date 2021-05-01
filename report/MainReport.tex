@@ -89,6 +89,9 @@
     
 \newcommand{\Var}{\mathbb{V}\text{ar}}
 
+    
+\renewcommand{\d}{\,\mathrm{d}}
+
 \lstdefinestyle{cppStyle}{
     language=C++,
     basicstyle={\small\ttfamily},
@@ -126,6 +129,27 @@
 % \include{acknowlegements}   % include an acknowledgements.tex file
 \include{abstract}          % include the abstract
 
+\begin{figure}[p]
+        \centering
+        \begin{minipage}[t]{.99\linewidth}
+                \vspace{0pt}
+                \centering
+                \includegraphics[width=.99\linewidth]{bathroom2.png}
+                \subcaption{A bathroom scene, rendered by path-tracing}
+        \end{minipage}
+        
+        \vspace{1cm}
+
+        \begin{minipage}[t]{.99\linewidth}
+                \vspace{0pt}
+                \centering
+                \includegraphics[width=.99\linewidth]{living_room_3.png}
+                \subcaption{A living room scene, rendered by path-tracing guided by reinforcement learning}      
+        \end{minipage}
+                
+        \caption{Images rendered by the software created in this project. Scenes created by \cite{resources16}}
+        \label{figure front demo figures}
+\end{figure}
 
 \begin{romanpages}          % start roman page numbering
 \tableofcontents            % generate and include a table of contents
