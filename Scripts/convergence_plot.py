@@ -40,7 +40,7 @@ def plot_error_vs_time(time_data,error_data,scene_name):
     ax.set_ylabel('MSE')  
     ax.set_title("MSE vs Rendering Time") 
     ax.legend()  # Add a legend.
-    fig.savefig(f"{scene_name}/error_vs_time.png")
+    fig.savefig(f"{scene_name}/error_vs_time.png",bbox_inches='tight')
 
     
 
