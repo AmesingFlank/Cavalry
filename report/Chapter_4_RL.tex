@@ -105,11 +105,17 @@ During path-tracing, at each surface point $p_n$, instead of sampling a directio
 ~
 
 After tracing $\omega_i$ from $p_n$ to find the next surface point $p_{n+1}$, the algorithm uses expected Sarsa to update the $Q$ table:
-\begin{align*}
+\begin{align}
+    \label{eqn Q update}
     Q(s,a) := (1-\alpha) Q(s,a) + \alpha  \left(L_e(p_{n+1}\to p_n)+ \sum_{a'} p_{sec,n+1}(a')  Q'(s_{n+1},a')\right)
-\end{align*}
+\end{align}
 
-To illustrate the benefit brought by reinforcement learning, the following figure compares the same scene rendered by traditional path tracing and with reinforcement learning guided path tracing. Both images are rendered with 64 samples per pixel, and the difference between them is blatant. 
+\section{Implementation}
+When implementing algorithm \ref{algo sample from Q} on GPUs, different threads could operate on different grid cells. However, in CUDA, if all threads within the same warp read the same memory address, the hardware can \textit{coalesce} the memory operation by broadcasting the same data content to all threads. To utilize this fact, this project included an additional sorting phase, which groups threads together according to the cell $s_n$ that they operate on (similar to the material sorting stage described in section \ref{section polymorphism}). It was observed that this improves the performance of computing the weighted $Q$ values by around 50\%.
+
+Further, when formula \ref{eqn Q update} is used to update the $Q$ table, the entry $Q(s,a)$ could be updated simultaneously by multiple threads. To avoid race conditions, this projects accumulates proposal $Q$ values using atomic operations, and then divide by the total amount of proposals in a later step. This ensures that all GPU threads can learn cooperatively. 
+
+To illustrate the benefit brought by reinforcement learning, the figure on the next page compares the same scene rendered by traditional path-tracing and with reinforcement learning guided path-tracing. Both images are rendered with 64 samples per pixel, but the difference in noise levels between them is blatant. 
 
 \begin{figure}[H]
     \centering

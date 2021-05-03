@@ -8,18 +8,18 @@ The rendering equation describes the ``strength'' of light at each point in spac
 
 \subsection{Radiometry}
 
-In radiometry, there is a hierarchy of quantities that measures the strength of light in different contexts. The first quantity is \textit{radiant flux}, which measures the total energy that travels through a region of space per unit time in the form of electromagnetic radiation. Radiant flux is often denoted by $\Phi$, and its unit of measure is Watts($W$). 
+In radiometry, there is a hierarchy of quantities that measure the strength of light in different contexts. The first quantity is \textit{radiant flux}, which measures the total energy that travels through a region of space per unit time in the form of electromagnetic radiation. Radiant flux is often denoted by $\Phi$, and its unit of measure is Watts($W$). 
 
-In almost all regions in any scene, the radiant flux is not uniformly distributed, and thus one important quantity is the density of radiant flux with respect to area. This quantity is named \textit{irradiance}, which is denoted by $E$, and measured in power per unit area ($W\cdot m^{-2}$). Intuitively, irradiance measures the amount of light received by a single point in space. For this reason, for a region of space $S$, integrating the irradiance of each point in $S$ gives the total flux through $S$:
+In almost all regions in any scene, the radiant flux is not uniformly distributed, and thus one important quantity is the density of radiant flux with respect to area. This quantity is named \textit{irradiance}, which is denoted by $E$ and measured in power per unit area ($W\cdot m^{-2}$). Intuitively, irradiance measures the amount of light received by a single point in space. For this reason, in a region of space $S$, integrating the irradiance of each point in $S$ gives the total flux through $S$:
 \begin{align}
     \Phi(S) = \int_S E(p) \d p 
     \label{irradiance integral}
 \end{align}
 
-For any point $p$, the irradiance $E(p)$ is not uniform across all directions, and thus it is also important to consider the density of irradiance in each direction $\omega$. This quantity, $L(p,\omega)$, is called \textit{radiance}, and its unit of measure for radiance is power per unit area per unit solid angle ($\text{W}\cdot\text{m}^{-2}\cdot \text{sr}^{-1}$). Radiance is an especially important quantity, because it is a measure of the strength of a single ray of light, identified by its direction $\omega$ and a point $p$ which it passes through. Consequently, radiance is the physical quantity that ray-tracing algorithms constantly operates in. 
+For any point $p$, the irradiance $E(p)$ is not uniform across all directions, and thus it is also important to consider the density of irradiance in each direction $\omega$. This quantity, $L(p,\omega)$, is called \textit{radiance}, and it is measured in power per unit area per unit solid angle ($\text{W}\cdot\text{m}^{-2}\cdot \text{sr}^{-1}$). Radiance is an especially important quantity, because it is a measure of the strength of a single ray of light, identified by its direction $\omega$ and a point $p$ which it passes through. Consequently, radiance is the physical quantity that ray-tracing algorithms constantly operates in. 
 
 
-In rendering, radiance often appears in the form $L_o(p,\omega)$ or $L_i(p,\omega)$, which mean radiance going out from the point $p$ or entering into it, respectively. More precisely, $L_o(p,\omega)$ represents the radiance that travels from $p$ and outwards in the direction $\omega$, and $L_i(p,\omega)$ represents the incoming radiance that travels towards to $p$ in the direction $-\omega$. The convention $L_i(p,\omega)$ might appear slightly counter-intuitive, since $\omega$ points in the opposite direction as the propagation of energy. However, the convenience of this notation will become apparent when the ray-tracing algorithm is formulated. 
+In rendering, radiance often appears in the form $L_o(p,\omega)$ or $L_i(p,\omega)$, which denote the radiance going out of $p$ and those entering into it, respectively. More precisely, $L_o(p,\omega)$ represents the radiance that travels from $p$ and outwards in the direction $\omega$, and $L_i(p,\omega)$ represents the incoming radiance that travels towards to $p$ in the direction $-\omega$. The convention $L_i(p,\omega)$ might appear slightly counter-intuitive, since $\omega$ points in the opposite direction as the propagation of energy. However, the convenience of this notation will become apparent when the ray-tracing algorithm is formulated. 
 
 
 
@@ -65,7 +65,7 @@ Similar to equation \ref{irradiance integral}, which expresses flux as an integr
     E(p) = \int_\Omega L_i(p,\omega_i)\cos\theta_i\d\omega_i
     \label{radiance integral}
 \end{align}
-Here, the support $\Omega$ is often a sphere or hemisphere of possible incoming direction, and the angle $\theta_i$ represents the angle between $\omega_i$ and the surface normal. The cosine term accounts for the fact that for incoming rays that are not perfectly perpendicular to the surface, the differential area illuminated by the ray is multiplied by a factor $\frac{1}{\cos\theta_i}$, and thus the contribution per unit area should be multiplied by $\cos\theta_i$. 
+Here, the support $\Omega$ is often a sphere or hemisphere of possible incoming directions, and the variable $\theta_i$ is the angle between $\omega_i$ and the surface normal. The cosine term accounts for the fact that for incoming rays that are not perfectly perpendicular to the surface, the differential area illuminated by the ray is multiplied by a factor $\frac{1}{\cos\theta_i}$, and thus the contribution per unit area should be multiplied by $\cos\theta_i$. 
 \begin{figure}[H]
     \centering
   
@@ -129,7 +129,7 @@ Here, the support $\Omega$ is often a sphere or hemisphere of possible incoming 
 
 \subsection{The BRDF}
 
-In order to model the outgoing radiances at each point, it is essential to account for the fact that surfaces reflect incoming light: for any direction $\omega_i$, the incoming radiance $L_i(p,\omega_i)$ contributes to the outgoing radiance $L_o(p,\omega_o)$ of another direction $\omega_o$. This relationship is captured by the bi-directional reflectance distribution function (BRDF), written as $f_r(p,\omega_o,\omega_i)$. Formally, the BRDF is defined as 
+In order to model the outgoing radiances at each point, it is essential to account for the fact that surfaces reflect incoming light. That is, for any direction $\omega_i$, the incoming radiance $L_i(p,\omega_i)$ may contribute to the outgoing radiance $L_o(p,\omega_o)$ of any other direction $\omega_o$. This relationship is captured by the bi-directional reflectance distribution function (BRDF), written as $f_r(p,\omega_o,\omega_i)$. Formally, the BRDF is defined as 
 \begin{align}
     f_r(p,\omega_o,\omega_i) = \frac{\d L_o(p,\omega_o)}{\d E(p,\omega_i)}
     \label{BRDF def 1}
@@ -154,12 +154,12 @@ Different materials in the real world have drastically different BRDFs. The BRDF
 
 ~
 
-In order to fully model $L_o(p,\omega_o)$, it remains to describe the term $C$ in equation \ref{reflection plus C}. Surfaces in the real world sends outgoing radiances for two reasons only: they might emit light actively, and they reflect incoming light. Equation \ref{reflection plus C} already includes the reflected radiances, and thus it only remains to include actively emitted light. Writing $L_e(p,\omega_o)$ for the actively emitted radiance from $p$ towards the direction $\omega_o$, the following equation completely describes $L_o$:
+In order to fully model $L_o(p,\omega_o)$, it remains to describe the term $C$ in equation \ref{reflection plus C}. Surfaces in the real world send outgoing radiances for two reasons only: they might emit light actively, and they reflect incoming light. Equation \ref{reflection plus C} already accounts for the reflected radiances, and thus it only remains to include actively emitted light. Writing $L_e(p,\omega_o)$ for the actively emitted radiance from $p$ towards the direction $\omega_o$, the following equation completely describes $L_o$:
 \begin{align}
     L_o(p,\omega_o) = L_e(p,\omega_o) + \int_\Omega L_i(p,\omega_i)f_r(p,\omega_o,\omega_i)\cos\theta_i\d\omega_i
     \label{rendering equation}
 \end{align}
-which is the famous rendering equation, originally proposed by Kaijiya\cite{rendering_equation}. 
+This is the famous rendering equation, originally proposed by Kaijiya\cite{rendering_equation}. 
 
 
 Under the assumption that radiance is constant along each ray, the incoming radiance $L_i(p,\omega_i)$ can be equated with the outgoing radiance from another point, $q$, as illustrated below.
@@ -214,18 +214,19 @@ Equation \ref{rendering equation with cast} cannot be solved analytically. Thus,
 \begin{align*}
     I = \int_\Omega f(x) \d x,
 \end{align*}
-a Monte Carlo integrator randomly samples $N$ points $x_1,...,x_n\in \Omega$ according to some distribution $D$, and computes
+a Monte Carlo integrator randomly samples $N$ points $x_1,...,x_n\in \Omega$ according to some probability density function (PDF) $p$, and computes
 \begin{align}
     I_N = \frac{1}{N}\sum_{i=1}^{N} \frac{f(x_i)}{p(x_i)}
     \label{monte carlo estimator}
 \end{align}
-where $p(x_i)$ is the probability density of sampling $x_i$ according to $D$. It can be proved that this indicator is both unbiased $(E[I_N]=I)$ and consistent $(\lim_{N\to\infty}I_N = I)$. When applied to the rendering equation, the support $\Omega$ is the sphere or hemisphere of directions, and the function $f$ is computed by recursively estimating $L_o$, and then multiplying by the BRDF and the cosine of the direction.
+
+It can be proved that this indicator is both unbiased $(E[I_N]=I)$ and consistent $(\lim_{N\to\infty}I_N = I)$. When applied to the rendering equation, the support $\Omega$ is the sphere or hemisphere of directions, and the function $f$ is computed by recursively estimating $L_o$, and then multiplying by the BRDF and the cosine of the direction.
 
 \subsection{Importance Sampling}
 \label{subsection IS}
 In rendering, the variance $\Var[I_N]$ of the Monte Carlo estimator manifest in the form of random noise in the resulting image. Thus, variance reduction techniques are vital for rendering high-quantity images efficiently. One of the most important such techniques is importance sampling.
 
-In the monte carlo estimator, the distribution $D$ used can be an arbitrary distribution. However, different distributions can lead to dramatically different variances. Importance sampling uses the fact that, informally, the variance $\Var[I_N]$ is reduced as the shape of the PDF $p(x)$ becomes similar to the shape of the integrand $f(x)$. As an example, consider when the PDF is 
+In the monte carlo estimator, the PDF $p$ used can be an arbitrary distribution. However, different distributions can lead to dramatically different variances. Importance sampling uses the fact that, informally, the variance $\Var[I_N]$ is reduced as the shape of the PDF $p(x)$ becomes similar to the shape of the integrand $f(x)$. As an example, consider when the PDF is 
 $$ 
 p(x)=\frac{f(x)}{\int_\Omega f(x') \d x'}.
 $$ 
@@ -245,9 +246,9 @@ $$
 I = \int_\Omega f(x)g(x)\d x
 $$
 
-In this case, if the renderer were to perform importance sampling to estimate this integral according to distributions based on either $f$ or $g$, one of these two will often perform poorly\cite{pharr2016physically}. This is exactly the issue addressed by the technique of multiple importance sampling, or MIS.
+In this case, if a renderer performs importance sampling according to distributions based on either $f$ or $g$, one of these two would often perform poorly\cite{pharr2016physically}. This is exactly the issue addressed by the technique of multiple importance sampling, or MIS.
 
-The basic idea of MIS is that, when estimating an integral, samples should be drawn from multiple distributions, chosen in the hope that at least one will match the shape of the integrand well. MIS provides a method of weighting the samples from each distribution that eliminates large variance spikes due to mismatches between the integrand and the sampling density. More precisely, given a PDF $p_f$ that is a good match for $f$, and $p_g$ that is a good match for $g$, MIS proposes to $N$ samples $x_1,...,x_N$ from $p_f$, and $y_1,...,y_N$ from $p_g$, and apply the alternative Monte Carlo estimator:
+MIS proposes that, during Monte Carlo Integration, samples should be drawn from multiple distributions, chosen in the hope that at least one will match the shape of the integrand well. MIS provides a way of weighting the samples from each distribution that eliminates large variance spikes due to mismatches between the integrand and the sampling density. More precisely, given a PDF $p_f$ that is a good match for $f$, and $p_g$ that is a good match for $g$, MIS draws $N$ samples $x_1,...,x_N$ from $p_f$, and $y_1,...,y_N$ from $p_g$, and apply the alternative Monte Carlo estimator:
 \begin{align}
     I_N = \frac{1}{N} \sum_{i=1}^{N} \frac{f(x_i)g(x_i)w_f(x_i)}{p_f(x_i)} + \frac{f(y_i)g(y_i)w_g(y_i)}{p_g(y_i)}
     \label{MIS}
@@ -258,7 +259,7 @@ where the weights $w_f$ and $w_g$ are defined by
 \end{align*}
 A full recount of why this weighting scheme reduces variance can be found in \cite{pharr2016physically}. 
 
-To apply MIS when solving the rendering equation, the renderer samples from a PDF $p_{rad}$ that matches to the incoming radiance $L_o(t(p,\omega_i),-\omega_i)$, and another PDF $p_{ref}$ that matches the reflection term $f_r(p,\omega_o,\omega_i)\cos\theta_i$. In the implementation of this project, $p_{rad}$ is a distribution which only samples $\omega_i$ that points to a light source, which is often much brighter than surfaces that indirectly reflects light. For $p_{ref}$, the project implemented specific sampling routings for each individual BRDF, thereby maximizing the similarity between the PDF and the BRDF of each sample point.
+To apply MIS when solving the rendering equation, the renderer samples from a PDF $p_{rad}$ that matches to the incoming radiance $L_o(t(p,\omega_i),-\omega_i)$, and another PDF $p_{ref}$ that matches the reflection term $f_r(p,\omega_o,\omega_i)\cos\theta_i$. In the path-tracer implemented in this project, $p_{rad}$ is a distribution that only samples $\omega_i$ that points to a light source, which is often much brighter than surfaces that indirectly reflects light. For $p_{ref}$, the project implemented specific sampling routings for each individual BRDF, thereby maximizing the similarity between the PDF and the BRDF at each point.
 
 
 \section{The Path Space Formulation}
@@ -350,7 +351,7 @@ If a Monte Carlo estimator is used to approximate the integrals, the above formu
 
 The path-tracing algorithm is parameterized by an integer, $spp$, which stands for samples per pixel. The algorithm samples $spp$ random points on each pixel to be rendered, and generate an initial ray corresponding to each sample point. Starting from the ray, the algorithm constructs $MaxDepth*2$ paths of increasing length, and accumulates the radiances carried by these paths. These radiances are combined by a MIS Monte Carlo estimator, which decides the final value of the pixel.
 
-The path tracing integrator generates paths incrementally, starting from the camera location $p_0$. At each surface point $p_n$, the algorithm samples an incoming direction (for $p_{1}\to p_0$, the direction is fixed by the configuration of the camera), and traces the incoming ray to find $p_{n+1}$. If the point $p_{n+1}$ emits light actively, then this constitutes a path of $n$ reflection point. Moreover, $p_{n+1}$ also serves as the next reflection point, so the algorithm samples a point $p_{light}$ that illuminates $p_{n+1}$, and the radiance can be passed back to $p_0$ through a chain of reflections.
+The path tracing integrator generates paths incrementally, starting from the camera location $p_0$. At each point $p_{n-1}$, the algorithm samples an incoming direction (for $p_{1}\to p_0$, the direction is fixed by the configuration of the camera), and traces the incoming ray to find $p_{n}$. If the point $p_{n}$ emits light actively, then this constitutes a path of $n-1$ reflection point. Moreover, $p_{n}$ also serves as the next reflection point, so the algorithm samples a point $p_{light}$ that illuminates $p_{n}$, and the radiance can be passed back to $p_0$ through a chain of reflections.
 
 
 More precisely, the path tracing algorithm works as follows:
@@ -426,9 +427,9 @@ For each pixel, the integrator estimates its color using a total of $spp*2*MaxDe
         \includegraphics[width=.96\textwidth]{cornell_spp64.png}
         \subcaption{$spp=64$}
     \end{minipage}
-    \caption{Effect of increasing $MaxDepth$}
-    \label{fig maxdepth}
+    \caption{Effect of increasing $spp$}
+    \label{fig spp}
 \end{figure}
 
-For a typical scene, $spp$ is required to be at least 1024 in order to reduce noise down to an inconceivable level. Common images to be rendered consists of around 1 million pixels, thus around 1 billion pixel samples are often needed. Moreover, each ray generated in the algorithm needs to tested for intersection with the entire scene, which often consists of millions of geometric primitives. The next chapter of this report will discuss how this project copes with this humongous amount of computation and implements an efficient path-tracing renderer.
+For a typical scene, $spp$ is required to be at least 1024 in order to reduce noise down to an inconceivable level. Common images to be rendered consists of around 1 million pixels, thus around 1 billion pixel samples are often needed. Moreover, each ray generated in the algorithm needs to be tested for intersection with the entire scene, which often consists of millions of geometric primitives. The next chapter of this report will discuss how this project copes with this humongous amount of computation and implements an efficient path-tracing renderer.
 

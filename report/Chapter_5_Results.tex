@@ -10,7 +10,7 @@ In order to demonstrate its efficiency, the \texttt{Cavalry} renderer created in
 
 The \texttt{Mitsuba} and \texttt{pbrt} renderers are compared with \texttt{Cavalry}'s implementation of both the traditional path-tracing and the reinforcement learning path-tracing algorithms. Notice that, \texttt{Mitsuba} and \texttt{pbrt} also implement other variants of path-tracing (e.g., bi-directional path-tracing), but only the traditional path-tracing integrator of these renderers are used for comparison.
 
-The scenes used to compare these renders are created by Benedikt Bitterli, and they were downloaded from \cite{resources16}. The creator defined these scenes for both \texttt{pbrt} and \texttt{Mitsuba}, with identical geometries and near identical materials. The \texttt{Cavalry} renderer created in this project parses the same input files as \texttt{pbrt}. It is thus ensured that all renderers are assigned the same task.
+The scenes used to compare these renders are created by Benedikt Bitterli, and they were downloaded from \cite{resources16}. The creator defined these scenes for both \texttt{pbrt} and \texttt{Mitsuba}, with identical geometries and near identical materials. The \texttt{Cavalry} renderer created in this project parses the same input files as \texttt{pbrt}. It is thus ensured that all renderers are assigned the same task\footnote{One potential source of unfairness is that when rendering on \texttt{Mitsuba}, a rather naive random number generator is used, because the better RNGs of \texttt{Mitsuba} does not allow flexibly setting $spp$s.}.
 
 For each scene, the renderers are asked to render images with an increasing amount of samples per pixel, starting from $4$ and doubling up to $1024$. The image with $1024$ $spp$s is used as a reference, and the other images are compared with the reference by computing the mean-squared-error (MSE) of pixel values. The MSE is plotted against the time spent on rendering on a log-log scale. Since MSE (i.e., variance) is inversely proportional to samples count (which is linear to rendering time), the log-log plots usually take the shape of a straight line with negative gradient.
 
@@ -22,10 +22,10 @@ A total of 4 scenes are selected. For each scene, an image rendered by \texttt{C
     \begin{minipage}[t]{.99\textwidth}
         \centering
         \vspace{0pt}
-        \includegraphics[width=.9\textwidth]{chapter5/living-room-2_1024spp_path.png}
+        \includegraphics[width=.8\textwidth]{chapter5/living-room-2_1024spp_path.png}
     \end{minipage}
     
-    \vspace{0.3cm}
+    \vspace{0.1cm}
 
     \begin{minipage}[t]{.99\textwidth}
         \centering
