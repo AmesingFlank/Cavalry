@@ -7,10 +7,10 @@ As described in section \ref{subsection MIS}, the path-tracing integrator sample
 
 \begin{figure}[H]
     \centering
-    \includegraphics[height=6.1cm]{veach-bidir2_1024spp_rlpath.png}
+    \includegraphics[height=8cm]{veach-bidir2_1024spp_rlpath.png}
 \end{figure}
 
-In this scene, both light sources are surrounded by opaque geometries, which means only a small region can be illuminated directly. Furthermore, the reflected radiance from this small region is the primary source of illumination for most surfaces in the scene. During path-tracing, the light sources sampled from $p_{rad}$ are often occluded, and hence $p_{rad}$ is poor match for the integrand. The directions sampled from $p_{ref}$ are also rarely useful, because only a small set of directions provides illumination. As both MIS distribution are ineffective, the algorithm converges extremely slowly.
+In this scene, both light sources are surrounded by opaque geometries, which means only a small region can be illuminated directly. Furthermore, the reflected radiance from this small region is the primary source of illumination for most surfaces in the scene. During path-tracing, the light sources sampled from $p_{rad}$ are often occluded, and hence $p_{rad}$ is poor match for the integrand. The directions sampled from $p_{ref}$ are also rarely useful, because only a small set of directions provide indirect illumination. As both MIS distributions are ineffective, the algorithm converges extremely slowly.
 
 \section{Method}
 This projects implements the algorithm proposed by \cite{RLPT}, which uses online reinforcement learning to identify a distribution $p_{RL}$ of rays that is a good match for the integrand of the rendering equation.
@@ -69,7 +69,7 @@ In the reinforcement learning setting, an agent, starting from state $S_1$, inte
 
 \end{figure}
 
-A commonly used method to guide an agent is to maintain a table $Q$, where the $Q(s,a)$ is an indication of how good is the choice of taking the action $a$ at state $s$. A well-known method for updating $Q$ and moving the agent at the same time is the \textit{Expected Sarsa} strategy. At each state $s$, the strategy chooses an action $a$ from a distribution $\pi(s,a)$ which depends on $Q(s,a)$. This gives the agent a reward $R(s,a)$, and leads the agent to a new state $S'$. The algorithm then updates $Q(s,a)$ by the following formula:
+A commonly used method of guiding an agent is to maintain a table $Q$, where the value $Q(s,a)$ is an indication of how good is the choice of taking the action $a$ at state $s$. A well-known method for updating $Q$ and moving the agent at the same time is the \textit{Expected Sarsa} strategy. At each state $s$, the strategy chooses an action $a$ from a distribution $\pi(s,a)$ which depends on $Q(s,a)$. This gives the agent a reward $R(s,a)$, and leads the agent to a new state $S'$. The algorithm then updates $Q(s,a)$ by the following formula:
 \begin{align*}
     Q(s,a) := (1-\alpha) Q(s,a) + \alpha  \left(R(s,a)+\gamma \sum_{a'} \pi(s',a')Q(s',a') \right)
 \end{align*}
@@ -85,7 +85,7 @@ Path-tracing bears many similarities with expected Sarsa. Specifically,
 \end{itemize}
 In \cite{RLPT}, it was proposed that the expected Sarsa algorithm can be used learn the distribution of $Q$ (as thus $L_i$). When weighted (discounted) by the reflectance term $f_r(p,\omega_o,\omega_i)\cos \theta_i$, this distribution becomes a good distribution to sample incoming rays from, according to importance sampling.
 
-Implementation-wise, notice that the domain of states $S$ and actions $A$ are both continuous, which makes a tabulated representation of $Q$ impossible. To work around this, this project divides the entire scene into a 3D grid, typically of size $32\times 32\times 32$. All surface points within the same grid cell are considered to be at the same state $s$. Moreover, at each grid cell, the spherical domain of incoming directions $\omega_i$ is also divided into 128 equally-sized sectors, and the directions in each sector are mapped to the same action $a$. 
+In this correspondence between path-tracing and reinforcement learning, the domain of states $S$ and actions $A$ are both continuous, which makes a complete tabulated representation of $Q$ impossible. To work around this, this project divides the entire scene into a 3D grid, typically of size $32\times 32\times 32$. All surface points within the same grid cell are considered to be at the same state $s$. Moreover, at each grid cell, the spherical domain of incoming directions $\omega_i$ is also divided into 128 equally-sized sectors, and the directions in each sector are mapped to the same action $a$. 
 
 During path-tracing, at each surface point $p_n$, instead of sampling a direction from the reflectance-matching $p_{ref}$, the algorithm uses the following sampling procedure:
 
@@ -93,7 +93,7 @@ During path-tracing, at each surface point $p_n$, instead of sampling a directio
     \label{algo sample from Q}
     Finds the grid cell $s_n$ that encloses $p_n$\;
     \ForEach{\upshape sector $a$ at the cell $s_n$}{
-        Sample a direction $\omega_i$ within $k$ uniformly at random\;
+        Sample a direction $\omega_i$ within $a$ uniformly at random\;
         Compute the discounted $Q$ value $Q'(s_n,a):= f_r(p,\omega_o,\omega_i)\cos \theta_i Q(s_n,a)$\;
     }
     Construct the discrete distribution over sectors $p_{sec,n}(a)=\frac{Q'(s_n,a)}{\sum_{a'}Q'(s_n,a')}$\;
@@ -113,7 +113,7 @@ After tracing $\omega_i$ from $p_n$ to find the next surface point $p_{n+1}$, th
 \section{Implementation}
 When implementing algorithm \ref{algo sample from Q} on GPUs, different threads could operate on different grid cells. However, in CUDA, if all threads within the same warp read the same memory address, the hardware can \textit{coalesce} the memory operation by broadcasting the same data content to all threads. To utilize this fact, this project included an additional sorting phase, which groups threads together according to the cell $s_n$ that they operate on (similar to the material sorting stage described in section \ref{section polymorphism}). It was observed that this improves the performance of computing the weighted $Q$ values by around 50\%.
 
-Further, when formula \ref{eqn Q update} is used to update the $Q$ table, the entry $Q(s,a)$ could be updated simultaneously by multiple threads. To avoid race conditions, this projects accumulates proposal $Q$ values using atomic operations, and then divide by the total amount of proposals in a later step. This ensures that all GPU threads can learn cooperatively. 
+Further, when formula \ref{eqn Q update} is used to update the $Q$ table, the entry $Q(s,a)$ could be updated simultaneously by multiple threads. To avoid race conditions, this projects accumulates proposal $Q$ values using atomic operations, and then divide by the total amount of proposals in a later step. This ensures that all GPU threads cooperatively contribute to learning. 
 
 To illustrate the benefit brought by reinforcement learning, the figure on the next page compares the same scene rendered by traditional path-tracing and with reinforcement learning guided path-tracing. Both images are rendered with 64 samples per pixel, but the difference in noise levels between them is blatant. 
 

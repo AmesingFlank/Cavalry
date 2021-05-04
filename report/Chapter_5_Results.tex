@@ -3,7 +3,7 @@
 In order to demonstrate its efficiency, the \texttt{Cavalry} renderer created in this project is compared with two of the most famous renderers used in the academia:
 
 \begin{itemize}
-    \item The \texttt{pbrt} renderer, version 3. This is a comprehensively documented and optimized CPU renderer, and it is accompanied and documented by the ``PBRT'' book \cite{pharr2016physically}. At the time of writing, a 4th version of \texttt{pbrt} is under development. The 4th version will include GPU support, but the beta version couldn't be used for comparison with \texttt{Cavalry} due to stability issues.
+    \item The \texttt{pbrt} renderer, version 3. This is a comprehensively documented and optimized CPU renderer, and it is accompanied and documented by the ``PBRT'' book \cite{pharr2016physically}. At the time of writing, a 4th version of \texttt{pbrt} is under development. The 4th version will include GPU support, but due to stability issues, the beta version couldn't be used for comparison with \texttt{Cavalry}.
     
     \item The \texttt{Mitsuba} renderer. This is another well-known renderer with full GPU support. The renderer uses NVIDIA's Optix library for intersection detection, which is considered to have state-of-the-art performance.  
 \end{itemize}
@@ -36,7 +36,7 @@ A total of 4 scenes are selected. For each scene, an image rendered by \texttt{C
     \caption{The ``living-room-2'' scene}
 \end{figure}
 
-As indicated the plot, for this living room scene, the reinforcement learning integrator exhibits the greatest efficiency. \texttt{Mitsuba} is less efficient than \texttt{path} in the beginning, but overtakes at bigger sample counts. Naturally, All 3 GPU rendering algorithms outperform \texttt{pbrt}, which is CPU-only.
+As indicated by the plot, for this living room scene, the reinforcement learning integrator exhibits the greatest efficiency. \texttt{Mitsuba} is less efficient than \texttt{path} in the beginning, but overtakes at bigger sample counts. Naturally, All 3 GPU rendering algorithms outperform \texttt{pbrt}, which is CPU-only.
 
 \newpage
 
@@ -107,8 +107,10 @@ This is the scene with the difficult lighting scenario that was described in cha
     \caption{The ``kitchen'' scene}
 \end{figure}
 
-In this kitchen scene, the \texttt{rlpath} integrator slightly outperforms \texttt{path}, which significantly outperforms both \texttt{pbrt} and \texttt{Mitsuba}\footnote{Peculiarly, the \texttt{Mitsuba} GPU renderer was even outperformed by \texttt{pbrt}. It is unclear as to why this happened.}. 
+In this kitchen scene, the \texttt{rlpath} integrator slightly outperforms \texttt{path}, which significantly outperforms both \texttt{pbrt} and \texttt{Mitsuba}\footnote{Peculiarly, in this scene, the \texttt{Mitsuba} GPU renderer was even outperformed by \texttt{pbrt}. It is unclear as to why this happened.}. 
 
 \newpage
 
-To sum up, it was found that the performance of the \texttt{Cavalry} renderer created by this project significantly outperforms the \texttt{pbrt} CPU renderer, and in many occasions, it even surpasses the \texttt{Mitsuba} GPU renderer, which uses NVIDIA's state-of-the-art intersection subroutine library\footnote{Other parts of \texttt{Mitsuba} is not as optimized in terms of performance. For a quick but vague discussion, see \url{https://github.com/mitsuba-renderer/mitsuba2/issues/72}}. Moreover, it was shown that except in scenes where direct lighting dominates, the reinforcement learning path-tracing algorithm prove to be more effective than the traditional path-tracing algorithm.
+To sum up, it was found that the performance of the \texttt{Cavalry} renderer created by this project significantly outperforms the \texttt{pbrt} CPU renderer, and in many occasions, it even surpasses the \texttt{Mitsuba} GPU renderer, which uses NVIDIA's state-of-the-art intersection detection library. Moreover, it was shown that except in scenes where direct lighting dominates, the reinforcement learning path-tracing algorithm prove to be more effective than the traditional path-tracing algorithm.
+
+%\footnote{Other parts of \texttt{Mitsuba} might not be as extremely optimized in terms of performance. For a quick but vague discussion, see \url{https://github.com/mitsuba-renderer/mitsuba2/issues/72}}
