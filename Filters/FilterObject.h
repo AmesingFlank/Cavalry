@@ -69,8 +69,14 @@ public:
 	}
 
 	static FilterObject createFromObjectDefinition(const ObjectDefinition& def) {
-		float xwidth = def.params.getNum("xwidth");
-		float ywidth = def.params.getNum("ywidth");
+		float xwidth = 1.f;
+		float ywidth = 1.f;
+		if (def.params.hasNum("xwidth")) {
+			xwidth = def.params.getNum("xwidth");
+		}
+		if (def.params.hasNum("ywidth")) {
+			ywidth = def.params.getNum("ywidth");
+		}
 		if (def.objectName == "box") {
 			return FilterObject(BoxFilter(xwidth,ywidth));
 		}
@@ -78,7 +84,7 @@ public:
 			return FilterObject(BoxFilter(xwidth, ywidth));
 		}
 		std::cout << "unsupported filter type: " << def.objectName << std::endl;
-		return FilterObject(BoxFilter(xwidth, ywidth));
+		return FilterObject(TriangleFilter(xwidth, ywidth));
 	}
 
 };

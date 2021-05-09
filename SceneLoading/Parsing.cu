@@ -184,6 +184,9 @@ void parseSceneWideOptions(TokenBuf& buf,RenderSetup& result, const Parameters& 
 	ObjectDefinition samplerDef;
 	ObjectDefinition filterDef;
 
+	filterDef.isDefined = true;
+	filterDef.objectName = "triangle"; //default;
+
 	// parse scene-wide options
 	while(true){
 		auto nextToken = buf.peek();
