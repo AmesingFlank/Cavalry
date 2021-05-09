@@ -9,7 +9,7 @@ Originally built for real-time rendering, GPUs can handle a massive amount of ge
 
 CUDA employs the execution model known as SIMT (Single Instruction Multiple Threads). In this model, a large amount of threads can be spawned simultaneously, each running the same code on different data. CUDA threads are organized in groups of 32, known as \textit{warps}. Each thread must execute the same instructions as the others in the same warp, or remain idle. When the threads within a warp access the memory, the entire warp can be paused and swapped out, so that a different warp can execute before the memory access finishes. Using this mechanism, the GPU hides memory access latencies by allowing very fast context switching. As a result, each physical core in the GPU can simultaneously handle multiple logical threads.
 
-As an example, the GPU used for development of this project is an NVIDIA GTX1060 Mobile, which contains 10 \textit{Streaming Multiprocessors}, each of which consists of 128 CUDA cores. Each streaming multiprocessors can have up to 2048 resident threads, giving a total of 20480 threads that can be simultaneously handled. Even though each GPU thread is not as fast as a CPU thread, the aggregated performance of the CUDA cores can still be many times faster than the CPU.
+As an example, the GPU used for development of this project is an NVIDIA GTX1060 Mobile, which contains 10 \textit{Streaming Multiprocessors}, each of which consists of 128 CUDA cores. Each streaming multiprocessor can have up to 2048 resident threads, giving a total of 20480 threads that can be simultaneously handled. Even though each GPU thread is not as fast as a CPU thread, the aggregated performance of the CUDA cores can still be many times faster than the CPU.
 
 % \begin{figure}[H]
 %     \centering
@@ -24,7 +24,7 @@ As an example, the GPU used for development of this project is an NVIDIA GTX1060
 \section{Wavefront Path-Tracing}
 In CUDA, a parallel GPU function that is invoked by the CPU is called a GPU \textit{kernel}. When implementing algorithm \ref{Path Tracing} on GPUs, the most straightforward method is to implement the loop body (lines 3 to 12) as a GPU kernel, and invoke it for all pixel samples in parallel. This pattern of programming, where the entire computation is embodied in a single GPU kernel, is called the \textit{Megakernel}\cite{megakernel} approach.
 
-In contrast to megakernels, the \textit{Wavefront} programming pattern divides the computation into many small kernels, where intermediate results are explicitly stored in memory. The CPU invokes these kernels one after another. On GPUs, regions of code that uses a large amount of registers or has a high control flow divergence can significantly hurt the parallelization of the entire kernel, and thus the wavefront pattern can effectively contain these regions of code into separate kernels, so that the performance of the other kernels remain unaffected. However, the wavefront pattern incurs additional overhead by requiring more CPU-GPU communication, and memory IOs.
+In contrast to megakernels, the \textit{Wavefront} programming pattern divides the computation into many small kernels, where intermediate results are explicitly stored in memory. The CPU invokes these kernels one after another. On GPUs, regions of code that use a large amount of registers or have a high control flow divergence can significantly hurt the parallelization of the entire kernel, and thus the wavefront pattern can effectively contain these regions of code into separate kernels, so that the performance of the other kernels remain unaffected. However, the wavefront pattern incurs additional overhead by requiring more CPU-GPU communication, and memory IOs.
 
 The project carried out numerous experiments to find an optimal way of dividing the rendering work into wavefronts. In the end, the program implemented is structured as indicated by the following pseudo-code:
 
@@ -78,7 +78,7 @@ Unfortunately, polymorphism for materials cannot be handled in this manner, and 
 using Material = std::variant<Plastic, Metal, Glass>;
 \end{lstlisting}
 
-Implementation wise, a \texttt{variant} class is realized by \textit{tagged union}s, which is in essence the same technique used to implement sum types in languages such as Haskell. Dynamic dispatch can be provided not via virtual functions, but by switching on an integer labelled attached to the object. This effectively avoids the extra memory operation incurred by dereferencing virtual pointers.
+Implementation wise, a \texttt{variant} class is realized by \textit{tagged union}s, which is in essence the same technique used to implement sum types in languages such as Haskell. Dynamic dispatch can be provided not via virtual functions, but by switching on an integer label attached to the object. This effectively avoids the extra memory operation incurred by dereferencing virtual pointers.
 
 The usage \texttt{variant} solves problem 2, but problem 1 still remains because control flow divergence still exists whenever threads in the same warp process different materials. To solve this problem, this project employs the method of \cite{megakernel}, which sorts the material evaluation tasks before they're executed. More precisely, in algorithm \ref{algo wavefront Path Tracing}, before the kernel at line 9 is executed, this project inserts an extra phase where all tasks are sorted according to the material at their respective $p_n$. This step groups together threads that work on the same material, and there will only be a few warps that experience any divergences. Even though the sorting incurs a small extra cost, it was observed that it considerably improves the overall rendering performance.
 
@@ -171,7 +171,7 @@ In a BVH, if one AABB doesn't intersect the ray, all descendent boxes can be pru
 
 Unfortunately, this recursive traversal is unsuitable for implementation on GPUs. Firstly, GPUs have very restrictive recursion depth limits (for CUDA, this is 24), and thus might fail to complete the traversal. Secondly, due to the massive amount of parallel threads, maintaining a recursion stack for each thread is significantly costly in terms of memory and register usage. For these reasons, this projects explicitly maintains a stack of nodes to be traversed, and operates on this stack iteratively.
 
-In addition to eliminating recursion, this project also makes two important observations that leads to a fruitful optimization. Firstly, the project notices that if it is known that a node can only produce intersections further than the current shortest intersection found, then it is useless to push it onto the stack. Secondly, the project notices that the intersection distance between the ray and an AABB is a lower-bound of the shortest intersection distance between the ray and any geometry in the AABB. Motivated by these observations, this project keeps track of the distance of the shortest intersection found, and then makes the following optimizations:
+In addition to eliminating recursion, this project also makes two important observations that lead to a fruitful optimization. Firstly, the project notices that if it is known that a node can only produce intersections further than the current shortest intersection found, then it is useless to push it onto the stack. Secondly, the project notices that the intersection distance between the ray and an AABB is a lower-bound of the shortest intersection distance between the ray and any geometry in the AABB. Motivated by these observations, this project keeps track of the distance of the shortest intersection found, and then makes the following optimizations:
 \begin{itemize}
     \item If a child node intersects the ray, but the ray-AABB intersection distance is further than the shortest intersection, then the node is discarded, because it cannot produce a shorter intersection.
     \item If both children nodes intersect the ray and are not discarded, then the node with the shorter intersection distance should be traversed first, because it has a higher chance of finding a better intersection.
@@ -220,16 +220,16 @@ where $I$ is the set of interior nodes, $L$ the set of leaves, $C_i$ the cost fo
     C_i \sum_{n\in I} \frac{A(n)}{A(root)} + C_l \sum_{n\in L} \frac{A(n)}{A(root)}
 \end{align*}
 
-Given a collection of primitives, finding the optimal BVH tree according to the SAH heuristic is an NP-hard problem\cite{bvh_optimize}. This is not entirely surprising, considering the fact given any node with $N$ geometries, there're $2^N-2$ ways of constructing the two children nodes. However, not all hope is lost if the goal is to construct a BVH that's not necessarily optimal, but still reasonably good. This project implements a two-step system to approach high-quality BVH construction:
+Given a collection of primitives, finding the optimal BVH tree according to the SAH heuristic is an NP-hard problem \cite{bvh_optimize}. This is not entirely surprising, considering the fact given any node with $N$ geometries, there are $2^N-2$ ways of constructing the two children nodes. However, not all hope is lost if the goal is to construct a BVH that's not necessarily optimal, but still reasonably good. This project implements a two-step system to approach high-quality BVH construction:
 
 \begin{enumerate}
     \item Firstly, construct a BVH using a naive heuristic: at each node, split the AABB at the mid-point of a coordinate axis, thereby dividing the geometries into two groups. This is known as a Linear BVH, which can be constructed efficiently on GPUs using the method of \cite{bvh_build}, but the tree created is of poor quality.
-    \item Secondly, optimize the previously created BVH tree, using the method of \cite{bvh_optimize}. This step repeatedly solve the NP-hard optimization problem for very small \textit{treelets}, which can still significantly improve the quality of the entire tree.
+    \item Secondly, optimize the previously created BVH tree, using the method of \cite{bvh_optimize}. This step repeatedly solves the NP-hard optimization problem for very small \textit{treelets}, which can still significantly improve the quality of the entire tree.
 \end{enumerate}
 This two-step approach is similar to the BVH construction routine of NVIDIA's Optix library. Details for the two steps are described below.
 
 \subsection{Linear BVH Construction}
-In Linear BVH, the AABB of each node is split at the mid-point of a coordinate axis, dividing the geometries into two groups. In three dimensions, the X, Y, and Z axises are used for splitting in a round-robin fashion, as the depth of the tree increases. A naive implementation of this splitting method would start at the root of the tree, and recursively divides each node using this heuristic. Unsurprisingly, this recursive algorithm parallelizes poorly. This motivates this project to employ a more sophisticated method described at \cite{bvh_build}, which uses a spatial encoding called \textit{morton code} and a data structure known as \textit{binary radix tree}.
+In Linear BVH, the AABB of each node is split at the mid-point of a coordinate axis, dividing the geometries into two groups. In three dimensions, the X, Y, and Z axises are used for splitting in a round-robin fashion, as the depth of the tree increases. A naive implementation of this splitting method would start at the root of the tree, and recursively divide each node using this heuristic. Unsurprisingly, this recursive algorithm parallelizes poorly. This motivates this project to employ a more sophisticated method described at \cite{bvh_build}, which uses a spatial encoding called \textit{morton code} and a data structure known as \textit{binary radix tree}.
 
 The algorithm begins by taking the centroid of each geometric primitive. The algorithm scales and rounds each component of the centroid, so that it is represented by a 21-bit integer. Then, using the integer tuple $(x,y,z)$ which represents the position of the centroid, the algorithm computes its \textit{morton code}, which is a 63-bit integer defined as
 $$ M=x_0~y_0~z_0~x_1~y_1~z_1~...~x_{20}~y_{20}~z_{20} $$
@@ -524,7 +524,7 @@ where $x_i$ is the $i$th bit of the $x$-coordinate, and the same for $y_i$ and $
 The morton code has many useful properties. To begin with, the most significant bit of $M$ determines exactly whether the primitive is located in the left half or the right half the scene, and the 2nd most significant bit determines whether it is located in the upper or the lower half. Continuing this pattern, for any rectangular region of the space defined by the first $k$ significant bits, the ($k+1$)th significant bit would split that region of space into two parts, alongside one of the coordinate axises. This structure is in good correspondence with the mid-point BVH splitting strategy.
 
 
-Given the morton codes of all primitives, one could straightforwardly construct a binary prefix tree where the $i$th level contains $2^i$ nodes, each of which corresponds to an assignment of the first $i$ bits of a morton code. However, such a tree would not correspond to a useful BVH. This is because geometries are always distributed \textit{sparsely} in the scenes, and thus only a very small portion of the $2^{63}$ morton code values are actually used by some geometry. Thus, the algorithm\cite{bvh_build} implemented in this project uses a variant of prefix tree known as the radix tree, which compactly stores sparsely distributed keys.
+Given the morton codes of all primitives, one could straightforwardly construct a binary prefix tree where the $i$th level contains $2^i$ nodes, each of which corresponds to an assignment of the first $i$ bits of a morton code. However, such a tree would not correspond to a useful BVH. This is because geometries are always distributed \textit{sparsely} in the scenes, and thus only a very small portion of the $2^{63}$ morton code values are actually used by some geometry. Thus, the algorithm \cite{bvh_build} implemented in this project uses a variant of prefix tree known as the radix tree, which compactly stores sparsely distributed keys.
 
 For a set of $N$ binary keys $k_0,...,k_{N-1}$, a binary radix tree is binary tree whose leaves are the keys in sorted order. Each interior node $n$ in the tree is also labeled by a bit sequence, which is the longest common prefix of all leaves in the subtree rooted at $n$. Using $\delta(i,j)$ to denote the length of the longest common prefix between $k_i$ and $k_j$, the ordering of leaves implies that if $i\leq i'\leq j'\leq j$, then $\delta(i,j)\geq \delta(i',j')$. Thus, for a node whose leftmost descendent is $k_i$ and rightmost descendent $k_j$, its prefix has length exactly $\delta(i,j)$. 
 
@@ -538,21 +538,21 @@ In the radix tree, each internal node partitions its keys using the first differ
 \end{figure} 
 
 
-In order to construct radix trees in parallel, the algorithm\cite{bvh_build} establishes a connection between node indices and keys through a specific tree layout, which enables any interior node to be built simultaneously with its children. The layout stores interior and leaf nodes in two separate arrays, $I$ and $L$. The leaf array is sorted on the keys increasingly, and the interior array is arranged such that
+In order to construct radix trees in parallel, the algorithm \cite{bvh_build} establishes a connection between node indices and keys through a specific tree layout, which enables any interior node to be built simultaneously with its children. The layout stores interior and leaf nodes in two separate arrays, $I$ and $L$. The leaf array is sorted on the keys increasingly, and the interior array is arranged such that
 \begin{enumerate}
     \item The root of the tree is at $I_0$.
     
     \item For each interior node $n$ which covers keys $k_i,...,k_j$ and splits at $k_\gamma$: the left child is stored at $I_\gamma$ if it is also an interior node, or at $L_\gamma$ if it is a leaf. Similarly, the right child is stored at either $I_{\gamma+1}$ if it is interior, or at $L_{\gamma+1}$ if it is a leaf.
 \end{enumerate}
 
-Notice that, these two rules enforces a special property: the index of an interior node coincides with the index of either its leftmost leaf descendent, or its rightmost leaf descendent. This property is visualized in the following image, where each horizontal bar represents the range of keys covered by an interior node.
+Notice that, these two rules enforce a special property: the index of an interior node coincides with the index of either its leftmost leaf descendent, or its rightmost leaf descendent. This property is visualized in the following image, where each horizontal bar represents the range of keys covered by an interior node.
 \begin{figure}[H]
     \centering
     \includegraphics[height=5cm]{radix_layout.png}
     \caption{Radix tree storage layout. Image credit \cite{bvh_build}.}
 \end{figure}
 
-Given an interior node, it is not too hard to find out whether its index correspond to the leftmost descendent, or the rightmost one. More precisely, for the interior node $I_{x}$, it suffices to compare $\delta(x,x+1)$ and $\delta(x,x-1)$. If the former is larger, then $x$ must be the index of the leftmost descendent, and otherwise $x$ coincides with the rightmost descendent. Furthermore, the smaller value of $\delta(x,x+1)$ and $\delta(x,x-1)$ provides a minimum threshold of the maximum common prefix length $\delta(i,j)$ for $I_x$, that is, $\delta(i,j)> \text{min}(\delta(x,x+1),\delta(x,x-1))$. This is because, the minimum of $\delta(x,x+1)$ and $\delta(x,x-1)$ must equal the maximum common prefix length of the parent of $I_x$, and since $L_x$ is the children, it must have a greater maximum common prefix length. 
+Given an interior node, it is not too hard to find out whether its index corresponds to the leftmost descendent, or the rightmost one. More precisely, for the interior node $I_{x}$, it suffices to compare $\delta(x,x+1)$ and $\delta(x,x-1)$. If the former is larger, then $x$ must be the index of the leftmost descendent, and otherwise $x$ coincides with the rightmost descendent. Furthermore, the smaller value of $\delta(x,x+1)$ and $\delta(x,x-1)$ provides a minimum threshold of the maximum common prefix length $\delta(i,j)$ for $I_x$, that is, $\delta(i,j)> \text{min}(\delta(x,x+1),\delta(x,x-1))$. This is because, the minimum of $\delta(x,x+1)$ and $\delta(x,x-1)$ must equal the maximum common prefix length of the parent of $I_x$, and since $L_x$ is the children, it must have a greater maximum common prefix length. 
 
 At this point, the algorithm knowns one of $i$ and $j$, and it also knows a lower-bound $\delta_{\text{min}}$ for $\delta(i,j)$. Without loss of generality, assume that the leftmost index $i$ is known. Notice that, $j$ is a value that satisfies $\delta(i,j)>\delta_{\text{min}}$, and it must be the maximum index that does so. Thus, it suffices to perform a binary search in the interval $[i+1,N]$, and find the largest $j$ that satisfies $\delta(i,j)>\delta_{\text{min}}$. 
 
@@ -590,18 +590,18 @@ Having constructed the binary radix tree, it only remains to convert it into a B
 
 %\enlargethispage{3\baselineskip}
 
-This project implemented this BVH construction on GPUs using CUDA. Thanks to the massively parallel nature of this algorithm, the project observed that the running time of this BVH construction algorithm is almost negligible ($\sim$50ms for 1 million primitives) compare to the cost of the actual path-tracing phase.
+This project implemented this BVH construction in CUDA. Thanks to the parallel nature of this algorithm, the project observed that the running time of this BVH construction algorithm is almost negligible ($\sim$50ms for 1 million primitives) compared to the cost of the actual path-tracing phase ($\sim$10 minutes for a 1024 $spp$ render).
 
 
 \subsection{BVH Optimization}
-The BVH trees constructed by the algorithm from the previous section can immensely accelerate intersection detections and thus rendering. However, the quality of these trees are still quite poor compared to trees generated with the guidance of the SAH heuristic. To address this issue, this project implements the algorithm described int \cite{bvh_optimize}, which optimizes existing BVH trees. With little running time cost, this optimization step boosts the rendering efficiency by about $300\%$.
+The BVH trees constructed by the algorithm from the previous section can immensely accelerate intersection detections and thus rendering. However, the quality of these trees are still quite poor compared to trees generated with the guidance of the SAH heuristic. To address this issue, this project implements the algorithm described in \cite{bvh_optimize}, which optimizes existing BVH trees. With little running time cost, this optimization step boosts the rendering efficiency by about $300\%$.
 
-It is believed that finding the optimal tree under the SAH heuristic is NP-hard\cite{bvh_optimize}. However, intuitively, if the tree is optimal in every local \textit{treelet}, the entire tree would be somewhat optimal. Formally, a \textit{treelet} of size $n$ rooted at some node is defined to be a collection of immediate descendants of the root, consisting of $n-1$ internal nodes and $n$ leaf nodes (which can still be internal nodes in the complete tree). The algorithm solves the SAH optimization problem using dynamic programming for each treelet of size 7, in the hope that these local transformations improve the structure of the entire tree. 
+It is believed that finding the optimal tree under the SAH heuristic is NP-hard \cite{bvh_optimize}. However, intuitively, if the tree is optimal in every local \textit{treelet}, the entire tree would be somewhat optimal. Formally, a \textit{treelet} rooted at some node is defined to be a collection of immediate descendants of the root, consisting of $m-1$ internal nodes and $m$ leaf nodes (which can still be internal nodes in the complete tree). The algorithm solves the SAH optimization problem using dynamic programming for each treelet with 7 leaves, in the hope that these local transformations improve the structure of the entire tree. 
 
 \begin{figure}[H]
     \centering
     \includegraphics[height=5cm]{treelet.png}
-    \caption{A treelet of size 7 and how it can be transformed. Image credit \cite{bvh_optimize}}
+    \caption{A treelet with 7 leaves and how it can be transformed. Image credit \cite{bvh_optimize}}
 \end{figure}
 For each internal node $n$, the algorithm defines its cost to be 
 \begin{align*}
@@ -611,9 +611,9 @@ For each internal node $n$, the algorithm defines its cost to be
         C_l A(n) &\text{if $n$ is a leaf node in the full BVH}\\
     \end{cases}
 \end{align*}
-where $n_l$ and $n_r$ are the left and right child. The cost defined this way is exactly the SAH cost multiplied by a constant factor of $A(root)$. For each internal node $n$ that is the root of a treelet of size 7, the algorithm optimizes $C(n)$ by finding the optimal structure of a local treelet. If more than one treelet of size 7 is rooted at $n$, the algorithm operates on the one where the leaves have the greatest surface area, which maximizes the potential for improvements. 
+where $n_l$ and $n_r$ are the left and right child. The cost defined this way is exactly the SAH cost multiplied by a constant factor of $A(root)$. For each internal node $n$ that is the root of a treelet with 7 leaves, the algorithm optimizes $C(n)$ by finding the optimal structure of a local treelet. If more than one treelets with 7 leaves are rooted at $n$, the algorithm operates on the one where the leaves have the greatest surface area, which maximizes the potential for improvements. 
 
-The algorithm optimizes treelets using dynamic programing. Specifically, it optimizes subsets of the leaves of increasing size, and memoize intermediate results. When working on a size-$n$ subset $S$, it suffices to enumerate all possible binary partitions of $S$, and use memoized results to obtain optimal tree structure for each partition. Then, when the entire set of leaves is optimized, the treelet itself is also optimized. The procedure for optimizing each treelet is given in the following pseudo-code:
+The algorithm optimizes treelets via dynamic programing. Specifically, it optimizes subsets of leaves of increasing size, and memoizes intermediate results. When working on a size-$k$ subset $S$, it suffices to enumerate all possible binary partitions of $S$, and use memoized results to obtain optimal tree structure for each partition. Then, when the entire set of leaves is optimized, the treelet itself is also optimized. The procedure for optimizing each treelet is given in the following pseudo-code:
 
 \begin{algorithm}[H]
     \label{algo optimize treelet}
@@ -641,12 +641,12 @@ The algorithm optimizes treelets using dynamic programing. Specifically, it opti
 
 ~
 
-For treelets rooted at the same level in the BVH, this optimization step can be parallelized because the treelets do not overlap. Thus, this project implemented the algorithm in GPU, where nodes across each level are processed in parallel. Again, this step is extremely efficient, taking around 200ms for a scene with 1 million triangle. This cost is extremely low compared to the actual rendering time.
+For treelets rooted at the same level in the BVH, this optimization step can be parallelized because the treelets do not overlap. Thus, this project implemented the algorithm in GPU, where nodes across each level are processed in parallel. Again, this step is extremely efficient, taking approximately 200ms for a scene with 1 million triangle. For such scenes rendered at 1024 $spp$, this optimization step could reduce rendering time from around 30 minutes to around 10 minutes.
 
 \thispagestyle{empty}
 \enlargethispage{5\baselineskip}
 
-Interestingly, this optimization step does not reach a fixed point after optimizing each treelet once. The following image plots how the SAH cost (and thus rendering cost) changes when the BVH for a scene is optimized repeatedly. This project runs the optimization for 3 rounds for each scene, which almost always reduces SAH cost to one third of the origin value.
+Interestingly, the optimization does not reach a fixed point after processing each treelet once. The following image plots how the SAH (and thus rendering time) changes when the BVH is optimized repeatedly. This project runs the optimization for 3 rounds for each scene, which almost always reduces SAH to $\frac{1}{3}$ of the origin value.
 
 \begin{figure}[H]
     \centering

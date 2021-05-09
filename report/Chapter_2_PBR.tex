@@ -16,7 +16,7 @@ In almost all regions in any scene, the radiant flux is not uniformly distribute
     \label{irradiance integral}
 \end{align}
 
-For any point $p$, the irradiance $E(p)$ is not uniform across all directions, and thus it is also important to consider the density of irradiance in each direction $\omega$. This quantity, $L(p,\omega)$, is called \textit{radiance}, and it is measured in power per unit area per unit solid angle ($\text{W}\cdot\text{m}^{-2}\cdot \text{sr}^{-1}$). Radiance is an especially important quantity, because it is a measure of the strength of a single ray of light, identified by its direction $\omega$ and a point $p$ which it passes through. Consequently, radiance is the physical quantity that ray-tracing algorithms constantly operates in. 
+For any point $p$, the irradiance $E(p)$ is not uniform across all directions, and thus it is also important to consider the density of irradiance in each direction $\omega$. This quantity, $L(p,\omega)$, is called \textit{radiance}, and it is measured in power per unit area per unit solid angle ($\text{W}\cdot\text{m}^{-2}\cdot \text{sr}^{-1}$). Radiance is an especially important quantity, because it is a measure of the strength of a single ray of light, identified by its direction $\omega$ and a point $p$ which it passes through. Consequently, radiance is the physical quantity that ray-tracing algorithms constantly operates with. 
 
 
 In rendering, radiance often appears in the form $L_o(p,\omega)$ or $L_i(p,\omega)$, which denote the radiance going out of $p$ and those entering into it, respectively. More precisely, $L_o(p,\omega)$ represents the radiance that travels from $p$ and outwards in the direction $\omega$, and $L_i(p,\omega)$ represents the incoming radiance that travels towards to $p$ in the direction $-\omega$. The convention $L_i(p,\omega)$ might appear slightly counter-intuitive, since $\omega$ points in the opposite direction as the propagation of energy. However, the convenience of this notation will become apparent when the ray-tracing algorithm is formulated. 
@@ -150,7 +150,7 @@ From this, it's straightforward to show that, for some $C$,
     \label{reflection plus C}
 \end{align}
 
-Different materials in the real world have drastically different BRDFs. The BRDF of a surface completely decides how it reflects light, which is a crucial factor of its appearances. This project implemented a range of different BRDFs corresponding to many different materials, but unfortunately, due to their complexity, details of these BRDFs could not be described here. 
+Different materials in the real world have drastically different BRDFs. The BRDF of a surface completely decides how it reflects light, which is a crucial factor of its appearance. This project implemented a range of different BRDFs corresponding to many different materials, but unfortunately, due to their complexity, details of these BRDFs could not be described here. 
 
 ~
 
@@ -159,7 +159,7 @@ In order to fully model $L_o(p,\omega_o)$, it remains to describe the term $C$ i
     L_o(p,\omega_o) = L_e(p,\omega_o) + \int_\Omega L_i(p,\omega_i)f_r(p,\omega_o,\omega_i)\cos\theta_i\d\omega_i
     \label{rendering equation}
 \end{align}
-This is the famous rendering equation, originally proposed by Kaijiya\cite{rendering_equation}. 
+This is the famous rendering equation, originally proposed by Kaijiya \cite{rendering_equation}. 
 
 
 Under the assumption that radiance is constant along each ray, the incoming radiance $L_i(p,\omega_i)$ can be equated with the outgoing radiance from another point, $q$, as illustrated below.
@@ -210,7 +210,7 @@ Finding solutions to this equation is the ultimate goal of rendering, because th
 
 \section{Monte Carlo Integration}
 
-Equation \ref{rendering equation with cast} cannot be solved analytically. Thus, rendering software solve the equation numerically using the method of Monte Carlo integration, and the algorithms used by these software are referred as ``integrators''. Given an integral
+Equation \ref{rendering equation with cast} cannot be solved analytically. Thus, rendering software solves the equation numerically using the method of Monte Carlo integration, and the algorithms used by these software are referred as ``integrators''. Given an integral
 \begin{align*}
     I = \int_\Omega f(x) \d x,
 \end{align*}
@@ -224,9 +224,9 @@ It can be proved that this indicator is both unbiased $(E[I_N]=I)$ and consisten
 
 \subsection{Importance Sampling}
 \label{subsection IS}
-In rendering, the variance $\Var[I_N]$ of the Monte Carlo estimator manifest in the form of random noise in the resulting image. Thus, variance reduction techniques are vital for rendering high-quantity images efficiently. One of the most important such techniques is importance sampling.
+In rendering, the variance $\Var[I_N]$ of the Monte Carlo estimator is manifest in the form of random noise in the resulting image. Thus, variance reduction techniques are vital for rendering high-quantity images efficiently. One of the most important such techniques is importance sampling.
 
-In the monte carlo estimator, the PDF $p$ used can be an arbitrary distribution. However, different distributions can lead to dramatically different variances. Importance sampling uses the fact that, informally, the variance $\Var[I_N]$ is reduced as the shape of the PDF $p(x)$ becomes similar to the shape of the integrand $f(x)$. As an example, consider when the PDF is 
+In the Monte Carlo estimator, the PDF $p$ used can be an arbitrary distribution. However, different distributions can lead to dramatically different variances. Importance sampling uses the fact that, informally, the variance $\Var[I_N]$ is reduced as the shape of the PDF $p(x)$ becomes similar to the shape of the integrand $f(x)$. As an example, consider when the PDF is 
 $$ 
 p(x)=\frac{f(x)}{\int_\Omega f(x') \d x'}.
 $$ 
@@ -246,20 +246,20 @@ $$
 I = \int_\Omega f(x)g(x)\d x
 $$
 
-In this case, if a renderer performs importance sampling according to distributions based on either $f$ or $g$, one of these two would often perform poorly\cite{pharr2016physically}. This is exactly the issue addressed by the technique of multiple importance sampling, or MIS.
+In this case, if a renderer performs importance sampling according to distributions based on either $f$ or $g$, one of these two would often perform poorly \cite{pharr2016physically}. This is exactly the issue addressed by the technique of multiple importance sampling (MIS).
 
-MIS proposes that, during Monte Carlo Integration, samples should be drawn from multiple distributions, chosen in the hope that at least one will match the shape of the integrand well. MIS provides a way of weighting the samples from each distribution that eliminates large variance spikes due to mismatches between the integrand and the sampling density. More precisely, given a PDF $p_f$ that is a good match for $f$, and $p_g$ that is a good match for $g$, MIS draws $N$ samples $x_1,...,x_N$ from $p_f$, and $y_1,...,y_N$ from $p_g$, and apply the alternative Monte Carlo estimator:
+MIS proposes that, during Monte Carlo Integration, samples should be drawn from multiple distributions, chosen in the hope that at least one will match the shape of the integrand well. MIS provides a way of weighting the samples from each distribution that eliminates large variance spikes due to mismatches between the integrand and the sampling density. More precisely, given a PDF $p_f$ that is a good match for $f$, and $p_g$ that is a good match for $g$, MIS draws $N$ samples $x_1,...,x_N$ from $p_f$, and $y_1,...,y_N$ from $p_g$, and applies the alternative Monte Carlo estimator:
 \begin{align}
     I_N = \frac{1}{N} \sum_{i=1}^{N} \frac{f(x_i)g(x_i)w_f(x_i)}{p_f(x_i)} + \frac{f(y_i)g(y_i)w_g(y_i)}{p_g(y_i)}
     \label{MIS}
 \end{align}
 where the weights $w_f$ and $w_g$ are defined by
 \begin{align*}
-    w_s(x) = \frac{p_f(x)^2}{p_f(x)^2+p_g(x)^2}
+    w_s(x) = \frac{p_s(x)^2}{p_f(x)^2+p_g(x)^2}
 \end{align*}
 A full recount of why this weighting scheme reduces variance can be found in \cite{pharr2016physically}. 
 
-To apply MIS when solving the rendering equation, the renderer samples from a PDF $p_{rad}$ that matches to the incoming radiance $L_o(t(p,\omega_i),-\omega_i)$, and another PDF $p_{ref}$ that matches the reflection term $f_r(p,\omega_o,\omega_i)\cos\theta_i$. In the path-tracer implemented in this project, $p_{rad}$ is a distribution that only samples $\omega_i$ that points to a light source, which is often much brighter than surfaces that indirectly reflects light. For $p_{ref}$, the project implemented specific sampling routings for each individual BRDF, thereby maximizing the similarity between the PDF and the BRDF at each point.
+To apply MIS when solving the rendering equation, the renderer samples from a PDF $p_{rad}$ that matches to the incoming radiance $L_o(t(p,\omega_i),-\omega_i)$, and another PDF $p_{ref}$ that matches the reflection term $f_r(p,\omega_o,\omega_i)\cos\theta_i$. In the path-tracer implemented in this project, $p_{rad}$ is a distribution that only samples $\omega_i$ that points to a light source, which is often much brighter than surfaces that indirectly reflect light. For $p_{ref}$, the project implemented specific sampling routings for each individual BRDF, thereby maximizing the similarity between the PDF and the BRDF at each point.
 
 
 \section{The Path Space Formulation}
@@ -276,7 +276,7 @@ where $\omega = \frac{p-p'}{|p-p'|}$. Similarly, for three points $p,p',p''$, su
 \end{align*} 
 where $\omega_i = \frac{p''-p'}{|p''-p'|}$ and $\omega_o = \frac{p-p'}{|p-p'|}$.
 
-Note that, since not all points $p_{src}$ is visible from $p$, the integrand needs to include a visibility term $V(p,p_{src})$, which takes the value 1 if $p_{src}$ is visible from $p$, and 0 otherwise. Furthermore, the change of variable also incurs a Jacobian term, which is $\frac{\cos\theta'}{|p-p_{src}|^2}$, with $\theta'$ being the angle between the incoming ray and the surface normal at $p_{src}$. Use these terms, equation \ref{rendering equation with cast} is rewritten so that for a ray from a point $p$ to the destination $p_{dest}$, the radiance is computed by
+Note that, since not every point $p_{src}$ is visible from $p$, the integrand needs to include a visibility term $V(p,p_{src})$, which takes the value 1 if $p_{src}$ is visible from $p$, and 0 otherwise. Furthermore, the change of variable also incurs a Jacobian term, which is $\frac{\cos\theta'}{|p-p_{src}|^2}$, with $\theta'$ being the angle between the incoming ray and the surface normal at $p_{src}$. Using these terms, equation \ref{rendering equation with cast} is rewritten so that for a ray from a point $p$ to the destination $p_{dest}$, the radiance is computed by
 \begin{align*}
     L_o(p\to p_{dest}) =~ &L_e(p\to p_{dest}) \\
     &+ \int_A f_r(p_{src}\to p\to p_{dest}) L_o(p_{src}\to p)  V(p,p_{src}) \frac{cos\theta\cos\theta'}{|p-p_{src}|^2} \d p_{src}
@@ -349,9 +349,9 @@ If a Monte Carlo estimator is used to approximate the integrals, the above formu
 
 \section{The Path-Tracing Algorithm}
 
-The path-tracing algorithm is parameterized by an integer, $spp$, which stands for samples per pixel. The algorithm samples $spp$ random points on each pixel to be rendered, and generate an initial ray corresponding to each sample point. Starting from the ray, the algorithm constructs $MaxDepth*2$ paths of increasing length, and accumulates the radiances carried by these paths. These radiances are combined by a MIS Monte Carlo estimator, which decides the final value of the pixel.
+The path-tracing algorithm is parameterized by an integer, $spp$, which stands for samples per pixel. The algorithm samples $spp$ random points on each pixel to be rendered, and generates an initial ray corresponding to each sample point. Starting from the ray, the algorithm constructs $MaxDepth*2$ paths of increasing length, and accumulates the radiances carried by these paths. These radiances are combined by a MIS Monte Carlo estimator, which decides the final value of the pixel.
 
-The path tracing integrator generates paths incrementally, starting from the camera location $p_0$. At each point $p_{n-1}$, the algorithm samples an incoming direction (for $p_{1}\to p_0$, the direction is fixed by the configuration of the camera), and traces the incoming ray to find $p_{n}$. If the point $p_{n}$ emits light actively, then this constitutes a path of $n-1$ reflection point. Moreover, $p_{n}$ also serves as the next reflection point, so the algorithm samples a point $p_{light}$ that illuminates $p_{n}$, and the radiance can be passed back to $p_0$ through a chain of reflections.
+The path tracing integrator generates paths incrementally, starting from the camera location $p_0$. At each point $p_{n-1}$, the algorithm samples an incoming direction (for $p_{1}\to p_0$, the direction is fixed by the configuration of the camera), and traces the incoming ray to find $p_{n}$. If the point $p_{n}$ emits light actively, then this constitutes a path of $n-1$ reflection points. Moreover, $p_{n}$ also serves as the next reflection point, so the algorithm samples a point $p_{light}$ that illuminates $p_{n}$, and the radiance can be passed back to $p_0$ through a chain of reflections.
 
 
 More precisely, the path tracing algorithm works as follows:
@@ -431,5 +431,5 @@ For each pixel, the integrator estimates its color using a total of $spp*2*MaxDe
     \label{fig spp}
 \end{figure}
 
-For a typical scene, $spp$ is required to be at least 1024 in order to reduce noise down to an inconceivable level. Common images to be rendered consists of around 1 million pixels, thus around 1 billion pixel samples are often needed. Moreover, each ray generated in the algorithm needs to be tested for intersection with the entire scene, which often consists of millions of geometric primitives. The next chapter of this report will discuss how this project copes with this humongous amount of computation and implements an efficient path-tracing renderer.
+For a typical scene, $spp$ is required to be at least 1024 in order to reduce noise down to an imperceptible level. Common images to be rendered consist of around 1 million pixels, thus around 1 billion pixel samples are often needed. Moreover, each ray generated in the algorithm needs to be tested for intersection with the entire scene, which often consists of millions of geometric primitives. The next chapter of this report will discuss how this project copes with this humongous amount of computation and implements an efficient path-tracing renderer.
 

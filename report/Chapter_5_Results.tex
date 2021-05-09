@@ -1,6 +1,6 @@
 \chapter{Results}
 
-In order to demonstrate its efficiency, the \texttt{Cavalry} renderer created in this project is compared with two of the most famous renderers used in the academia:
+In order to demonstrate its efficiency, the \texttt{Cavalry} renderer created in this project is compared with two of the most famous renderers used in academia:
 
 \begin{itemize}
     \item The \texttt{pbrt} renderer, version 3. This is a comprehensively documented and optimized CPU renderer, and it is accompanied and documented by the ``PBRT'' book \cite{pharr2016physically}. At the time of writing, a 4th version of \texttt{pbrt} is under development. The 4th version will include GPU support, but due to stability issues, the beta version couldn't be used for comparison with \texttt{Cavalry}.
@@ -10,9 +10,9 @@ In order to demonstrate its efficiency, the \texttt{Cavalry} renderer created in
 
 The \texttt{Mitsuba} and \texttt{pbrt} renderers are compared with \texttt{Cavalry}'s implementation of both the traditional path-tracing and the reinforcement learning path-tracing algorithms. Notice that, \texttt{Mitsuba} and \texttt{pbrt} also implement other variants of path-tracing (e.g., bi-directional path-tracing), but only the traditional path-tracing integrator of these renderers are used for comparison.
 
-The scenes used to compare these renders are created by Benedikt Bitterli, and they were downloaded from \cite{resources16}. The creator defined these scenes for both \texttt{pbrt} and \texttt{Mitsuba}, with identical geometries and near identical materials. The \texttt{Cavalry} renderer created in this project parses the same input files as \texttt{pbrt}. It is thus ensured that all renderers are assigned the same task\footnote{One potential source of unfairness is that when rendering on \texttt{Mitsuba}, a rather naive random number generator is used, because the better RNGs of \texttt{Mitsuba} does not allow flexibly setting $spp$s.}.
+The scenes used to compare these renders are created by Benedikt Bitterli, and they were downloaded from \cite{resources16}. The creator defined these scenes for both \texttt{pbrt} and \texttt{Mitsuba}, with identical geometries and near identical materials. The \texttt{Cavalry} renderer created in this project parses the same input files as \texttt{pbrt}. It is thus ensured that all renderers are assigned the same task\footnote{One potential source of unfairness is that when rendering on \texttt{Mitsuba}, a rather naive random number generator is used, because the better RNGs of \texttt{Mitsuba} do not allow flexibly setting $spp$.}.
 
-For each scene, the renderers are asked to render images with an increasing amount of samples per pixel, starting from $4$ and doubling up to $1024$. The image with $1024$ $spp$s is used as a reference, and the other images are compared with the reference by computing the mean-squared-error (MSE) of pixel values. The MSE is plotted against the time spent on rendering on a log-log scale. Since MSE (i.e., variance) is inversely proportional to samples count (which is linear to rendering time), the log-log plots usually take the shape of a straight line with negative gradient.
+For each scene, the renderers are asked to render images with an increasing amount of samples per pixel, starting from $4$ and doubling up to $1024$. The image with $1024$ $spp$ is used as a reference, and the other images are compared with the reference by computing the mean-squared-error (MSE) of pixel values. The MSE is plotted against the time spent on rendering on a log-log scale. Since MSE (i.e., variance) is inversely proportional to samples count (which is linear to rendering time), the log-log plots usually take the shape of a straight line with negative gradient.
 
 A total of 4 scenes are selected. For each scene, an image rendered by \texttt{Cavalry} is shown, as well as the plot of MSE against rendering time. Notice that in the legends, \texttt{path} represents the path-racing implementation by \texttt{Cavalry}, and \texttt{rlpath} represents its reinforcement learning path-tracing implementation.
 
@@ -36,7 +36,7 @@ A total of 4 scenes are selected. For each scene, an image rendered by \texttt{C
     \caption{The ``living-room-2'' scene}
 \end{figure}
 
-As indicated by the plot, for this living room scene, the reinforcement learning integrator exhibits the greatest efficiency. \texttt{Mitsuba} is less efficient than \texttt{path} in the beginning, but overtakes at bigger sample counts. Naturally, All 3 GPU rendering algorithms outperform \texttt{pbrt}, which is CPU-only.
+As indicated by the plot, for this living room scene, the reinforcement learning integrator exhibits the greatest efficiency. \texttt{Mitsuba} is less efficient than \texttt{path} in the beginning, but overtakes at bigger sample counts. Naturally, all 3 GPU rendering algorithms outperform \texttt{pbrt}, which is CPU-only.
 
 \newpage
 
