@@ -68,6 +68,7 @@ public:
     GpuArray<LightObject> lightsDevice = GpuArray<LightObject>(0,true);
 
     BVH bvh;
+    int BVHOptimizationRounds = -1;
 
     int environmentMapIndex  = -1;
 

@@ -138,12 +138,14 @@ void Scene::prepareForRender(int spp) {
     auto temp = sceneBounds;
     std::cout << "scene bounds " << temp.minimum.x << ", " << temp.minimum.y << ", " << temp.minimum.z << ",   to  " << temp.maximum.x << ", " << temp.maximum.y << ", " << temp.maximum.z << std::endl;
 
-    int bvhOptimizationRounds = 3;
-    if (spp >= 64) {
-        bvhOptimizationRounds = 10;
+    if (BVHOptimizationRounds == -1) {
+        BVHOptimizationRounds = 3;
+        if (spp >= 64) {
+            BVHOptimizationRounds = 10;
+        }
     }
 
-    bvh = BVH::build(trianglesDevice.data,trianglesDevice.N,sceneBounds, bvhOptimizationRounds);
+    bvh = BVH::build(trianglesDevice.data,trianglesDevice.N,sceneBounds, BVHOptimizationRounds);
 
     std::cout << "done preparations. TrianglesCount: " << trianglesHost.size() << std::endl;
 }

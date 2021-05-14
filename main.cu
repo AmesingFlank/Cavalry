@@ -30,6 +30,7 @@ int main(int argc, char** argv){
         ("o,output", "Override output file name", cxxopts::value<std::string>())
         ("spp", "Override samples per pixel", cxxopts::value<int>())
         ("integrator", "Override integrator", cxxopts::value<std::string>())
+        ("bvh-opt-rounds", "BVH Optmization Rounds", cxxopts::value<int>())
         ("h,help", "Print usage")
     ;
     options.allow_unrecognised_options();
@@ -77,6 +78,12 @@ int main(int argc, char** argv){
     }
     if (args.count("spp")) {
         params.nums["spp"] = args["spp"].as<int>();
+    }
+    if (args.count("bvh-opt-rounds")) {
+        params.nums["BVHOptimizationRounds"] = args["bvh-opt-rounds"].as<int>();
+    }
+    else {
+        params.nums["BVHOptimizationRounds"] = -1;
     }
 
 
