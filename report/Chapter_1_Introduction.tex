@@ -27,9 +27,16 @@ Most of the ray-tracing renderers used tody, including \texttt{pbrt}, runs on th
 \section{Project Outline}
 This project focuses on the GPU parallelization of ray-tracing algorithms for the efficient rendering of photorealistic images. A fully-featured GPU renderer is created, which supports a wide range of geometries, materials, and light sources. At the heart of the renderer are efficient implementations of two algorithms: the original path-tracing algorithm, and a variant of path-tracing guided by reinforcement learning. 
 
-In order to efficiently implement path-tracing, this project implemented state-of-the-art methods of performing ray-scene intersection detection. These includes algorithms for constructing BVH trees in parallel, optimizing the structure of constructed BVHs, and recursion-free methods of tree traversal. The project also makes numerous optimizations that reduce control flow divergences and memory access latencies, so that the resulting implementation maximally utilizes the parallel architecture of GPUs.  
+To maximize the efficiency of path-tracing, this project implemented state-of-the-art methods of performing ray-scene intersection detection. These includes algorithms for constructing BVH trees in parallel, optimizing the structure of constructed BVHs, and recursion-free methods of tree traversal. The project also makes numerous optimizations that reduce control flow divergences and memory access latencies, so that the resulting implementation maximally utilizes the parallel architecture of GPUs.  
 
 This project made the observation that in certain lighting scenarios, the original path-tracing algorithm struggles to converge to a noiseless solution. To alleviate this problem, the project implements a variant of path-tracing, where reinforcement learning is used to guide the selection of light rays. The project investigates how the architecture of the GPU interacts with various aspects of the reinforcement learning routine, and implements a version that allows tens of thousands of GPU threads to efficiently cooperate during learning. 
 
 
-The renderer created by this project is named \texttt{Cavalry}\footnote{The name is inspired by a character in a video game called Overwatch. The character goes by the name ``Tracer'', and refers to herself as the ``Cavalry''.}. It is created mainly using the C++ programing language on the CPU side, and the CUDA language for GPU computing. With a total of over 7 thousand lines, the complete source code of the software can be found at \url{https://github.com/AmesingFlank/Cavalry}, along with some additional information and screenshots.
+The renderer created by this project is named \texttt{Cavalry}\footnote{The name is inspired by a character in a video game called Overwatch. The character goes by the name ``Tracer'', and refers to herself as the ``Cavalry''. Figure \ref{figure tracer} is a rendered image of her.}. It is created mainly using the C++ programing language on the CPU side, and the CUDA language for GPU computing. With a total of over 7 thousand lines, the complete source code of the software can be found at \url{https://github.com/AmesingFlank/Cavalry}, along with some additional information and screenshots.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[height=14cm]{tracer copy.png}
+    \caption{A video game character. Geometry created by \cite{tracer} and rendered using \texttt{Cavalry}.}
+    \label{figure tracer}
+\end{figure}

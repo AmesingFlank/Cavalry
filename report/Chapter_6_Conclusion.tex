@@ -1,6 +1,6 @@
 \chapter{Conclusions}
 
-This project explored how to utilize GPUs for photorealistic rendering. The project implemented a parallel version of the path-tracing algorithm, as well as a variant of path-tracing where online reinforcement learning guides the generation of new rays. These algorithms are accelerated by a Bounding Volume Hierarchy system, where state-of-the-art BVH construction, optimization, and traversal procedures are implemented. The project demonstrates how these different algorithms can be combined and parallelized together to form an extremely efficient photorealistic rendering system. After around 200 commits and over 7 thousand lines of CUDA/C++ code, this project created the \texttt{Cavalry} renderer, whose full source code can be found at \url{https://github.com/AmesingFlank/Cavalry}.
+This project explored how to utilize GPUs for photorealistic rendering. The project implemented a parallel version of the path-tracing algorithm, as well as a variant of path-tracing where online reinforcement learning guides the generation of new rays. These algorithms are accelerated by a Bounding Volume Hierarchy system, where state-of-the-art BVH construction, optimization, and traversal procedures are implemented. The project demonstrates how these different algorithms can be combined and parallelized together to form an extremely efficient photorealistic rendering system. After over 200 commits and 7 thousand lines of CUDA/C++ code, this project created the \texttt{Cavalry} renderer, whose full source code can be found at \url{https://github.com/AmesingFlank/Cavalry}.
 
 \section{Limitations \& Future Work}
 This section begins by listing a few algorithmic aspects of \texttt{Cavalry} that are fairly important, but were not described in detail in this report due to the word-count limit:
@@ -63,3 +63,9 @@ Apart from the algorithmic side of rendering, this project also motivated me to 
 One observation that I made was that on some occasions, pursuing the scalability of the software sometimes means sacrificing performance or parallelizability. As an example, when organizing data, the array-of-structures pattern is often clearer and easier to modify, but the structure-of-arrays format enables better memory performance during parallelization. It was after many experiments when I settled into an architecture of the software that obtains a satisfying balance between these two aspects.
 
 The completion of this project marks the end of 4 years of study at the computer science department of Oxford. Much like the project itself, my experience at Oxford had be delightfully challenging and extraordinarily rewarding. When I look back to the this project in the future, it will for sure be a pleasant reminder of the time I spent studying a field that I genuinely love.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=.99\textwidth]{oxford copy.png}
+    \caption{Oxford Computer Science. Geometry of Radcliffe Camera created by \cite{radcliffe} and rendered using \texttt{Cavalry}.}
+\end{figure}

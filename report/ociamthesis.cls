@@ -60,21 +60,21 @@
   \null\vfill
   \begin{center}
     { \Huge {\bfseries {\@title}} \par}
-{\large \vspace*{20mm} {\logo \par} \vspace*{20mm}}
-    {{\Large {Candidate Number: 1023011}} \par}
+{\large \vspace*{40mm} {\logo \par} \vspace*{40mm}}
+    {{\large {Candidate Number: 1023011}} \par}
 {\large 
 
-\vspace*{5mm}
+\vspace*{3mm}
     {University of Oxford \par}
-\vspace*{5mm}
+\vspace*{3mm}
     {Computer Science 4th Year Project Report \par}
-\vspace*{5mm}
+\vspace*{3mm}
     {Supervised by: Joe Pitt-Francis \par}
-
-  
-    
-\vspace*{5mm}
-    {Trinity 2020}}
+\vspace*{3mm}
+    {Word Count: 9977 \par}
+\vspace*{3mm}
+    {Trinity 2021}
+}
   \end{center}
   \null\vfill
 \end{alwayssingle}}
