@@ -47,7 +47,7 @@ __device__ byte optimizationSchedule[160] = {
 };
 
 __device__ 
-void optimizeTreelet(BVHRestructureNode* nodes, int root, thread_block_tile<32> thisWarp, int warpIndex, float* area, float* optimalCost, byte* optimalPartition) {
+void optimizeTreelet(BVHRestructureNode *  nodes, int root, thread_block_tile<32> thisWarp, int warpIndex, float* area, float* optimalCost, byte* optimalPartition) {
     int laneIndex = thisWarp.thread_rank();// ==index % 32;
 
     int myNode = -1;
@@ -489,6 +489,7 @@ void optimizeBVHImpl(int nodesCount, BVHRestructureNode* nodes, unsigned int* vi
         //if (laneIndex == 0) printf("visiting %d\n", curr);
         if(laneIndex==0 && curr == 0) printf("original BVH cost %f\n", nodes[0].cost);
         optimizeTreelet(nodes, curr, thisWarp,warpIndex,area,optimalCost,optimalPartition);
+        __threadfence();
         if (laneIndex == 0 && curr == 0) printf("optimized BVH cost %f\n", nodes[0].cost);
 
         if (curr == 0) break;
