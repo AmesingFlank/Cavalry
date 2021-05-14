@@ -168,9 +168,7 @@ struct TokenBuf {
     }
 
     void insertHere(const TokenBuf& buf) {
-        for (auto& token : buf.tokens) {
-            tokens.insert(tokens.begin() + currentIndex, token);
-        }
+        tokens.insert(tokens.begin() + currentIndex, buf.tokens.begin(),buf.tokens.end());
     }
 };
 
