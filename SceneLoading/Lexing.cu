@@ -22,12 +22,12 @@ TokenBuf runLexing(const std::filesystem::path& inputPath){
             continue;
         }
         else if(input[pos]=='['){
-            result.tokens.push_back(std::make_shared<LeftSquareBracketToken>());
+            result.tokens.push_back(LeftSquareBracketToken());
             ++pos;
             continue;
         }
         else if(input[pos]==']'){
-            result.tokens.push_back(std::make_shared<RightSquareBracketToken>());
+            result.tokens.push_back(RightSquareBracketToken());
             ++pos;
             continue;
         }
@@ -64,7 +64,7 @@ void KeyWordToken::read(const std::string& input, int& pos, TokenBuf& result){
             break;
         }
     }
-    result.tokens.push_back(std::make_shared<KeyWordToken>(word));
+    result.tokens.push_back(KeyWordToken(word));
 }
 
 
@@ -81,7 +81,7 @@ void StringToken::read(const std::string& input, int& pos, TokenBuf& result){
         SIGNAL_LEXING_ERROR("Didn't find ending quotation",pos);
     }
     ++pos;
-    result.tokens.push_back(std::make_shared<StringToken>(raw));
+    result.tokens.push_back(StringToken(raw));
 }
 
 
@@ -98,7 +98,7 @@ void NumToken::read(const std::string& input, int& pos, TokenBuf& result){
     if(raw[0]=='.'){
         raw = std::string("0")+raw;
     }
-    result.tokens.push_back(std::make_shared<NumToken>(std::stof(raw)));
+    result.tokens.push_back(NumToken(std::stof(raw)));
 }
 
 

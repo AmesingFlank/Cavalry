@@ -410,13 +410,16 @@ struct initialize_from_variant {
     }
 };
 
+struct UselessVariantStruct {};
+
 
 } //end namespace detail
+
 
 template<typename T,
          typename... Args>
 struct variant {
-    typedef typename detail::cons_type<T, Args...>::type cons_type;
+    typedef typename detail::cons_type < T, Args..., detail::UselessVariantStruct > ::type cons_type;
     typedef typename detail::wrapped<cons_type>::type wrapped_type;
     typedef detail::storage<wrapped_type> storage_type;
     storage_type m_storage;
@@ -425,8 +428,8 @@ struct variant {
 #pragma hd_warning_disable
     __host__ __device__
     variant() {
-        detail::initialize_storage<false, T, wrapped_type>::
-            impl(m_storage, m_which, T());
+      detail::initialize_storage<false, detail::UselessVariantStruct, wrapped_type>::
+           impl(m_storage, m_which, detail::UselessVariantStruct());
     }
 
     template<typename V>

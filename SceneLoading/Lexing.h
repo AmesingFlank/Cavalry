@@ -6,6 +6,7 @@
 #include <iostream>
 #include "../Utils/GpuCommons.h"
 #include "../Utils/Utils.h"
+#include "../Utils/Variant.h"
 #include <vector> 
 #include <memory>
 #include <filesystem>
@@ -14,49 +15,16 @@ enum class TokenType{
     KeyWord, String,Num, LeftSquareBracket, RightSquareBracket
 };
 
-class Token {
+class TokenBase {
 public:
     TokenType type;
     virtual std::string print() = 0;
 };
 
-struct TokenBuf {
-    std::vector<std::shared_ptr<Token>> tokens;
-    int currentIndex = 0;
-
-    std::shared_ptr<Token> peek(int offset = 0){
-        if (currentIndex+offset >= tokens.size()) {
-            SIGNAL_ERROR("peek out of bounds");
-        }
-        return tokens[currentIndex+offset];
-    }
-
-    void moveForward(){
-        ++currentIndex;
-    }
-
-    template <typename T>
-    std::shared_ptr<T> checkAndPop(){
-        std::shared_ptr<Token> thisToken = peek();
-        std::shared_ptr<T> casted = std::dynamic_pointer_cast<T>(thisToken);
-        if(casted){
-            ++currentIndex;
-            return casted;
-        }
-        SIGNAL_ERROR((std::string("Token checkAndPop failed. Token index: ")+std::to_string(currentIndex)+ "." + thisToken->print()).c_str());
-    }
-
-    void insertHere(const TokenBuf& buf) {
-        for (auto& token : buf.tokens) {
-            tokens.insert(tokens.begin()+currentIndex, token);
-        }
-    }
-};
-
-TokenBuf runLexing(const std::filesystem::path& inputPath);
+class TokenBuf;
 
 
-class KeyWordToken: public Token{
+class KeyWordToken: public TokenBase{
 public:
     std::string word;
 
@@ -76,7 +44,7 @@ public:
     }
 };
 
-class StringToken: public Token{
+class StringToken: public TokenBase{
 public:
     std::vector<std::string> words;
     std::string all;
@@ -92,7 +60,7 @@ public:
     }
 };
 
-class NumToken: public Token{
+class NumToken: public TokenBase{
 public:
     float value;
     NumToken(float value_):value(value_){
@@ -104,7 +72,7 @@ public:
     }
 };
 
-class LeftSquareBracketToken: public Token{
+class LeftSquareBracketToken: public TokenBase{
 public:
     LeftSquareBracketToken(){
         type = TokenType::LeftSquareBracket;
@@ -114,7 +82,7 @@ public:
     }
 };
 
-class RightSquareBracketToken: public Token{
+class RightSquareBracketToken: public TokenBase{
 public:
     RightSquareBracketToken(){
         type = TokenType::RightSquareBracket;
@@ -126,3 +94,84 @@ public:
 
 
 
+
+using TokenVariant = Variant<KeyWordToken,StringToken,NumToken,LeftSquareBracketToken,RightSquareBracketToken>;
+
+class Token : public TokenVariant {
+public:
+
+	Token() {}
+
+	template<typename V>
+	Token(const V& v) :TokenVariant(v) {}
+
+	Token(const Token& other) : TokenVariant(other.value) {}
+
+	__device__
+	Token& operator=(const Token& other) {
+		value = other.value;
+		return *this;
+	}
+
+    std::string print() {
+        auto visitor = [&](auto& arg) -> std::string {
+            using T = typename std::remove_reference<decltype(arg)>::type;
+            if constexpr (std::is_base_of<TokenBase, typename T>::value) {
+                return arg.T::print();
+            }
+            else {
+                SIGNAL_VARIANT_ERROR;
+            }
+        };
+        return visit(visitor);
+    }
+
+	TokenType type() {
+		auto visitor = [&](auto& arg) -> TokenType {
+			using T = typename std::remove_reference<decltype(arg)>::type;
+			if constexpr (std::is_base_of<TokenBase, typename T>::value) {
+				return arg.type;
+			}
+			else {
+				SIGNAL_VARIANT_ERROR;
+			}
+		};
+		return visit(visitor);
+	}
+};
+
+
+
+struct TokenBuf {
+    std::vector<Token> tokens;
+    int currentIndex = 0;
+
+    Token* peek(int offset = 0) {
+        if (currentIndex + offset >= tokens.size()) {
+            SIGNAL_ERROR("peek out of bounds");
+        }
+        return &tokens[currentIndex + offset];
+    }
+
+    void moveForward() {
+        ++currentIndex;
+    }
+
+    template <typename T>
+    T* checkAndPop() {
+        Token* thisToken = peek();
+        if (thisToken->is<T>()) {
+            ++currentIndex;
+            return thisToken->get<T>();
+        }
+        SIGNAL_ERROR((std::string("Token checkAndPop failed. Token index: ") + std::to_string(currentIndex) + "." + thisToken->print()).c_str());
+    }
+
+    void insertHere(const TokenBuf& buf) {
+        for (auto& token : buf.tokens) {
+            tokens.insert(tokens.begin() + currentIndex, token);
+        }
+    }
+};
+
+TokenBuf runLexing(const std::filesystem::path& inputPath);

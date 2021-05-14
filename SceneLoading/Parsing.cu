@@ -38,10 +38,9 @@ using TextureStorage = NamedStorage<Texture2D>;
 std::vector<float> readNumList(TokenBuf& buf){
 	std::vector<float> result;
 	buf.checkAndPop<LeftSquareBracketToken>();
-	while(buf.peek()->type == TokenType::Num){
-		std::shared_ptr<NumToken> num = buf.checkAndPop<NumToken>();
+	while(buf.peek()->type() == TokenType::Num){
+		auto num = buf.checkAndPop<NumToken>();
 		result.push_back(num->value);
-		
 	}
 	buf.checkAndPop<RightSquareBracketToken>();
 	return result;
@@ -50,10 +49,9 @@ std::vector<float> readNumList(TokenBuf& buf){
 std::vector<std::string> readStringList(TokenBuf& buf) {
 	std::vector<std::string> result;
 	buf.checkAndPop<LeftSquareBracketToken>();
-	while (buf.peek()->type == TokenType::String) {
-		std::shared_ptr<StringToken> s = buf.checkAndPop<StringToken>();
+	while (buf.peek()->type() == TokenType::String) {
+		auto s = buf.checkAndPop<StringToken>();
 		result.push_back(s->all);
-
 	}
 	buf.checkAndPop<RightSquareBracketToken>();
 	return result;
@@ -61,7 +59,7 @@ std::vector<std::string> readStringList(TokenBuf& buf) {
 
 void readUntilNextKeyWorkd(TokenBuf& buf) {
 	buf.checkAndPop<KeyWordToken>();
-	while (buf.peek()->type != TokenType::KeyWord) {
+	while (buf.peek()->type() != TokenType::KeyWord) {
 		buf.moveForward();
 	}
 }
@@ -69,18 +67,18 @@ void readUntilNextKeyWorkd(TokenBuf& buf) {
 ObjectDefinition readObjectDefinition(TokenBuf& buf){
 	ObjectDefinition def;
 
-	std::shared_ptr<KeyWordToken> keyWord = buf.checkAndPop<KeyWordToken>();
+	auto keyWord = buf.checkAndPop<KeyWordToken>();
 	def.keyWord = keyWord -> word;
 
-	std::shared_ptr<StringToken> name = buf.checkAndPop<StringToken>();
+	auto name = buf.checkAndPop<StringToken>();
 	def.objectName = name->words[0];
 
-	while(buf.peek()->type == TokenType::String){
-		std::shared_ptr<StringToken> key = buf.checkAndPop<StringToken>();
+	while(buf.peek()->type() == TokenType::String){
+		auto key = buf.checkAndPop<StringToken>();
 		std::string fieldName = key->words[key->words.size()-1];
 
 		auto nextToken = buf.peek();
-		switch(nextToken->type){
+		switch(nextToken->type()){
 			case TokenType::String:
 				def.params.strings[fieldName] = buf.checkAndPop<StringToken>()->all;
 				break;
@@ -88,10 +86,10 @@ ObjectDefinition readObjectDefinition(TokenBuf& buf){
 				def.params.nums[fieldName] = buf.checkAndPop<NumToken>()->value;
 				break;
 			case TokenType::LeftSquareBracket:
-				if (buf.peek(1)->type == TokenType::Num) {
+				if (buf.peek(1)->type() == TokenType::Num) {
 					def.params.numLists[fieldName] = readNumList(buf);
 				}
-				else if (buf.peek(1)->type == TokenType::String) {
+				else if (buf.peek(1)->type() == TokenType::String) {
 					def.params.stringLists[fieldName] = readStringList(buf);
 				}
 				else {
@@ -130,7 +128,7 @@ void readLookAt(TokenBuf& buf, float3& eye, float3& center, float3& up){
 
 bool readTransform(TokenBuf& buf, glm::mat4& transform){
 	auto nextToken = buf.peek();
-	auto keyWord = std::dynamic_pointer_cast<KeyWordToken>(nextToken);
+	auto keyWord = nextToken->get<KeyWordToken>();
 	if(keyWord){
 		std::string word = keyWord->word;
 		if(word=="Translate"){
@@ -190,7 +188,7 @@ void parseSceneWideOptions(TokenBuf& buf,RenderSetup& result, const Parameters& 
 	// parse scene-wide options
 	while(true){
 		auto nextToken = buf.peek();
-		auto keyWord = std::dynamic_pointer_cast<KeyWordToken>(nextToken);
+		auto keyWord = nextToken->get<KeyWordToken>();
 		if(keyWord){
 			if(keyWord->word == "WorldBegin"){
 				break;
@@ -282,7 +280,7 @@ void parseSubsection(TokenBuf& buf, RenderSetup& result, glm::mat4 transform,con
 
 	while (true) {
 		auto nextToken = buf.peek();
-		auto keyWord = std::dynamic_pointer_cast<KeyWordToken>(nextToken);
+		auto keyWord = nextToken->get<KeyWordToken>();
 		if (keyWord) {
 			if (endsWith(keyWord->word, "End")) {
 				std::string endingSubsectionName = keyWord->word.substr(0, keyWord->word.size() - std::string("End").size());

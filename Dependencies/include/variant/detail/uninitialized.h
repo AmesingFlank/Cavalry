@@ -69,8 +69,7 @@ template<typename T>
     __host__ __device__ inline uninitialized<T> &operator=(const T &other)
     {
 
-      T& self = *(new(this) T());
-      self = other;
+      T& self = *(new(this) T(other));
       return *this;
     }
 
