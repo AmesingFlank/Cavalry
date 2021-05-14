@@ -17,7 +17,7 @@
 #if USE_LONG_MORTON
 
 #define MORTEN_BITS_PER_DIMENSION 21
-using MortonType = unsigned long;
+using MortonType = uint64_t;
 
 #else
 
