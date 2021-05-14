@@ -248,7 +248,7 @@ $$
 
 In this case, if a renderer performs importance sampling according to distributions based on either $f$ or $g$, one of these two would often perform poorly \cite{pharr2016physically}. This is exactly the issue addressed by the technique of multiple importance sampling (MIS).
 
-MIS proposes that, during Monte Carlo Integration, samples should be drawn from multiple distributions, chosen in the hope that at least one will match the shape of the integrand well. MIS provides a way of weighting the samples from each distribution that eliminates large variance spikes due to mismatches between the integrand and the sampling density. More precisely, given a PDF $p_f$ that is a good match for $f$, and $p_g$ that is a good match for $g$, MIS draws $N$ samples $x_1,...,x_N$ from $p_f$, and $y_1,...,y_N$ from $p_g$, and applies the alternative Monte Carlo estimator:
+MIS proposes that, during Monte Carlo Integration, samples should be drawn from multiple distributions, chosen in the hope that at least one will match the shape of the integrand well. MIS weights the samples from each distribution in a way that eliminates large variance spikes arising from mismatches between the sampling density and the integrand. More precisely, given a PDF $p_f$ that is a good match for $f$, and $p_g$ that is a good match for $g$, MIS draws $N$ samples $x_1,...,x_N$ from $p_f$, and $y_1,...,y_N$ from $p_g$, and applies the alternative Monte Carlo estimator:
 \begin{align}
     I_N = \frac{1}{N} \sum_{i=1}^{N} \frac{f(x_i)g(x_i)w_f(x_i)}{p_f(x_i)} + \frac{f(y_i)g(y_i)w_g(y_i)}{p_g(y_i)}
     \label{MIS}
