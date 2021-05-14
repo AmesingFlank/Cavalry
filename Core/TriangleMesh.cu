@@ -123,7 +123,12 @@ TriangleMesh TriangleMesh::createFromParams(const Parameters& params,const glm::
         std::filesystem::path plyRelativePath(plyPathString);
         std::string filename = (basePath / plyRelativePath).generic_string();
 
-        return TriangleMesh::createFromPLY(filename, transform);
+        try {
+            return TriangleMesh::createFromPLY(filename, transform);
+        }
+        catch (std::runtime_error err) {
+            SIGNAL_ERROR("read ply file failed, %s\n", err.what());
+        }
     }
     else if(params.hasNumList("P") && params.hasNumList("indices")){
         std::vector<float> positionsFloats = params.getNumList("P");
