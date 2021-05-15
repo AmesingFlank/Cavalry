@@ -7,7 +7,7 @@ As described in section \ref{subsection MIS}, the path-tracing integrator sample
 
 \begin{figure}[H]
     \centering
-    \includegraphics[height=8cm]{veach-bidir2_1024spp_rlpath.png}
+    \includegraphics[height=8cm]{veach-bidir2_8192spp_rlpath.png}
 \end{figure}
 
 In this scene, both light sources are surrounded by opaque geometries, which means only a small region can be illuminated directly. Furthermore, the reflected radiance from this small region is the primary source of illumination for most surfaces in the scene. During path-tracing, the light sources sampled from $p_{rad}$ are often occluded, and hence $p_{rad}$ is poor match for the integrand. The directions sampled from $p_{ref}$ are also rarely useful, because only a small set of directions provide indirect illumination. As both MIS distributions are ineffective, the algorithm converges extremely slowly.
